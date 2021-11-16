@@ -12,7 +12,6 @@ export interface Reserve {
 
 }
 
-
 const RESERVE_LAYOUT = struct([
     u8("version"),
     struct([
@@ -139,39 +138,36 @@ export class Reserve implements Reserve {
         this.config = config;
     }
     calculateUtilizationRatio() {
-        const borrowedAmount = this.liquidity.borrowed_amount_wads.muln(10E-8);
-        const availableAmount = this.liquidity.available_amount;
+        const borrowedAmount = this.liquidity.borrowed_amount_wads.div(new BN(`1${''.padEnd(18, '0')}`));
+        const total_amount = this.liquidity.available_amount.add(borrowedAmount);
         const currentUtilization =
-            borrowedAmount.div(availableAmount.add(borrowedAmount));
+            (borrowedAmount.toNumber() / total_amount.toNumber());
         return currentUtilization;
     }
 
     calculateBorrowAPY() {
-        const percentage = new BN(0.01)
         const currentUtilization = this.calculateUtilizationRatio();
-        //console.log(this);
-        const optimal_utilization_rate = this.config.optimal_utilization_rate
-        const optimalUtilization = optimal_utilization_rate.mul(percentage);
+        const optimalUtilization = new BN(this.config.optimal_utilization_rate).toNumber() / 100;
         let borrowAPY;
-        if (optimalUtilization.toNumber() === 1.0 || currentUtilization < optimalUtilization) {
-            const normalizedFactor = currentUtilization.div(optimalUtilization);
-            const optimalBorrowRate = this.config.optimal_borrow_rate.mul(percentage);
-            const minBorrowRate = this.config.min_borrow_rate.mul(percentage);
+        if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
+            const normalizedFactor = currentUtilization / optimalUtilization;
+            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
+            const minBorrowRate = new BN(this.config.min_borrow_rate).toNumber() / 100;
             borrowAPY =
-                minBorrowRate.add(normalizedFactor.mul(optimalBorrowRate.sub(minBorrowRate)));
+                normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate
         } else {
             const normalizedFactor =
-                currentUtilization.sub(optimalUtilization).div(new BN(1).sub(optimalUtilization));
-            const optimalBorrowRate = this.config.optimal_borrow_rate.div(percentage);
-            const maxBorrowRate = this.config.max_borrow_rate.mul(percentage);
+                (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
+            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
+            const maxBorrowRate = new BN(this.config.max_borrow_rate).toNumber() / 100;
             borrowAPY =
-                optimalBorrowRate.add(normalizedFactor.mul(maxBorrowRate.sub(optimalBorrowRate)));
-
+                normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
+                optimalBorrowRate;
         }
+
 
         return borrowAPY;
     };
-
 }
 
 class Last_update {
