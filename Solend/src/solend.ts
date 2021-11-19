@@ -11,8 +11,8 @@ import {
   DataSizeFilter
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { info } from "console";
-
+import * as info from "./solend_info"
+import * as obligation from "./obligation"
 interface lending_market_info {
   reserve_address: PublicKey;
   supply_token_mint: PublicKey;
@@ -27,29 +27,14 @@ interface lending_market_info {
 
 }
 import * as state from "./state";
-const SOLEND_PROGRAM_ID = new PublicKey(
-  "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo",
-);
 
-const SOLEND_LENDING_MARKET_ID = new PublicKey(
-  "4UpD2fh7xH3VP9QQaXtsS1YY3bxzWhtfpks7FatyKvdY",
-);
 
-const MARKET_AUTHORITY = new PublicKey(
-  "GDmSxpPzLkfxxr6dHLNRnCoYVGzvgc41tozkrr4pHTjB",
-);
-
-const MARKET_OWNER = new PublicKey(
-  "5pHk2TmnqQzRF9L6egy5FfiyBgS7G9cMZ5RFaJAvghzw",
-);
-
-const RESERVE_LAYOUT_SPAN = 619;
 
 //all from https://docs.solend.fi/protocol/addresses
 
 
 
-class lending_info implements lending_market_info {
+export class lending_info implements lending_market_info {
   reserve_address: PublicKey;
   supply_token_mint: PublicKey;
   supply_token_decimal: BN;
@@ -60,6 +45,7 @@ class lending_info implements lending_market_info {
   supply_apy: number;
   mining_apy: number;
   reserve_info: state.Reserve;
+  //total_usd_value: BN;
   constructor(
     reserve_address: PublicKey,
     supply_token_mint: PublicKey,
@@ -71,6 +57,7 @@ class lending_info implements lending_market_info {
     supply_apy: number,
     mining_apy: number,
     reserve_info: state.Reserve,
+    //total_usd_value: BN,
   ) {
     this.reserve_address = reserve_address;
     this.supply_token_mint = supply_token_mint;
@@ -82,27 +69,31 @@ class lending_info implements lending_market_info {
     this.supply_apy = supply_apy;
     this.mining_apy = mining_apy;
     this.reserve_info = reserve_info;
+    //this.total_usd_value = total_usd_value;
   }
 }
 
 export async function get_all_lending_info(connection: Connection) {
   const all_reserve = await get_all_reserve(connection);
   let lending_infos = <Array<lending_info>>[];
-  
+
   for (let reserves_meta of all_reserve) {
 
     let borrowed_amount = reserves_meta[1].liquidity.borrowed_amount_wads.div(new BN(`1${''.padEnd(18, '0')}`));
-    
+
     let available_amount = reserves_meta[1].liquidity.available_amount;
-   
+
     let supply_amount = borrowed_amount.add(available_amount);
-    
+
     let UtilizationRatio = reserves_meta[1].calculateUtilizationRatio()
     let mining_apy = 0;
     let borrowAPY = reserves_meta[1].calculateBorrowAPY() as number
     let apy = UtilizationRatio * borrowAPY;
+    let decimal = new BN(reserves_meta[1].liquidity.mint_decimals).toNumber()
+    let borrowed_usd_value = borrowed_amount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reserves_meta[1].liquidity.market_price).div(new BN(`1${''.padEnd(18, '0')}
+    `))
     
-
+    
     const info = new lending_info(
       reserves_meta[0],
       reserves_meta[1].liquidity.mint_pubkey,
@@ -120,31 +111,33 @@ export async function get_all_lending_info(connection: Connection) {
   }
   return lending_infos;
 }
-export async function get_all_reserve(connection: Connection) {
+async function get_all_reserve(connection: Connection) {
   const program_id_memcmp: MemcmpFilter = {
     memcmp: {
       offset: 10,
       //offset 10byte
-      bytes: SOLEND_LENDING_MARKET_ID.toString(),
+      bytes: info.SOLEND_LENDING_MARKET_ID.toString(),
     }
   }
   const data_size_filters: DataSizeFilter = {
 
-    dataSize: RESERVE_LAYOUT_SPAN,
+    dataSize: info.RESERVE_LAYOUT_SPAN,
 
   }
 
   const filters = [program_id_memcmp, data_size_filters];
 
   const config: GetProgramAccountsConfig = { filters: filters }
-  const reserve_accounts = await connection.getProgramAccounts(SOLEND_PROGRAM_ID, config);
+  const reserve_accounts = await connection.getProgramAccounts(info.SOLEND_PROGRAM_ID, config);
   let reserves = <Array<[PublicKey, state.Reserve]>>[];
   for (let account of reserve_accounts) {
-    
+
     let info = await state.parseReserveData(account.account.data);
     reserves.push([account.pubkey, info]);
   }
-  
+
   return reserves;
 
 }
+
+
