@@ -1,5 +1,4 @@
 import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 export interface Reserve {
@@ -9,7 +8,64 @@ export interface Reserve {
     liquidity: Reserve_liquidity;
     collateral: Reserve_collateral;
     config: Reserve_config;
+    calculateUtilizationRatio():number;
+    calculateBorrowAPY():number;
 
+}
+export class Reserve implements Reserve {
+    version: BN;
+    last_update: Last_update;
+    lending_market: PublicKey;
+    liquidity: Reserve_liquidity;
+    collateral: Reserve_collateral;
+    config: Reserve_config;
+    constructor(
+        version: BN,
+        last_update: Last_update,
+        lending_market: PublicKey,
+        liquidity: Reserve_liquidity,
+        collateral: Reserve_collateral,
+        config: Reserve_config,
+
+    ) {
+        this.version = version;
+        this.last_update = last_update;
+        this.lending_market = lending_market;
+        this.liquidity = liquidity;
+        this.collateral = collateral;
+        this.config = config;
+    }
+    calculateUtilizationRatio() {
+        const borrowedAmount = this.liquidity.borrowed_amount_wads.div(new BN(`1${''.padEnd(18, '0')}`));
+        const total_amount = this.liquidity.available_amount.add(borrowedAmount);
+        const currentUtilization =
+            (borrowedAmount.toNumber() / total_amount.toNumber());
+        return currentUtilization;
+    }
+
+    calculateBorrowAPY() {
+        const currentUtilization = this.calculateUtilizationRatio();
+        const optimalUtilization = new BN(this.config.optimal_utilization_rate).toNumber() / 100;
+        let borrowAPY;
+        if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
+            const normalizedFactor = currentUtilization / optimalUtilization;
+            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
+            const minBorrowRate = new BN(this.config.min_borrow_rate).toNumber() / 100;
+            borrowAPY =
+                normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate
+        } else {
+            const normalizedFactor =
+                (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
+            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
+            const maxBorrowRate = new BN(this.config.max_borrow_rate).toNumber() / 100;
+            borrowAPY =
+                normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
+                optimalBorrowRate;
+        }
+
+
+        return borrowAPY;
+    };
 }
 
 const RESERVE_LAYOUT = struct([
@@ -113,63 +169,6 @@ class Reserve_collateral {
         this.supply_pubkey = supply_pubkey;
     }
 }
-
-export class Reserve implements Reserve {
-    version: BN;
-    last_update: Last_update;
-    lending_market: PublicKey;
-    liquidity: Reserve_liquidity;
-    collateral: Reserve_collateral;
-    config: Reserve_config;
-    constructor(
-        version: BN,
-        last_update: Last_update,
-        lending_market: PublicKey,
-        liquidity: Reserve_liquidity,
-        collateral: Reserve_collateral,
-        config: Reserve_config,
-
-    ) {
-        this.version = version;
-        this.last_update = last_update;
-        this.lending_market = lending_market;
-        this.liquidity = liquidity;
-        this.collateral = collateral;
-        this.config = config;
-    }
-    calculateUtilizationRatio() {
-        const borrowedAmount = this.liquidity.borrowed_amount_wads.div(new BN(`1${''.padEnd(18, '0')}`));
-        const total_amount = this.liquidity.available_amount.add(borrowedAmount);
-        const currentUtilization =
-            (borrowedAmount.toNumber() / total_amount.toNumber());
-        return currentUtilization;
-    }
-
-    calculateBorrowAPY() {
-        const currentUtilization = this.calculateUtilizationRatio();
-        const optimalUtilization = new BN(this.config.optimal_utilization_rate).toNumber() / 100;
-        let borrowAPY;
-        if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
-            const normalizedFactor = currentUtilization / optimalUtilization;
-            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
-            const minBorrowRate = new BN(this.config.min_borrow_rate).toNumber() / 100;
-            borrowAPY =
-                normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate
-        } else {
-            const normalizedFactor =
-                (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
-            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
-            const maxBorrowRate = new BN(this.config.max_borrow_rate).toNumber() / 100;
-            borrowAPY =
-                normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
-                optimalBorrowRate;
-        }
-
-
-        return borrowAPY;
-    };
-}
-
 class Last_update {
     last_updated_slot: BN;
     stale: boolean;
@@ -182,9 +181,6 @@ class Last_update {
         this.stale = stale;
     }
 }
-
-
-
 class Reserve_liquidity {
     mint_pubkey: PublicKey;
     mint_decimals: BN;
@@ -217,9 +213,6 @@ class Reserve_liquidity {
         this.market_price = market_price;
     }
 }
-
-
-
 class Reserve_fees {
     borrow_fee_wad: BN;
     flash_loan_fee_wad: BN;
@@ -254,3 +247,4 @@ export function parseReserveData(data: any): Reserve {
 
     return reserve;
 }
+
