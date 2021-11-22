@@ -284,6 +284,10 @@ export async function wrap_native(amount: number, wallet_public_key: PublicKey, 
 }
 export async function create_obligation_account_ix(wallet :PublicKey) {
     let tx = new Transaction;
+    const seed = info.SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
+    let createAccountFromSeedIx = await  SystemProgram.createAccountWithSeed({fromPubkey:wallet,seed:seed,space:1300,newAccountPubkey:await get_obligation_public_key(wallet),basePubkey:wallet,lamports:9938880,programId:info.SOLEND_PROGRAM_ID});
+    console.log(createAccountFromSeedIx);
+    tx.add(createAccountFromSeedIx);
     const dataLayout = struct([u8('instruction')]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode(
@@ -314,5 +318,6 @@ export async function create_obligation_account_ix(wallet :PublicKey) {
     let create_obligation_ix = new TransactionInstruction(
         {keys,programId:info.SOLEND_PROGRAM_ID,data:data}
         )
-    return create_obligation_ix;
+    tx.add(create_obligation_ix);
+    return tx;
 }
