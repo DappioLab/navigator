@@ -119,7 +119,7 @@ export const withdrawObligationCollateralAndRedeemReserveLiquidity = (
         u64('collateralAmount'),
     ]);
 
-    console.log(new BN(collateralAmount).toString());
+    //console.log(new BN(collateralAmount).toString());
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode(
         {
@@ -253,22 +253,22 @@ export const refreshObligationInstruction = (
     });
 };
 
-export async function wrap_native(amount: number, wallet_public_key: PublicKey, connection: Connection, create_ata: boolean) {
+export async function wrap_native(amount: BN, wallet_public_key: PublicKey, connection: Connection, create_ata: boolean) {
     let tx = new Transaction;
 
     let destination_ata = await util.findAssociatedTokenAddress(wallet_public_key, NATIVE_MINT);
     if (create_ata == true) {
         if ((await connection.getAccountInfo(destination_ata))?.owner.toString() == TOKEN_PROGRAM_ID.toString()) {
-            console.log("wSol was created")
+            //console.log("wSol was created")
 
         }
         else {
-            console.log("creating wSol account")
+            //console.log("creating wSol account")
             let create_ata_ix = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT, destination_ata, wallet_public_key, wallet_public_key);
             tx.add(create_ata_ix);
         }
     }
-    let transfer_pram = { fromPubkey: wallet_public_key, lamports: amount, toPubkey: destination_ata }
+    let transfer_pram = { fromPubkey: wallet_public_key, lamports: amount.toNumber(), toPubkey: destination_ata }
     let transfer_lamport_ix = SystemProgram.transfer(transfer_pram);
     tx.add(transfer_lamport_ix);
     let key = [{ pubkey: destination_ata, isSigner: false, isWritable: true }];
@@ -286,7 +286,7 @@ export async function create_obligation_account_ix(wallet :PublicKey) {
     let tx = new Transaction;
     const seed = info.SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
     let createAccountFromSeedIx = await  SystemProgram.createAccountWithSeed({fromPubkey:wallet,seed:seed,space:1300,newAccountPubkey:await get_obligation_public_key(wallet),basePubkey:wallet,lamports:9938880,programId:info.SOLEND_PROGRAM_ID});
-    console.log(createAccountFromSeedIx);
+    //console.log(createAccountFromSeedIx);
     tx.add(createAccountFromSeedIx);
     const dataLayout = struct([u8('instruction')]);
     const data = Buffer.alloc(dataLayout.span);
