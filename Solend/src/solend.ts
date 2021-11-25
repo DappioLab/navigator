@@ -139,5 +139,11 @@ async function get_all_reserve(connection: Connection) {
   return reserves;
 
 }
+export async function getObligation(connection:Connection,wallet:PublicKey) {
+  let obligationAddress =await obligation.get_obligation_public_key(wallet);
+  let accountInfo = await connection.getAccountInfo(obligationAddress);
+  let obligationInfo = obligation.parseObligationData(accountInfo?.data);
+  return obligationInfo;
+}
 
 
