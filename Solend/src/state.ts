@@ -169,7 +169,7 @@ class Reserve_collateral {
         this.supply_pubkey = supply_pubkey;
     }
 }
-class Last_update {
+export class Last_update {
     last_updated_slot: BN;
     stale: boolean;
 
