@@ -31,7 +31,6 @@ import * as state from "./state";
 import { isMining } from "./util";
 
 
-
 //all from https://docs.solend.fi/protocol/addresses
 
 
@@ -90,11 +89,11 @@ export async function getAllLendingInfo(connection: Connection) {
 
     let supplyAmount = borrowedAmount.add(availableAmount);
 
-    let UtilizationRatio = reservesMeta[1].calculateUtilizationRatio()
+    let UtilizationRatio = reservesMeta[1].calculateUtilizationRatio();
     let miningApy = 0;
-    let borrowAPY = reservesMeta[1].calculateBorrowAPY() as number
+    let borrowAPY = reservesMeta[1].calculateBorrowAPY() as number;
     let apy = UtilizationRatio * borrowAPY;
-    let decimal = new BN(reservesMeta[1].liquidity.mintDecimals).toNumber()
+    let decimal = new BN(reservesMeta[1].liquidity.mintDecimals).toNumber();
     if (await isMining(reservesMeta[0])) {
       let borrowedUsdValue = borrowedAmount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reservesMeta[1].liquidity.marketPrice).div(new BN(`1${''.padEnd(18, '0')}
     `));
@@ -120,6 +119,7 @@ export async function getAllLendingInfo(connection: Connection) {
     lendingInfos.push(info);
 
   }
+  let slndMinning
   return lendingInfos;
 }
 async function getAllReserve(connection: Connection) {
@@ -153,8 +153,11 @@ async function getAllReserve(connection: Connection) {
 export async function getObligation(connection: Connection, wallet: PublicKey) {
   let obligationAddress = await obligation.getObligationPublicKey(wallet);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
-  let obligationInfo = obligation.parseObligationData(accountInfo?.data);
-  return obligationInfo;
+  if (accountInfo?.owner.toString() == info.SOLENDPROGRAMID.toString()) {
+    let obligationInfo = obligation.parseObligationData(accountInfo?.data);
+    return obligationInfo;
+  }
+  else { return null }
 }
 
 
