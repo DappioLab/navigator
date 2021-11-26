@@ -2,12 +2,12 @@
 import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
 
 import { Connection, PublicKey } from "@solana/web3.js";
-import { Last_update } from "./state";
+import { LastUpdate } from "./state";
 import BN from "bn.js";
-import * as info from "./solend_info"
+import * as info from "./solendInfo"
 export interface obligation{
     version: BN;
-    lastUpdate: Last_update;
+    lastUpdate: LastUpdate;
     lendingMarket: PublicKey;
     owner:PublicKey;
     depositedValue:BN;
@@ -29,7 +29,7 @@ interface obligationLiquidity{
   borrowedAmount:BN;
   marketValue:BN;
 }
-const OBLIGATION_LAYOUT = struct([
+const OBLIGATIONLAYOUT = struct([
   u8("version"),
   struct([
       u64("lastUpdatedSlot"),
@@ -43,13 +43,13 @@ const OBLIGATION_LAYOUT = struct([
   u128("unhealthyBorrowValue"),
 
 ]);
-const COLLATERAL_LAYOUT = struct([
+const COLLATERALLAYOUT = struct([
   publicKey("reserveAddress"),
   u64("depositedAmount"),
   u128("marketValue"),
 ]);
 
-const LOAN_LAYOUT = struct([
+const LOANLAYOUT = struct([
   publicKey("reserveAddress"),
   u128("cumulativeBorrowRate"),
   u128("borrowedAmount"),
@@ -60,18 +60,18 @@ const U8 = struct([
   u8("amount"),
 ]);
 
-export async function get_obligation_public_key(wallet: PublicKey){
+export async function getObligationPublicKey(wallet: PublicKey){
 
-    const seed = info.SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
+    const seed = info.SOLENDLENDINGMARKETID.toString().slice(0, 32);
     const obligationAddress = await PublicKey.createWithSeed(
     wallet,
     seed,
-    info.SOLEND_PROGRAM_ID,);
+    info.SOLENDPROGRAMID,);
     return obligationAddress
 }
-export async function obligation_created(connection:Connection, wallet: PublicKey ) {
-  let obligation_info = await connection.getAccountInfo(await get_obligation_public_key(wallet))
-  if (obligation_info?.owner.toString()== info.SOLEND_PROGRAM_ID.toString()){
+export async function obligationCreated(connection:Connection, wallet: PublicKey ) {
+  let obligationInfo = await connection.getAccountInfo(await getObligationPublicKey(wallet))
+  if (obligationInfo?.owner.toString()== info.SOLENDPROGRAMID.toString()){
     return true;
   }
   return false
@@ -79,7 +79,7 @@ export async function obligation_created(connection:Connection, wallet: PublicKe
 
 export class Obligation implements obligation{
     version: BN;
-    lastUpdate: Last_update;
+    lastUpdate: LastUpdate;
     lendingMarket: PublicKey;
     owner:PublicKey;
     depositedValue:BN;
@@ -90,7 +90,7 @@ export class Obligation implements obligation{
     borrowedLiqudity:obligationLiquidity[];
     constructor(
     version: BN,
-    lastUpdate: Last_update,
+    lastUpdate: LastUpdate,
     lendingMarket: PublicKey,
     owner:PublicKey,
     depositedValue:BN,
@@ -145,22 +145,22 @@ class obligationLiquidity implements obligationLiquidity{
   }
 }
 export function parseObligationData(data: any){
-  let data_buffer = data as Buffer;
-  let amountData = data_buffer.slice(OBLIGATION_LAYOUT.span+64,OBLIGATION_LAYOUT.span+64+2);
+  let dataBuffer = data as Buffer;
+  let amountData = dataBuffer.slice(OBLIGATIONLAYOUT.span+64,OBLIGATIONLAYOUT.span+64+2);
   
-  let decoded_info = OBLIGATION_LAYOUT.decode(data_buffer);
-  let {version,lastUpdate,lendingMarket,owner,depositedValue,borrowedValue,allowedBorrowValue,unhealthyBorrowValue} = decoded_info;
+  let decodedInfo = OBLIGATIONLAYOUT.decode(dataBuffer);
+  let {version,lastUpdate,lendingMarket,owner,depositedValue,borrowedValue,allowedBorrowValue,unhealthyBorrowValue} = decodedInfo;
   let supplyedLen = U8.decode(amountData.slice(0,1)).amount as number;
   let borroeedLen = U8.decode(amountData.slice(1,2)).amount as number;
-  let all_posposition = data_buffer.slice(OBLIGATION_LAYOUT.span+66);
+  let allPosposition = dataBuffer.slice(OBLIGATIONLAYOUT.span+66);
   let depositCollateral:obligationCollateral[] = [];
   let borrowedLiquidity:obligationLiquidity[] = [];
   if (supplyedLen > 0 ){
     for (let index = 0; index < supplyedLen; index++){
       
-      let offset = (COLLATERAL_LAYOUT.span+32)*index
+      let offset = (COLLATERALLAYOUT.span+32)*index
       //console.log(offset);
-      let data = all_posposition.slice(offset)
+      let data = allPosposition.slice(offset)
       let collateralInfo = parseCollateralData(data);
       depositCollateral.push(collateralInfo);
     }
@@ -168,21 +168,21 @@ export function parseObligationData(data: any){
   if (borroeedLen > 0 ){
     for (let index = 0; index < borroeedLen; index++){
       
-      let offset = ((COLLATERAL_LAYOUT.span+32)* supplyedLen) + (LOAN_LAYOUT.span+32)*index
+      let offset = ((COLLATERALLAYOUT.span+32)* supplyedLen) + (LOANLAYOUT.span+32)*index
       //console.log(offset);
-      let data = all_posposition.slice(offset)
-      let supply_info = LOAN_LAYOUT.decode(data);
-      let {reserveAddress,cumulativeBorrowRate,borrowedAmount,marketValue} = supply_info;
+      let data = allPosposition.slice(offset)
+      let supplyInfo = LOANLAYOUT.decode(data);
+      let {reserveAddress,cumulativeBorrowRate,borrowedAmount,marketValue} = supplyInfo;
       //console.log(borrowedAmount.div(new BN(`1${''.padEnd(18, '0')}`)).toString());
       borrowedLiquidity.push( new obligationLiquidity(reserveAddress,cumulativeBorrowRate,borrowedAmount.div(new BN(`1${''.padEnd(18, '0')}`)),marketValue));
     }
   }
   //console.log(supplyedLen,borroeedLen,"\n",);
-  let obligation_info = new Obligation(version,lastUpdate,lendingMarket,owner,depositedValue,borrowedValue,allowedBorrowValue,unhealthyBorrowValue,depositCollateral,borrowedLiquidity);
-  return obligation_info;
+  let obligationInfo = new Obligation(version,lastUpdate,lendingMarket,owner,depositedValue,borrowedValue,allowedBorrowValue,unhealthyBorrowValue,depositCollateral,borrowedLiquidity);
+  return obligationInfo;
 }
 export function parseCollateralData(data:any){
-  let collateralInfo = COLLATERAL_LAYOUT.decode(data);
+  let collateralInfo = COLLATERALLAYOUT.decode(data);
   let {reserveAddress,depositedAmount,marketValue } = collateralInfo;
   let collateral = new obligationCollateral(reserveAddress,depositedAmount,marketValue);
   return collateral;

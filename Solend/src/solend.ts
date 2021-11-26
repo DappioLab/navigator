@@ -11,22 +11,24 @@ import {
   DataSizeFilter
 } from "@solana/web3.js";
 import BN from "bn.js";
-import * as info from "./solend_info"
+import * as info from "./solendInfo"
 import * as obligation from "./obligation"
-interface lending_market_info {
-  reserve_address: PublicKey;
-  supply_token_mint: PublicKey;
-  supply_token_decimal: BN;
-  reserve_token_mint: PublicKey;
-  reserve_token_decimal: BN;
-  supply_amount: BN;
-  supply_limit: BN;
-  supply_apy: number;
-  mining_apy: number;
-  reserve_info: state.Reserve;
+interface lendingMarketInfo {
+  reserveAddress: PublicKey;
+  supplyTokenMint: PublicKey;
+  supplyTokenDecimal: BN;
+  reserveTokenMint: PublicKey;
+  reserveTokenDecimal: BN;
+  supplyAmount: BN;
+  supplyLimit: BN;
+  supplyApy: number;
+  miningApy: number;
+  miningEnble: boolean;
+  reserveInfo: state.Reserve;
 
 }
 import * as state from "./state";
+import { isMining } from "./util";
 
 
 
@@ -34,103 +36,112 @@ import * as state from "./state";
 
 
 
-export class lending_info implements lending_market_info {
-  reserve_address: PublicKey;
-  supply_token_mint: PublicKey;
-  supply_token_decimal: BN;
-  reserve_token_mint: PublicKey;
-  reserve_token_decimal: BN;
-  supply_amount: BN;
-  supply_limit: BN;
-  supply_apy: number;
-  mining_apy: number;
-  reserve_info: state.Reserve;
-  //total_usd_value: BN;
+export class lendingInfo implements lendingMarketInfo {
+  reserveAddress: PublicKey;
+  supplyTokenMint: PublicKey;
+  supplyTokenDecimal: BN;
+  reserveTokenMint: PublicKey;
+  reserveTokenDecimal: BN;
+  supplyAmount: BN;
+  supplyLimit: BN;
+  supplyApy: number;
+  miningApy: number;
+  miningEnble: boolean;
+  reserveInfo: state.Reserve;
+  //totalUsdValue: BN;
   constructor(
-    reserve_address: PublicKey,
-    supply_token_mint: PublicKey,
-    supply_token_decimal: BN,
-    reserve_token_mint: PublicKey,
-    reserve_token_decimal: BN,
-    supply_amount: BN,
-    supply_limit: BN,
-    supply_apy: number,
-    mining_apy: number,
-    reserve_info: state.Reserve,
-    //total_usd_value: BN,
+    reserveAddress: PublicKey,
+    supplyTokenMint: PublicKey,
+    supplyTokenDecimal: BN,
+    reserveTokenMint: PublicKey,
+    reserveTokenDecimal: BN,
+    supplyAmount: BN,
+    supplyLimit: BN,
+    supplyApy: number,
+    miningApy: number,
+    miningEnble: boolean,
+    reserveInfo: state.Reserve,
+    //totalUsdValue: BN,
   ) {
-    this.reserve_address = reserve_address;
-    this.supply_token_mint = supply_token_mint;
-    this.supply_token_decimal = supply_token_decimal;
-    this.reserve_token_mint = reserve_token_mint;
-    this.reserve_token_decimal = reserve_token_decimal;
-    this.supply_amount = supply_amount;
-    this.supply_limit = supply_limit;
-    this.supply_apy = supply_apy;
-    this.mining_apy = mining_apy;
-    this.reserve_info = reserve_info;
-    //this.total_usd_value = total_usd_value;
+    this.reserveAddress = reserveAddress;
+    this.supplyTokenMint = supplyTokenMint;
+    this.supplyTokenDecimal = supplyTokenDecimal;
+    this.reserveTokenMint = reserveTokenMint;
+    this.reserveTokenDecimal = reserveTokenDecimal;
+    this.supplyAmount = supplyAmount;
+    this.supplyLimit = supplyLimit;
+    this.supplyApy = supplyApy;
+    this.miningApy = miningApy;
+    this.miningEnble = miningEnble
+    this.reserveInfo = reserveInfo;
+    //this.totalUsdValue = totalUsdValue;
   }
 }
 
-export async function get_all_lending_info(connection: Connection) {
-  const all_reserve = await get_all_reserve(connection);
-  let lending_infos = <Array<lending_info>>[];
+export async function getAllLendingInfo(connection: Connection) {
+  const allReserve = await getAllReserve(connection);
+  let lendingInfos = <Array<lendingInfo>>[];
+  let allUsdValue = new BN(0);
+  let allBorrowedValue = new BN(0);
+  for (let reservesMeta of allReserve) {
+    let borrowedAmount = reservesMeta[1].liquidity.borrowedAmountWads.div(new BN(`1${''.padEnd(18, '0')}`));
 
-  for (let reserves_meta of all_reserve) {
+    let availableAmount = reservesMeta[1].liquidity.availableAmount;
 
-    let borrowed_amount = reserves_meta[1].liquidity.borrowed_amount_wads.div(new BN(`1${''.padEnd(18, '0')}`));
+    let supplyAmount = borrowedAmount.add(availableAmount);
 
-    let available_amount = reserves_meta[1].liquidity.available_amount;
-
-    let supply_amount = borrowed_amount.add(available_amount);
-
-    let UtilizationRatio = reserves_meta[1].calculateUtilizationRatio()
-    let mining_apy = 0;
-    let borrowAPY = reserves_meta[1].calculateBorrowAPY() as number
+    let UtilizationRatio = reservesMeta[1].calculateUtilizationRatio()
+    let miningApy = 0;
+    let borrowAPY = reservesMeta[1].calculateBorrowAPY() as number
     let apy = UtilizationRatio * borrowAPY;
-    let decimal = new BN(reserves_meta[1].liquidity.mint_decimals).toNumber()
-    let borrowed_usd_value = borrowed_amount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reserves_meta[1].liquidity.market_price).div(new BN(`1${''.padEnd(18, '0')}
-    `))
-    
-    
-    const info = new lending_info(
-      reserves_meta[0],
-      reserves_meta[1].liquidity.mint_pubkey,
-      reserves_meta[1].liquidity.mint_decimals,
-      reserves_meta[1].collateral.reserve_token_mint,
-      reserves_meta[1].liquidity.mint_decimals,
-      supply_amount,
-      reserves_meta[1].config.deposit_limit,
+    let decimal = new BN(reservesMeta[1].liquidity.mintDecimals).toNumber()
+    if (await isMining(reservesMeta[0])) {
+      let borrowedUsdValue = borrowedAmount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reservesMeta[1].liquidity.marketPrice).div(new BN(`1${''.padEnd(18, '0')}
+    `));
+      let supplyUSDValue = supplyAmount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reservesMeta[1].liquidity.marketPrice).div(new BN(`1${''.padEnd(18, '0')}
+    `));
+
+      allUsdValue = allUsdValue.add(supplyUSDValue);
+      allBorrowedValue = allBorrowedValue.add(borrowedUsdValue);
+    }
+    const info = new lendingInfo(
+      reservesMeta[0],
+      reservesMeta[1].liquidity.mintPubkey,
+      reservesMeta[1].liquidity.mintDecimals,
+      reservesMeta[1].collateral.reserveTokenMint,
+      reservesMeta[1].liquidity.mintDecimals,
+      supplyAmount,
+      reservesMeta[1].config.depositLimit,
       apy,
-      mining_apy,
-      reserves_meta[1]
+      miningApy,
+      await isMining(reservesMeta[0]),
+      reservesMeta[1]
     )
-    lending_infos.push(info);
+    lendingInfos.push(info);
 
   }
-  return lending_infos;
+  return lendingInfos;
 }
-async function get_all_reserve(connection: Connection) {
-  const program_id_memcmp: MemcmpFilter = {
+async function getAllReserve(connection: Connection) {
+  const programIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 10,
       //offset 10byte
-      bytes: info.SOLEND_LENDING_MARKET_ID.toString(),
+      bytes: info.SOLENDLENDINGMARKETID.toString(),
     }
   }
-  const data_size_filters: DataSizeFilter = {
+  const dataSizeFilters: DataSizeFilter = {
 
-    dataSize: info.RESERVE_LAYOUT_SPAN,
+    dataSize: info.RESERVELAYOUTSPAN,
 
   }
 
-  const filters = [program_id_memcmp, data_size_filters];
+  const filters = [programIdMemcmp, dataSizeFilters];
 
   const config: GetProgramAccountsConfig = { filters: filters }
-  const reserve_accounts = await connection.getProgramAccounts(info.SOLEND_PROGRAM_ID, config);
+  const reserveAccounts = await connection.getProgramAccounts(info.SOLENDPROGRAMID, config);
   let reserves = <Array<[PublicKey, state.Reserve]>>[];
-  for (let account of reserve_accounts) {
+  for (let account of reserveAccounts) {
 
     let info = await state.parseReserveData(account.account.data);
     reserves.push([account.pubkey, info]);
@@ -139,8 +150,8 @@ async function get_all_reserve(connection: Connection) {
   return reserves;
 
 }
-export async function getObligation(connection:Connection,wallet:PublicKey) {
-  let obligationAddress =await obligation.get_obligation_public_key(wallet);
+export async function getObligation(connection: Connection, wallet: PublicKey) {
+  let obligationAddress = await obligation.getObligationPublicKey(wallet);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
   let obligationInfo = obligation.parseObligationData(accountInfo?.data);
   return obligationInfo;

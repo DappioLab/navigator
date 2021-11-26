@@ -1,12 +1,8 @@
 import {
     PublicKey,
-    SYSVAR_CLOCK_PUBKEY,
-    Transaction,
-    TransactionInstruction,
-    SystemProgram,
-    TransferParams,
     Connection
   } from '@solana/web3.js';
+  import * as info from "./solendInfo"
   import { TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID} from '@solana/spl-token';
 export async function findAssociatedTokenAddress(
     walletAddress: PublicKey,
@@ -21,10 +17,18 @@ export async function findAssociatedTokenAddress(
         ASSOCIATED_TOKEN_PROGRAM_ID
     ))[0];
 }
-export async function check_token_account(publickey:PublicKey,connection:Connection) {
-    let account_info = await connection.getAccountInfo(publickey);
-    if (account_info?.owner.toString() == TOKEN_PROGRAM_ID.toString()){
+export async function checkTokenAccount(publickey:PublicKey,connection:Connection) {
+    let accountInfo = await connection.getAccountInfo(publickey);
+    if (accountInfo?.owner.toString() == TOKEN_PROGRAM_ID.toString()){
         return true
     }
     else  return false
 }
+export async function isMining(reserveAddress:PublicKey) {
+    for (let address of info.MININGREVERSES ){
+        if (reserveAddress.toString() == address){
+            return true;
+        }
+    }
+    return false;
+}  

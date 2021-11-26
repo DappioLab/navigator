@@ -17,8 +17,8 @@ enum LendingInstruction {
     WithdrawObligationCollateralAndRedeemReserveLiquidity = 15,
     SyncNative = 17,
 }
-import * as info from "./solend_info"
-const SOLEND_PROGRAM_ID = info.SOLEND_PROGRAM_ID;
+import * as info from "./solendInfo"
+const SOLENDPROGRAMID = info.SOLENDPROGRAMID;
 import * as util from "./util"
 
 // deposit 
@@ -32,11 +32,11 @@ import {
     SystemProgram,
     TransferParams,
     Connection,
-    SYSVAR_RENT_PUBKEY
+    SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
 import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
-import { get_obligation_public_key, obligation_created } from "./obligation";
+import { getObligationPublicKey, obligationCreated } from "./obligation";
 /// Deposit liquidity into a reserve in exchange for collateral, and deposit the collateral as well.
 export const depositReserveLiquidityAndObligationCollateralInstruction = (
     liquidityAmount: number | BN,
@@ -88,7 +88,7 @@ export const depositReserveLiquidityAndObligationCollateralInstruction = (
     ];
     return new TransactionInstruction({
         keys,
-        programId: SOLEND_PROGRAM_ID,
+        programId: SOLENDPROGRAMID,
         data,
     });
 };
@@ -147,7 +147,7 @@ export const withdrawObligationCollateralAndRedeemReserveLiquidity = (
     ];
     return new TransactionInstruction({
         keys,
-        programId: SOLEND_PROGRAM_ID,
+        programId: SOLENDPROGRAMID,
         data,
     });
 };
@@ -196,7 +196,7 @@ export const refreshReserveInstruction = (
 
     return new TransactionInstruction({
         keys,
-        programId: SOLEND_PROGRAM_ID,
+        programId: SOLENDPROGRAMID,
         data,
     });
 };
@@ -248,44 +248,44 @@ export const refreshObligationInstruction = (
     );
     return new TransactionInstruction({
         keys,
-        programId: SOLEND_PROGRAM_ID,
+        programId: SOLENDPROGRAMID,
         data,
     });
 };
 
-export async function wrap_native(amount: BN, wallet_public_key: PublicKey, connection: Connection, create_ata: boolean) {
+export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection: Connection, createAta: boolean) {
     let tx = new Transaction;
 
-    let destination_ata = await util.findAssociatedTokenAddress(wallet_public_key, NATIVE_MINT);
-    if (create_ata == true) {
-        if ((await connection.getAccountInfo(destination_ata))?.owner.toString() == TOKEN_PROGRAM_ID.toString()) {
+    let destinationAta = await util.findAssociatedTokenAddress(walletPublicKey, NATIVE_MINT);
+    if (createAta == true) {
+        if ((await connection.getAccountInfo(destinationAta))?.owner.toString() == TOKEN_PROGRAM_ID.toString()) {
             //console.log("wSol was created")
 
         }
         else {
             //console.log("creating wSol account")
-            let create_ata_ix = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT, destination_ata, wallet_public_key, wallet_public_key);
-            tx.add(create_ata_ix);
+            let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT, destinationAta, walletPublicKey, walletPublicKey);
+            tx.add(createAtaIx);
         }
     }
-    let transfer_pram = { fromPubkey: wallet_public_key, lamports: amount.toNumber(), toPubkey: destination_ata }
-    let transfer_lamport_ix = SystemProgram.transfer(transfer_pram);
-    tx.add(transfer_lamport_ix);
-    let key = [{ pubkey: destination_ata, isSigner: false, isWritable: true }];
+    let transferPram = { fromPubkey: walletPublicKey, lamports: amount.toNumber(), toPubkey: destinationAta }
+    let transferLamportIx = SystemProgram.transfer(transferPram);
+    tx.add(transferLamportIx);
+    let key = [{ pubkey: destinationAta, isSigner: false, isWritable: true }];
     const dataLayout = struct([u8('instruction')]);
     const data = Buffer.alloc(dataLayout.span);
     dataLayout.encode(
         { instruction: LendingInstruction.SyncNative },
         data,
     );
-    let sync_native_ix = new TransactionInstruction({ keys: key, programId: TOKEN_PROGRAM_ID, data: data });
-    tx.add(sync_native_ix);
+    let syncNativeIx = new TransactionInstruction({ keys: key, programId: TOKEN_PROGRAM_ID, data: data });
+    tx.add(syncNativeIx);
     return tx;
 }
-export async function create_obligation_account_ix(wallet :PublicKey) {
+export async function createObligationAccountIx(wallet :PublicKey) {
     let tx = new Transaction;
-    const seed = info.SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
-    let createAccountFromSeedIx = await  SystemProgram.createAccountWithSeed({fromPubkey:wallet,seed:seed,space:1300,newAccountPubkey:await get_obligation_public_key(wallet),basePubkey:wallet,lamports:9938880,programId:info.SOLEND_PROGRAM_ID});
+    const seed = info.SOLENDLENDINGMARKETID.toString().slice(0, 32);
+    let createAccountFromSeedIx = await  SystemProgram.createAccountWithSeed({fromPubkey:wallet,seed:seed,space:1300,newAccountPubkey:await getObligationPublicKey(wallet),basePubkey:wallet,lamports:9938880,programId:info.SOLENDPROGRAMID});
     //console.log(createAccountFromSeedIx);
     tx.add(createAccountFromSeedIx);
     const dataLayout = struct([u8('instruction')]);
@@ -295,8 +295,8 @@ export async function create_obligation_account_ix(wallet :PublicKey) {
         data,
     );
     let keys = [
-        { pubkey: await get_obligation_public_key(wallet), isSigner: false, isWritable: true},
-        {pubkey: info.SOLEND_LENDING_MARKET_ID, isSigner: false, isWritable: false},
+        { pubkey: await getObligationPublicKey(wallet), isSigner: false, isWritable: true},
+        {pubkey: info.SOLENDLENDINGMARKETID, isSigner: false, isWritable: false},
         {pubkey: wallet, isSigner: true, isWritable: true},    
     ];
     keys.push({
@@ -315,9 +315,9 @@ export async function create_obligation_account_ix(wallet :PublicKey) {
         isWritable: false,
     });
 
-    let create_obligation_ix = new TransactionInstruction(
-        {keys,programId:info.SOLEND_PROGRAM_ID,data:data}
+    let createObligationIx = new TransactionInstruction(
+        {keys,programId:info.SOLENDPROGRAMID,data:data}
         )
-    tx.add(create_obligation_ix);
+    tx.add(createObligationIx);
     return tx;
 }

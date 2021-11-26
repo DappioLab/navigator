@@ -3,61 +3,61 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 export interface Reserve {
     version: BN;
-    last_update: Last_update;
-    lending_market: PublicKey;
-    liquidity: Reserve_liquidity;
-    collateral: Reserve_collateral;
-    config: Reserve_config;
+    lastUpdate: LastUpdate;
+    lendingMarket: PublicKey;
+    liquidity: ReserveLiquidity;
+    collateral: ReserveCollateral;
+    config: ReserveConfig;
     calculateUtilizationRatio():number;
     calculateBorrowAPY():number;
 
 }
 export class Reserve implements Reserve {
     version: BN;
-    last_update: Last_update;
-    lending_market: PublicKey;
-    liquidity: Reserve_liquidity;
-    collateral: Reserve_collateral;
-    config: Reserve_config;
+    lastUpdate: LastUpdate;
+    lendingMarket: PublicKey;
+    liquidity: ReserveLiquidity;
+    collateral: ReserveCollateral;
+    config: ReserveConfig;
     constructor(
         version: BN,
-        last_update: Last_update,
-        lending_market: PublicKey,
-        liquidity: Reserve_liquidity,
-        collateral: Reserve_collateral,
-        config: Reserve_config,
+        lastUpdate: LastUpdate,
+        lendingMarket: PublicKey,
+        liquidity: ReserveLiquidity,
+        collateral: ReserveCollateral,
+        config: ReserveConfig,
 
     ) {
         this.version = version;
-        this.last_update = last_update;
-        this.lending_market = lending_market;
+        this.lastUpdate = lastUpdate;
+        this.lendingMarket = lendingMarket;
         this.liquidity = liquidity;
         this.collateral = collateral;
         this.config = config;
     }
     calculateUtilizationRatio() {
-        const borrowedAmount = this.liquidity.borrowed_amount_wads.div(new BN(`1${''.padEnd(18, '0')}`));
-        const total_amount = this.liquidity.available_amount.add(borrowedAmount);
+        const borrowedAmount = this.liquidity.borrowedAmountWads.div(new BN(`1${''.padEnd(18, '0')}`));
+        const totalAmount = this.liquidity.availableAmount.add(borrowedAmount);
         const currentUtilization =
-            (borrowedAmount.toNumber() / total_amount.toNumber());
+            (borrowedAmount.toNumber() / totalAmount.toNumber());
         return currentUtilization;
     }
 
     calculateBorrowAPY() {
         const currentUtilization = this.calculateUtilizationRatio();
-        const optimalUtilization = new BN(this.config.optimal_utilization_rate).toNumber() / 100;
+        const optimalUtilization = new BN(this.config.optimalUtilizationRate).toNumber() / 100;
         let borrowAPY;
         if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
             const normalizedFactor = currentUtilization / optimalUtilization;
-            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
-            const minBorrowRate = new BN(this.config.min_borrow_rate).toNumber() / 100;
+            const optimalBorrowRate = new BN(this.config.optimalBorrowRate).toNumber() / 100;
+            const minBorrowRate = new BN(this.config.minBorrowRate).toNumber() / 100;
             borrowAPY =
                 normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate
         } else {
             const normalizedFactor =
                 (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
-            const optimalBorrowRate = new BN(this.config.optimal_borrow_rate).toNumber() / 100;
-            const maxBorrowRate = new BN(this.config.max_borrow_rate).toNumber() / 100;
+            const optimalBorrowRate = new BN(this.config.optimalBorrowRate).toNumber() / 100;
+            const maxBorrowRate = new BN(this.config.maxBorrowRate).toNumber() / 100;
             borrowAPY =
                 normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
                 optimalBorrowRate;
@@ -68,179 +68,179 @@ export class Reserve implements Reserve {
     };
 }
 
-const RESERVE_LAYOUT = struct([
+const RESERVELAYOUT = struct([
     u8("version"),
     struct([
-        u64("last_updated_slot"),
+        u64("lastUpdatedSlot"),
         bool("stale")
-    ], "last_update"),
-    publicKey("lending_market"),
+    ], "lastUpdate"),
+    publicKey("lendingMarket"),
 
     struct([
-        publicKey("mint_pubkey"),
-        u8("mint_decimals"),
-        publicKey("supply_pubkey"),
-        publicKey("pyth_oracle_pubkey"),
-        publicKey("switchboard_oracle_pubkey"),
-        u64("available_amount"),
-        u128("borrowed_amount_wads"),
-        u128("cumulative_borrow_rate_wads"),
-        u128("market_price")
+        publicKey("mintPubkey"),
+        u8("mintDecimals"),
+        publicKey("supplyPubkey"),
+        publicKey("pythOraclePubkey"),
+        publicKey("switchboardOraclePubkey"),
+        u64("availableAmount"),
+        u128("borrowedAmountWads"),
+        u128("cumulativeBorrowRateWads"),
+        u128("marketPrice")
     ], "liquidity"),
     struct([
-        publicKey("reserve_token_mint"),
-        u64("mint_total_supply"),
-        publicKey("supply_pubkey")
+        publicKey("reserveTokenMint"),
+        u64("mintTotalSupply"),
+        publicKey("supplyPubkey")
 
     ], "collateral"),
     struct([
-        u8("optimal_utilization_rate"),
-        u8("loan_to_value_ratio"),
-        u8("liquidation_bonus"),
-        u8("liquidation_threshold"),
-        u8("min_borrow_rate"),
-        u8("optimal_borrow_rate"),
-        u8("max_borrow_rate"),
+        u8("optimalUtilizationRate"),
+        u8("loanToValueRatio"),
+        u8("liquidationBonus"),
+        u8("liquidationThreshold"),
+        u8("minBorrowRate"),
+        u8("optimalBorrowRate"),
+        u8("maxBorrowRate"),
         struct([
-            u64("borrow_fee_wad"),
-            u64("flash_loan_fee_wad"),
-            u8("host_fee_percentage"),
+            u64("borrowFeeWad"),
+            u64("flashLoanFeeWad"),
+            u8("hostFeePercentage"),
         ], "fees"),
-        u64("deposit_limit"),
-        u64("borrow_limit"),
-        publicKey("fee_receiver")
+        u64("depositLimit"),
+        u64("borrowLimit"),
+        publicKey("feeReceiver")
     ], "config")
 
 
 ]);
-class Reserve_config {
-    optimal_utilization_rate: BN;
-    loan_to_value_ratio: BN;
-    liquidation_bonus: BN;
-    liquidation_threshold: BN;
-    min_borrow_rate: BN;
-    optimal_borrow_rate: BN;
-    max_borrow_rate: BN;
-    fees: Reserve_fees;
-    deposit_limit: BN;
-    borrow_limit: BN;
-    fee_receiver: PublicKey;
+class ReserveConfig {
+    optimalUtilizationRate: BN;
+    loanToValueRatio: BN;
+    liquidationBonus: BN;
+    liquidationThreshold: BN;
+    minBorrowRate: BN;
+    optimalBorrowRate: BN;
+    maxBorrowRate: BN;
+    fees: ReserveFees;
+    depositLimit: BN;
+    borrowLimit: BN;
+    feeReceiver: PublicKey;
     constructor(
-        optimal_utilization_rate: BN,
-        loan_to_value_ratio: BN,
-        liquidation_bonus: BN,
-        liquidation_threshold: BN,
-        min_borrow_rate: BN,
-        optimal_borrow_rate: BN,
-        max_borrow_rate: BN,
-        fees: Reserve_fees,
-        deposit_limit: BN,
-        borrow_limit: BN,
-        fee_receiver: PublicKey,
+        optimalUtilizationRate: BN,
+        loanToValueRatio: BN,
+        liquidationBonus: BN,
+        liquidationThreshold: BN,
+        minBorrowRate: BN,
+        optimalBorrowRate: BN,
+        maxBorrowRate: BN,
+        fees: ReserveFees,
+        depositLimit: BN,
+        borrowLimit: BN,
+        feeReceiver: PublicKey,
     ) {
-        this.optimal_utilization_rate = optimal_utilization_rate;
-        this.loan_to_value_ratio = loan_to_value_ratio;
-        this.liquidation_bonus = liquidation_bonus;
-        this.liquidation_threshold = liquidation_threshold;
-        this.min_borrow_rate = min_borrow_rate;
-        this.optimal_borrow_rate = optimal_borrow_rate;
-        this.max_borrow_rate = max_borrow_rate;
+        this.optimalUtilizationRate = optimalUtilizationRate;
+        this.loanToValueRatio = loanToValueRatio;
+        this.liquidationBonus = liquidationBonus;
+        this.liquidationThreshold = liquidationThreshold;
+        this.minBorrowRate = minBorrowRate;
+        this.optimalBorrowRate = optimalBorrowRate;
+        this.maxBorrowRate = maxBorrowRate;
         this.fees = fees;
-        this.deposit_limit = deposit_limit;
-        this.borrow_limit = borrow_limit;
-        this.fee_receiver = fee_receiver;
+        this.depositLimit = depositLimit;
+        this.borrowLimit = borrowLimit;
+        this.feeReceiver = feeReceiver;
     }
 }
 
-class Reserve_collateral {
-    reserve_token_mint: PublicKey;
-    mint_total_supply: BN;
-    supply_pubkey: PublicKey;
+class ReserveCollateral {
+    reserveTokenMint: PublicKey;
+    mintTotalSupply: BN;
+    supplyPubkey: PublicKey;
     constructor(
-        reserve_token_mint: PublicKey,
-        mint_total_supply: BN,
-        supply_pubkey: PublicKey,
+        reserveTokenMint: PublicKey,
+        mintTotalSupply: BN,
+        supplyPubkey: PublicKey,
 
 
     ) {
 
-        this.reserve_token_mint = reserve_token_mint;
-        this.mint_total_supply = mint_total_supply;
-        this.supply_pubkey = supply_pubkey;
+        this.reserveTokenMint = reserveTokenMint;
+        this.mintTotalSupply = mintTotalSupply;
+        this.supplyPubkey = supplyPubkey;
     }
 }
-export class Last_update {
-    last_updated_slot: BN;
+export class LastUpdate {
+    lastUpdatedSlot: BN;
     stale: boolean;
 
     constructor(
-        last_updated_slot: BN,
+        lastUpdatedSlot: BN,
         stale: boolean,
     ) {
-        this.last_updated_slot = last_updated_slot;
+        this.lastUpdatedSlot = lastUpdatedSlot;
         this.stale = stale;
     }
 }
-class Reserve_liquidity {
-    mint_pubkey: PublicKey;
-    mint_decimals: BN;
-    supply_pubkey: PublicKey;
-    pyth_oracle_pubkey: PublicKey;
-    switchboard_oracle_pubkey: PublicKey;
-    available_amount: BN;
-    borrowed_amount_wads: BN;
-    cumulative_borrow_rate_wads: BN;
-    market_price: BN;
+class ReserveLiquidity {
+    mintPubkey: PublicKey;
+    mintDecimals: BN;
+    supplyPubkey: PublicKey;
+    pythOraclePubkey: PublicKey;
+    switchboardOraclePubkey: PublicKey;
+    availableAmount: BN;
+    borrowedAmountWads: BN;
+    cumulativeBorrowRateWads: BN;
+    marketPrice: BN;
     constructor(
-        mint_pubkey: PublicKey,
-        mint_decimals: BN,
-        supply_pubkey: PublicKey,
-        pyth_oracle_pubkey: PublicKey,
-        switchboard_oracle_pubkey: PublicKey,
-        available_amount: BN,
-        borrowed_amount_wads: BN,
-        cumulative_borrow_rate_wads: BN,
-        market_price: BN,
+        mintPubkey: PublicKey,
+        mintDecimals: BN,
+        supplyPubkey: PublicKey,
+        pythOraclePubkey: PublicKey,
+        switchboardOraclePubkey: PublicKey,
+        availableAmount: BN,
+        borrowedAmountWads: BN,
+        cumulativeBorrowRateWads: BN,
+        marketPrice: BN,
     ) {
-        this.mint_pubkey = mint_pubkey;
-        this.mint_decimals = mint_decimals;
-        this.supply_pubkey = supply_pubkey;
-        this.pyth_oracle_pubkey = pyth_oracle_pubkey;
-        this.switchboard_oracle_pubkey = switchboard_oracle_pubkey;
-        this.available_amount = available_amount;
-        this.borrowed_amount_wads = borrowed_amount_wads;
-        this.cumulative_borrow_rate_wads = cumulative_borrow_rate_wads;
-        this.market_price = market_price;
+        this.mintPubkey = mintPubkey;
+        this.mintDecimals = mintDecimals;
+        this.supplyPubkey = supplyPubkey;
+        this.pythOraclePubkey = pythOraclePubkey;
+        this.switchboardOraclePubkey = switchboardOraclePubkey;
+        this.availableAmount = availableAmount;
+        this.borrowedAmountWads = borrowedAmountWads;
+        this.cumulativeBorrowRateWads = cumulativeBorrowRateWads;
+        this.marketPrice = marketPrice;
     }
 }
-class Reserve_fees {
-    borrow_fee_wad: BN;
-    flash_loan_fee_wad: BN;
-    host_fee_percentage: BN;
+class ReserveFees {
+    borrowFeeWad: BN;
+    flashLoanFeeWad: BN;
+    hostFeePercentage: BN;
     constructor(
-        borrow_fee_wad: BN,
-        flash_loan_fee_wad: BN,
-        host_fee_percentage: BN,
+        borrowFeeWad: BN,
+        flashLoanFeeWad: BN,
+        hostFeePercentage: BN,
     ) {
-        this.borrow_fee_wad = borrow_fee_wad;
-        this.flash_loan_fee_wad = flash_loan_fee_wad;
-        this.host_fee_percentage = host_fee_percentage;
+        this.borrowFeeWad = borrowFeeWad;
+        this.flashLoanFeeWad = flashLoanFeeWad;
+        this.hostFeePercentage = hostFeePercentage;
     }
 }
 
 export function parseReserveData(data: any): Reserve {
 
-    const decoded_data = RESERVE_LAYOUT.decode(data)
+    const decodedData = RESERVELAYOUT.decode(data)
     let { version,
-        last_update,
-        lending_market,
+        lastUpdate,
+        lendingMarket,
         liquidity,
         collateral,
-        config } = decoded_data;
+        config } = decodedData;
     let reserve = new Reserve(
         version,
-        last_update,
-        lending_market,
+        lastUpdate,
+        lendingMarket,
         liquidity,
         collateral,
         config);

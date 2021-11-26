@@ -1,6 +1,6 @@
 import * as solana from "@solana/web3.js"
 import * as solend from "./solend";
-import { check_token_account, findAssociatedTokenAddress } from "./util";
+import { checkTokenAccount, findAssociatedTokenAddress } from "./util";
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import BN from "bn.js";
 import {
@@ -16,57 +16,57 @@ import {
     DataSizeFilter
 } from "@solana/web3.js";
 import * as ins from "./instructions"
-import { lending_info } from "./solend";
-import * as info from "./solend_info"
+import { lendingInfo } from "./solend";
+import * as info from "./solendInfo"
 import * as obligation from "./obligation"
 import * as state from "./state";
-export async function create_deposit_tx(lending_info: lending_info, wallet: PublicKey, amount: BN, connection: Connection, supply_token_address?: PublicKey, reserve_token_address?: PublicKey) {
+export async function createDepositTx(lendingInfo: lendingInfo, wallet: PublicKey, amount: BN, connection: Connection, supplyTokenAddress?: PublicKey, reserveTokenAddress?: PublicKey) {
 
     let tx: Transaction = new Transaction;
-    if (await obligation.obligation_created(connection,wallet)){
+    if (await obligation.obligationCreated(connection,wallet)){
 
     }
     else{
-        let create_obligation_ix = await ins.create_obligation_account_ix(wallet)
-        tx.add(create_obligation_ix);
+        let createObligationIx = await ins.createObligationAccountIx(wallet)
+        tx.add(createObligationIx);
     }
-    if (reserve_token_address) {
-        reserve_token_address = supply_token_address as PublicKey;
-    }
-    else
-        reserve_token_address = await findAssociatedTokenAddress(wallet, lending_info.reserve_token_mint);
-    if (supply_token_address) {
-        supply_token_address = supply_token_address as PublicKey;
+    if (reserveTokenAddress) {
+        reserveTokenAddress = supplyTokenAddress as PublicKey;
     }
     else
-        supply_token_address = await findAssociatedTokenAddress(wallet, lending_info.supply_token_mint);
-    if (await check_token_account(reserve_token_address, connection)) { }
-    else {
-        let create_ata_ix = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lending_info.reserve_token_mint, reserve_token_address, wallet, wallet);
-        tx.add(create_ata_ix);
+        reserveTokenAddress = await findAssociatedTokenAddress(wallet, lendingInfo.reserveTokenMint);
+    if (supplyTokenAddress) {
+        supplyTokenAddress = supplyTokenAddress as PublicKey;
     }
-    /*if (await check_token_account(supply_token_address, connection)) { }
+    else
+        supplyTokenAddress = await findAssociatedTokenAddress(wallet, lendingInfo.supplyTokenMint);
+    if (await checkTokenAccount(reserveTokenAddress, connection)) { }
     else {
-        let create_ata_ix = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lending_info.supply_token_mint, supply_token_address, wallet, wallet);
-        tx.add(create_ata_ix);
+        let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingInfo.reserveTokenMint, reserveTokenAddress, wallet, wallet);
+        tx.add(createAtaIx);
+    }
+    /*if (await checkTokenAccount(supplyTokenAddress, connection)) { }
+    else {
+        let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingInfo.supplyTokenMint, supplyTokenAddress, wallet, wallet);
+        tx.add(createAtaIx);
     }*/
-    let refresh_ix = await ins.refreshReserveInstruction(lending_info.reserve_address, lending_info.reserve_info.liquidity.pyth_oracle_pubkey, lending_info.reserve_info.liquidity.switchboard_oracle_pubkey);
-    //console.log(refresh_ix);
-    tx.add(refresh_ix);
-    if (lending_info.supply_token_mint.toString() == NATIVE_MINT.toString()) {
-        let wrap_ix = await ins.wrap_native(amount, wallet, connection, true);
-        tx.add(wrap_ix);
+    let refreshIx = await ins.refreshReserveInstruction(lendingInfo.reserveAddress, lendingInfo.reserveInfo.liquidity.pythOraclePubkey, lendingInfo.reserveInfo.liquidity.switchboardOraclePubkey);
+    //console.log(refreshIx);
+    tx.add(refreshIx);
+    if (lendingInfo.supplyTokenMint.toString() == NATIVE_MINT.toString()) {
+        let wrapIx = await ins.wrapNative(amount, wallet, connection, true);
+        tx.add(wrapIx);
     }
 
-    let supply_ix = await ins.depositReserveLiquidityAndObligationCollateralInstruction(
-        amount, supply_token_address, reserve_token_address, lending_info.reserve_address, lending_info.reserve_info.liquidity.supply_pubkey, lending_info.reserve_token_mint, info.SOLEND_LENDING_MARKET_ID, info.MARKET_PDA, lending_info.reserve_info.collateral.supply_pubkey,await obligation.get_obligation_public_key(wallet), wallet,lending_info.reserve_info.liquidity.pyth_oracle_pubkey, lending_info.reserve_info.liquidity.switchboard_oracle_pubkey,wallet
+    let supplyIx = await ins.depositReserveLiquidityAndObligationCollateralInstruction(
+        amount, supplyTokenAddress, reserveTokenAddress, lendingInfo.reserveAddress, lendingInfo.reserveInfo.liquidity.supplyPubkey, lendingInfo.reserveTokenMint, info.SOLENDLENDINGMARKETID, info.MARKETPDA, lendingInfo.reserveInfo.collateral.supplyPubkey,await obligation.getObligationPublicKey(wallet), wallet,lendingInfo.reserveInfo.liquidity.pythOraclePubkey, lendingInfo.reserveInfo.liquidity.switchboardOraclePubkey,wallet
     );
-    //console.log(supply_ix.keys[0].pubkey.toString());
-    tx.add(supply_ix);
+    //console.log(supplyIx.keys[0].pubkey.toString());
+    tx.add(supplyIx);
     return tx;
 }
 
-export async function createWithdrawTx(wallet:PublicKey,reserve_address:PublicKey ,amount:BN,obligationInfo:obligation.obligation,lendingMarketInfo:lending_info,connection:Connection,withdrawTokenAddress?: PublicKey, reserveTokenAddress?: PublicKey) {
+export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey ,amount:BN,obligationInfo:obligation.obligation,lendingMarketInfo:lendingInfo,connection:Connection,withdrawTokenAddress?: PublicKey, reserveTokenAddress?: PublicKey) {
     let tx = new Transaction;
     let depositReserves: PublicKey[] = [];
     let borrowedReserves: PublicKey[] = [];
@@ -74,46 +74,46 @@ export async function createWithdrawTx(wallet:PublicKey,reserve_address:PublicKe
         depositReserves.push(reserve.reserve);
         let reserveInfo = state.parseReserveData((await connection.getAccountInfo(reserve.reserve))?.data)
         tx.add(
-            ins.refreshReserveInstruction(reserve.reserve,reserveInfo.liquidity.pyth_oracle_pubkey,reserveInfo.liquidity.switchboard_oracle_pubkey)
+            ins.refreshReserveInstruction(reserve.reserve,reserveInfo.liquidity.pythOraclePubkey,reserveInfo.liquidity.switchboardOraclePubkey)
         );
     }
     for (let reserve of obligationInfo.borrowedLiqudity){
         borrowedReserves.push(reserve.reserve);
         let reserveInfo = state.parseReserveData((await connection.getAccountInfo(reserve.reserve))?.data)
         tx.add(
-            ins.refreshReserveInstruction(reserve.reserve,reserveInfo.liquidity.pyth_oracle_pubkey,reserveInfo.liquidity.switchboard_oracle_pubkey)
+            ins.refreshReserveInstruction(reserve.reserve,reserveInfo.liquidity.pythOraclePubkey,reserveInfo.liquidity.switchboardOraclePubkey)
         );
     }
-    tx.add(ins.refreshObligationInstruction(await obligation.get_obligation_public_key(wallet),depositReserves,borrowedReserves));
-    if (await obligation.obligation_created(connection,wallet)){
+    tx.add(ins.refreshObligationInstruction(await obligation.getObligationPublicKey(wallet),depositReserves,borrowedReserves));
+    if (await obligation.obligationCreated(connection,wallet)){
 
     }
     else{
-        let create_obligation_ix = await ins.create_obligation_account_ix(wallet)
-        tx.add(create_obligation_ix);
+        let createObligationIx = await ins.createObligationAccountIx(wallet)
+        tx.add(createObligationIx);
     }
     if (reserveTokenAddress) {
         reserveTokenAddress = reserveTokenAddress as PublicKey;
     }
     else
-        reserveTokenAddress = await findAssociatedTokenAddress(wallet, lendingMarketInfo.reserve_token_mint);
+        reserveTokenAddress = await findAssociatedTokenAddress(wallet, lendingMarketInfo.reserveTokenMint);
     if (withdrawTokenAddress) {
         withdrawTokenAddress = withdrawTokenAddress as PublicKey;
     }
     else
-        withdrawTokenAddress = await findAssociatedTokenAddress(wallet, lendingMarketInfo.supply_token_mint);
-    if (await check_token_account(reserveTokenAddress, connection)) { }
+        withdrawTokenAddress = await findAssociatedTokenAddress(wallet, lendingMarketInfo.supplyTokenMint);
+    if (await checkTokenAccount(reserveTokenAddress, connection)) { }
     else {
-        let create_ata_ix = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingMarketInfo.reserve_token_mint, reserveTokenAddress, wallet, wallet);
-        tx.add(create_ata_ix);
+        let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingMarketInfo.reserveTokenMint, reserveTokenAddress, wallet, wallet);
+        tx.add(createAtaIx);
     }
     let withdrawIns = ins.withdrawObligationCollateralAndRedeemReserveLiquidity(
         amount,
-        lendingMarketInfo.reserve_info.collateral.supply_pubkey,
-        reserveTokenAddress,reserve_address,await obligation.get_obligation_public_key(wallet),info.SOLEND_LENDING_MARKET_ID,info.MARKET_PDA,withdrawTokenAddress,lendingMarketInfo.reserve_token_mint,lendingMarketInfo.reserve_info.liquidity.supply_pubkey,wallet,wallet);
+        lendingMarketInfo.reserveInfo.collateral.supplyPubkey,
+        reserveTokenAddress,reserveAddress,await obligation.getObligationPublicKey(wallet),info.SOLENDLENDINGMARKETID,info.MARKETPDA,withdrawTokenAddress,lendingMarketInfo.reserveTokenMint,lendingMarketInfo.reserveInfo.liquidity.supplyPubkey,wallet,wallet);
     
     tx.add(withdrawIns);
-    if (lendingMarketInfo.supply_token_mint.toString()== NATIVE_MINT.toString()){
+    if (lendingMarketInfo.supplyTokenMint.toString()== NATIVE_MINT.toString()){
         tx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,withdrawTokenAddress,wallet,wallet,[]))
     }
     return tx;
