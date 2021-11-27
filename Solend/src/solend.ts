@@ -167,7 +167,7 @@ export async function getObligation(connection: Connection, wallet: PublicKey) {
     let obligationInfo = obligation.parseObligationData(accountInfo?.data);
     return obligationInfo;
   }
-  else { return null }
+  else { return obligation.defaultObligation() }
 }
 
 

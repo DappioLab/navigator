@@ -187,3 +187,6 @@ export function parseCollateralData(data:any){
   let collateral = new obligationCollateral(reserveAddress,depositedAmount,marketValue);
   return collateral;
 }
+export function defaultObligation(){
+  return (new Obligation(new BN(1),new LastUpdate(new BN(0),false),PublicKey.default,PublicKey.default,new BN(0),new BN(0),new BN(0),new BN(0),[],[]));
+}
