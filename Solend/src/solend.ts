@@ -19,6 +19,7 @@ interface lendingMarketInfo {
   supplyTokenDecimal: BN;
   reserveTokenMint: PublicKey;
   reserveTokenDecimal: BN;
+  reserveTokenSupply:BN;
   supplyAmount: BN;
   supplyLimit: BN;
   supplyApy: number;
@@ -41,6 +42,7 @@ export class lendingInfo implements lendingMarketInfo {
   supplyTokenDecimal: BN;
   reserveTokenMint: PublicKey;
   reserveTokenDecimal: BN;
+  reserveTokenSupply:BN;
   supplyAmount: BN;
   supplyLimit: BN;
   supplyApy: number;
@@ -54,6 +56,7 @@ export class lendingInfo implements lendingMarketInfo {
     supplyTokenDecimal: BN,
     reserveTokenMint: PublicKey,
     reserveTokenDecimal: BN,
+    reserveTokenSupply:BN,
     supplyAmount: BN,
     supplyLimit: BN,
     supplyApy: number,
@@ -67,6 +70,7 @@ export class lendingInfo implements lendingMarketInfo {
     this.supplyTokenDecimal = supplyTokenDecimal;
     this.reserveTokenMint = reserveTokenMint;
     this.reserveTokenDecimal = reserveTokenDecimal;
+    this.reserveTokenSupply = reserveTokenSupply;
     this.supplyAmount = supplyAmount;
     this.supplyLimit = supplyLimit;
     this.supplyApy = supplyApy;
@@ -94,21 +98,26 @@ export async function getAllLendingInfo(connection: Connection) {
     let borrowAPY = reservesMeta[1].calculateBorrowAPY() as number;
     let apy = UtilizationRatio * borrowAPY;
     let decimal = new BN(reservesMeta[1].liquidity.mintDecimals).toNumber();
-    if (await isMining(reservesMeta[0])) {
-      let borrowedUsdValue = borrowedAmount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reservesMeta[1].liquidity.marketPrice).div(new BN(`1${''.padEnd(18, '0')}
-    `));
-      let supplyUSDValue = supplyAmount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reservesMeta[1].liquidity.marketPrice).div(new BN(`1${''.padEnd(18, '0')}
-    `));
 
-      allUsdValue = allUsdValue.add(supplyUSDValue);
-      allBorrowedValue = allBorrowedValue.add(borrowedUsdValue);
-    }
-    const info = new lendingInfo(
+    let borrowedUsdValue = borrowedAmount.div(new BN(`1${''.padEnd(decimal, '0')}`)).mul(reservesMeta[1].liquidity.marketPrice).div(new BN(`1${''.padEnd(18, '0')}
+    `));
+    let supplyUSDValue = 
+      supplyAmount
+      .div(new BN(`1${''.padEnd(decimal, '0')}`))
+      .mul(reservesMeta[1].liquidity.marketPrice)
+      .div(new BN(`1${''.padEnd(18, '0')}`));
+    let reserveAddress = reservesMeta[0].toString()
+    allUsdValue = allUsdValue
+    .add(supplyUSDValue.mul(info.MININGMULTIPLIER(reservesMeta[0])))
+    allBorrowedValue = allBorrowedValue.add(borrowedUsdValue.mul(info.MININGMULTIPLIER(reservesMeta[0])));
+
+    const newinfo = new lendingInfo(
       reservesMeta[0],
       reservesMeta[1].liquidity.mintPubkey,
       reservesMeta[1].liquidity.mintDecimals,
       reservesMeta[1].collateral.reserveTokenMint,
       reservesMeta[1].liquidity.mintDecimals,
+      reservesMeta[1].collateral.mintTotalSupply,
       supplyAmount,
       reservesMeta[1].config.depositLimit,
       apy,
