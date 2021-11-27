@@ -7,12 +7,12 @@
     "start": "ts-node ./src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  
   "dependencies": {
     "@project-serum/borsh": "^0.2.2",
+    "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.26.0",
     "bignumber.js": "^9.0.1",
-    "@solana/spl-token": "^0.1.8"
+    "ftx-api": "^1.0.19"
   },
   "devDependencies": {
     "@project-serum/borsh": "^0.2.2",
