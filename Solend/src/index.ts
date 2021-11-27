@@ -15,6 +15,8 @@ import * as transaction from "./transaction"
 import { NATIVE_MINT } from "@solana/spl-token";
 import BigNumber from "bignumber.js";
 import BN from "bn.js";
+import { obligation } from "./obligation";
+import { getSlndPrice } from "./util";
 const keyPairPath = os.homedir() + "/.config/solana/id.json";
 const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
 const wallet = new Account(PrivateKey);
@@ -30,21 +32,24 @@ async function main() {
   );
   let tx = new Transaction
   const lendingMarkets = await solend.getAllLendingInfo(connection);
-  const positionInfo = await solend.getObligation(connection,walletPublicKey);
-  for (let markets of lendingMarkets){
-   
-    if(markets.reserveInfo.liquidity.mintPubkey.toString() == NATIVE_MINT.toString()){
-      tx.add(await transaction.createDepositTx(markets,walletPublicKey,new BN(100000),connection));
-      tx.add(await transaction.createWithdrawTx(walletPublicKey,markets.reserveAddress,new BN(100000),positionInfo,markets,connection));
+  const positionInfo = await solend.getObligation(connection, walletPublicKey) as obligation;
+  for (let markets of lendingMarkets) {
+
+    if (markets.reserveInfo.liquidity.mintPubkey.toString() == NATIVE_MINT.toString()) {
+
+      tx.add(await transaction.createDepositTx(markets, walletPublicKey, new BN(100000), connection));
+      tx.add(await transaction.createWithdrawTx(walletPublicKey, markets.reserveAddress, new BN(100000), positionInfo, markets, connection));
 
     }
+    console.log(markets)
   }
   var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
   tx.recentBlockhash = recentBlockhash;
   tx.feePayer = walletPublicKey;
-  //console.log(tx.serializeMessage().toString("base64"));
+  console.log(tx.serializeMessage().toString("base64"));
   let result = await sendAndConfirmTransaction(connection,tx,[wallet])
-  //console.log(result);
-}
+  console.log(result);
 
+
+}
 main()
