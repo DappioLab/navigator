@@ -39,3 +39,5 @@ export  const MARKETAUTHORITY = new PublicKey(
     }
 }
 export const SLNDPERYEAR = new BN(10E6);
+
+export const SLND_PRICE_ORACLE = new PublicKey("7QKyBR3zLRhoEH5UMjcG8emDD2J2CCDmkxv3qsa2Mqif");
