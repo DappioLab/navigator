@@ -83,6 +83,7 @@ export class lendingInfo implements lendingMarketInfo {
 
 export async function getAllLendingInfo(connection: Connection) {
   const allReserve = await getAllReserve(connection);
+  let slndPrice = await getSlndPrice(connection);
   let lendingInfos = <Array<lendingInfo>>[];
   for (let reservesMeta of allReserve) {
     let slndPerYear = info.MININGMULTIPLIER(reservesMeta[0]).div(new BN(`1${''.padEnd(3, '0')}`));
@@ -94,10 +95,6 @@ export async function getAllLendingInfo(connection: Connection) {
     let supplyAmount = borrowedAmount.add(availableAmount);
 
     let UtilizationRatio = reservesMeta[1].calculateUtilizationRatio();
-
-    let liquidityPrice = reservesMeta[1].liquidity.marketPrice.div(new BN(`1${''.padEnd(18, '0')}`));
-    let slndPrice = await getSlndPrice();
-    let totalUsdValue
     let supplyUSDValue = 
     supplyAmount
     .div(new BN(`1${''.padEnd(decimal, '0')}`))

@@ -4,8 +4,8 @@ import {
   } from '@solana/web3.js';
   import * as info from "./solendInfo"
   import { TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID} from '@solana/spl-token';
-import * as ftx from "ftx-api";
 import BN from "bn.js";
+import { SwitchboardAccountType,parseAggregatorAccountData } from '@switchboard-xyz/switchboard-api';
 export async function findAssociatedTokenAddress(
     walletAddress: PublicKey,
     tokenMintAddress: PublicKey
@@ -34,8 +34,8 @@ export async function isMining(reserveAddress:PublicKey) {
     }
     return false;
 }  
-export async function getSlndPrice() {
-    let client = new  ftx.RestClient();
-    let price = await client.getMarket("SLND/USD")
-    return new BN(price.result.bid* 1000)
+export async function getSlndPrice(connection:Connection) {
+    let priceFeed = await parseAggregatorAccountData(connection,info.SLND_PRICE_ORACLE);
+    let price = priceFeed.lastRoundResult?.result as number;
+    return new BN(price* 1000)
 }

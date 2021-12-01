@@ -28,7 +28,7 @@ const walletPublicKey = wallet.publicKey;
 async function main() {
 
   const connection = new Connection(
-    "https://api.mainnet-beta.solana.com/"
+    "https://rpc-mainnet-fork.dappio.xyz"
   );
   let tx = new Transaction
   const lendingMarkets = await solend.getAllLendingInfo(connection);
@@ -38,7 +38,7 @@ async function main() {
     if (markets.reserveInfo.liquidity.mintPubkey.toString() == NATIVE_MINT.toString()) {
 
       tx.add(await transaction.createDepositTx(markets, walletPublicKey, new BN(100000), connection));
-      tx.add(await transaction.createWithdrawTx(walletPublicKey, markets.reserveAddress, new BN(100000), positionInfo, markets, connection));
+      tx.add(await transaction.createWithdrawTx(walletPublicKey, markets.reserveAddress, new BN(100000), positionInfo, markets, connection,false));
 
     }
     console.log(markets)
