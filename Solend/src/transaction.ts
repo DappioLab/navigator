@@ -66,7 +66,7 @@ export async function createDepositTx(lendingInfo: lendingInfo, wallet: PublicKe
     return tx;
 }
 
-export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey ,amount:BN,obligationInfo:obligation.obligation,lendingMarketInfo:lendingInfo,connection:Connection,withdrawTokenAddress?: PublicKey, reserveTokenAddress?: PublicKey) {
+export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey ,amount:BN,obligationInfo:obligation.obligation,lendingMarketInfo:lendingInfo,connection:Connection,createWithdrawTokenATA:boolean = true,withdrawTokenAddress?: PublicKey, reserveTokenAddress?: PublicKey) {
     let tx = new Transaction;
     let depositReserves: PublicKey[] = [];
     let borrowedReserves: PublicKey[] = [];
@@ -102,11 +102,19 @@ export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey
     }
     else
         withdrawTokenAddress = await findAssociatedTokenAddress(wallet, lendingMarketInfo.supplyTokenMint);
+    if (createWithdrawTokenATA){
+        if (await checkTokenAccount(withdrawTokenAddress, connection)) { }
+        else {
+            let wrapSolIX = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID,TOKEN_PROGRAM_ID,NATIVE_MINT,withdrawTokenAddress,wallet,wallet);
+            tx.add(wrapSolIX);
+        }
+    }
     if (await checkTokenAccount(reserveTokenAddress, connection)) { }
     else {
         let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingMarketInfo.reserveTokenMint, reserveTokenAddress, wallet, wallet);
         tx.add(createAtaIx);
     }
+    
     let withdrawIns = ins.withdrawObligationCollateralAndRedeemReserveLiquidity(
         amount,
         lendingMarketInfo.reserveInfo.collateral.supplyPubkey,
