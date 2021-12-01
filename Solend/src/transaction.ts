@@ -105,7 +105,7 @@ export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey
     if (createWithdrawTokenATA){
         if (await checkTokenAccount(withdrawTokenAddress, connection)) { }
         else {
-            let wrapSolIX = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID,TOKEN_PROGRAM_ID,NATIVE_MINT,withdrawTokenAddress,wallet,wallet);
+            let wrapSolIX = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID,TOKEN_PROGRAM_ID,lendingMarketInfo.supplyTokenMint,withdrawTokenAddress,wallet,wallet);
             tx.add(wrapSolIX);
         }
     }
