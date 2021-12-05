@@ -5,7 +5,7 @@ import {
   import * as info from "./solendInfo"
   import { TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID} from '@solana/spl-token';
 import BN from "bn.js";
-import { SwitchboardAccountType,parseAggregatorAccountData } from '@switchboard-xyz/switchboard-api';
+import { parseAggregatorAccountData } from '@switchboard-xyz/switchboard-api';
 export async function findAssociatedTokenAddress(
     walletAddress: PublicKey,
     tokenMintAddress: PublicKey

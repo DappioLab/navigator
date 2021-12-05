@@ -1,11 +1,6 @@
 import {
-  AccountMeta,
   Connection,
-  Keypair,
   PublicKey,
-  sendAndConfirmTransaction,
-  Transaction,
-  TransactionInstruction,
   GetProgramAccountsConfig,
   MemcmpFilter,
   DataSizeFilter

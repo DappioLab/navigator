@@ -1,5 +1,4 @@
-import * as solana from "@solana/web3.js"
-import * as solend from "./solend";
+
 import { checkTokenAccount, findAssociatedTokenAddress } from "./util";
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import BN from "bn.js";

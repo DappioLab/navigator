@@ -1,4 +1,4 @@
-import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8, bool} from "@project-serum/borsh";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 export interface Reserve {
