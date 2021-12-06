@@ -5,6 +5,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { LastUpdate } from "./state";
 import BN from "bn.js";
 import * as info from "./solendInfo"
+import { lendingInfo } from "./solend";
 export interface obligation{
     version: BN;
     lastUpdate: LastUpdate;
@@ -16,6 +17,7 @@ export interface obligation{
     unhealthyBorrowValue:BN;
     depositCollateral:obligationCollateral[];
     borrowedLiqudity:obligationLiquidity[];
+    update(lendingInfo:lendingInfo[]):void;
 }
 
 interface obligationCollateral{
@@ -110,6 +112,47 @@ export class Obligation implements obligation{
       this.unhealthyBorrowValue = unhealthyBorrowValue;
       this.depositCollateral = depositCollateral;
       this.borrowedLiqudity = borrowedLiqudity;
+    }
+    update(lendingInfos: lendingInfo[]){
+      let unhealthyBorrowValue = new BN(0);
+      let borrowedValue = new BN(0);
+      let depositedValue = new BN(0);
+      for (let depositedReserve of this.depositCollateral  ){
+        for(let lendingInfo of lendingInfos){
+          if (depositedReserve.reserve.toString()==lendingInfo.reserveAddress.toString()){
+            //console.log(lendingInfo.supplyAmount.toString(),lendingInfo.reserveInfo.collateral.mintTotalSupply.toString())
+            let decimal = new BN(lendingInfo.reserveTokenDecimal).toNumber();
+            let thisDepositedValue = 
+              depositedReserve.depositedAmount
+              .mul(lendingInfo.supplyAmount)
+              .mul(lendingInfo.reserveInfo.liquidity.marketPrice)
+              .div(lendingInfo.reserveInfo.collateral.mintTotalSupply)
+              .div(new BN(`1${''.padEnd(decimal, '0')}`));
+            depositedValue = depositedValue.add(thisDepositedValue)
+            //console.log(lendingInfo.reserveInfo.config.liquidationThreshold);
+            let thisUnhealthyBorrowValue = new BN(lendingInfo.reserveInfo.config.liquidationThreshold).mul( thisDepositedValue).div(new BN(`1${''.padEnd(2, '0')}`));;
+            unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
+
+            
+          }
+        }
+      }
+      for(let borrowedReserve of this.borrowedLiqudity){
+        for(let lendingInfo of lendingInfos){
+          if (borrowedReserve.reserve.toString()==lendingInfo.reserveAddress.toString()){
+            let decimal = new BN(lendingInfo.reserveTokenDecimal).toNumber();
+            //console.log(lendingInfo.reserveInfo.liquidity.marketPrice.toString())
+            let thisborrowedValue = 
+            borrowedReserve.borrowedAmount
+              .mul(lendingInfo.reserveInfo.liquidity.marketPrice)
+              .div(new BN(`1${''.padEnd(decimal, '0')}`));
+            borrowedValue = borrowedValue.add(thisborrowedValue);
+          }
+        }
+      }
+      this.borrowedValue = borrowedValue;
+      this.depositedValue = depositedValue;
+      this.unhealthyBorrowValue = unhealthyBorrowValue;
     }
 }
 class obligationCollateral implements obligationCollateral{
