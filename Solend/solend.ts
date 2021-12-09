@@ -14,7 +14,7 @@ interface lendingMarketInfo {
   supplyTokenDecimal: BN;
   reserveTokenMint: PublicKey;
   reserveTokenDecimal: BN;
-  reserveTokenSupply:BN;
+  reserveTokenSupply: BN;
   supplyAmount: BN;
   supplyLimit: BN;
   supplyApy: number;
@@ -37,7 +37,7 @@ export class lendingInfo implements lendingMarketInfo {
   supplyTokenDecimal: BN;
   reserveTokenMint: PublicKey;
   reserveTokenDecimal: BN;
-  reserveTokenSupply:BN;
+  reserveTokenSupply: BN;
   supplyAmount: BN;
   supplyLimit: BN;
   supplyApy: number;
@@ -51,7 +51,7 @@ export class lendingInfo implements lendingMarketInfo {
     supplyTokenDecimal: BN,
     reserveTokenMint: PublicKey,
     reserveTokenDecimal: BN,
-    reserveTokenSupply:BN,
+    reserveTokenSupply: BN,
     supplyAmount: BN,
     supplyLimit: BN,
     supplyApy: number,
@@ -78,30 +78,33 @@ export class lendingInfo implements lendingMarketInfo {
 
 export async function getAllLendingInfo(connection: Connection) {
   const allReserve = await getAllReserve(connection);
-  let slndPrice = await getSlndPrice(connection);
+  
   let lendingInfos = <Array<lendingInfo>>[];
   for (let reservesMeta of allReserve) {
-    let slndPerYear = info.MININGMULTIPLIER(reservesMeta[0]).div(new BN(`1${''.padEnd(3, '0')}`));
+    let miningApy = 0
     let borrowedAmount = reservesMeta[1].liquidity.borrowedAmountWads.div(new BN(`1${''.padEnd(18, '0')}`));
     let decimal = new BN(reservesMeta[1].liquidity.mintDecimals).toNumber();
 
     let availableAmount = reservesMeta[1].liquidity.availableAmount;
 
     let supplyAmount = borrowedAmount.add(availableAmount);
+    if (info.MININGMULTIPLIER(reservesMeta[0]).eq(new BN(0))) { miningApy = 0 }
+    else {
+      let slndPrice = await getSlndPrice(connection);
+      let slndPerYear = info.MININGMULTIPLIER(reservesMeta[0]).div(new BN(`1${''.padEnd(3, '0')}`));
 
+      let supplyUSDValue =
+        supplyAmount
+          .div(new BN(`1${''.padEnd(decimal, '0')}`))
+          .mul(reservesMeta[1].liquidity.marketPrice)
+          .div(new BN(`1${''.padEnd(18, '0')}`));
+
+      miningApy = slndPerYear.mul(slndPrice).toNumber() / (supplyUSDValue).toNumber();
+    }
     let UtilizationRatio = reservesMeta[1].calculateUtilizationRatio();
-    let supplyUSDValue = 
-    supplyAmount
-    .div(new BN(`1${''.padEnd(decimal, '0')}`))
-    .mul(reservesMeta[1].liquidity.marketPrice)
-    .div(new BN(`1${''.padEnd(18, '0')}`));
-
-    let miningApy =  slndPerYear.mul(slndPrice).toNumber()/(supplyUSDValue).toNumber();
-
-
     let borrowAPY = reservesMeta[1].calculateBorrowAPY() as number;
     let apy = UtilizationRatio * borrowAPY;
-    
+
 
     const newinfo = new lendingInfo(
       reservesMeta[0],
@@ -118,9 +121,9 @@ export async function getAllLendingInfo(connection: Connection) {
       reservesMeta[1]
     )
     lendingInfos.push(newinfo);
-    
+
   }
-  
+
 
   return lendingInfos;
 }
