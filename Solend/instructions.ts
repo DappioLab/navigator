@@ -19,7 +19,8 @@ enum LendingInstruction {
 }
 import * as info from "./solendInfo"
 const SOLENDPROGRAMID = info.SOLENDPROGRAMID;
-import * as util from "./util"
+import * as solendUtil from "./util"
+import * as util from "../src/util"
 
 // deposit 
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
@@ -253,35 +254,7 @@ export const refreshObligationInstruction = (
     });
 };
 
-export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection: Connection, createAta: boolean) {
-    let tx = new Transaction;
 
-    let destinationAta = await util.findAssociatedTokenAddress(walletPublicKey, NATIVE_MINT);
-    if (createAta == true) {
-        if ((await connection.getAccountInfo(destinationAta))?.owner.toString() == TOKEN_PROGRAM_ID.toString()) {
-            //console.log("wSol was created")
-
-        }
-        else {
-            //console.log("creating wSol account")
-            let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, NATIVE_MINT, destinationAta, walletPublicKey, walletPublicKey);
-            tx.add(createAtaIx);
-        }
-    }
-    let transferPram = { fromPubkey: walletPublicKey, lamports: amount.toNumber(), toPubkey: destinationAta }
-    let transferLamportIx = SystemProgram.transfer(transferPram);
-    tx.add(transferLamportIx);
-    let key = [{ pubkey: destinationAta, isSigner: false, isWritable: true }];
-    const dataLayout = struct([u8('instruction')]);
-    const data = Buffer.alloc(dataLayout.span);
-    dataLayout.encode(
-        { instruction: LendingInstruction.SyncNative },
-        data,
-    );
-    let syncNativeIx = new TransactionInstruction({ keys: key, programId: TOKEN_PROGRAM_ID, data: data });
-    tx.add(syncNativeIx);
-    return tx;
-}
 export async function createObligationAccountIx(wallet :PublicKey) {
     let tx = new Transaction;
     const seed = info.SOLENDLENDINGMARKETID.toString().slice(0, 32);

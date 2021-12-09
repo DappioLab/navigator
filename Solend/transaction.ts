@@ -1,5 +1,5 @@
 
-import { checkTokenAccount, findAssociatedTokenAddress } from "./util";
+import { checkTokenAccount, findAssociatedTokenAddress } from "../src/util";
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 import BN from "bn.js";
 import {
@@ -19,6 +19,7 @@ import { lendingInfo } from "./solend";
 import * as info from "./solendInfo"
 import * as obligation from "./obligation"
 import * as state from "./state";
+import { wrapNative } from "../src/util";
 export async function createDepositTx(lendingInfo: lendingInfo, wallet: PublicKey, amount: BN, connection: Connection, supplyTokenAddress?: PublicKey, reserveTokenAddress?: PublicKey) {
 
     let tx: Transaction = new Transaction;
@@ -53,7 +54,7 @@ export async function createDepositTx(lendingInfo: lendingInfo, wallet: PublicKe
     //console.log(refreshIx);
     tx.add(refreshIx);
     if (lendingInfo.supplyTokenMint.toString() == NATIVE_MINT.toString()) {
-        let wrapIx = await ins.wrapNative(amount, wallet, connection, true);
+        let wrapIx = await wrapNative(amount, wallet, connection, true);
         tx.add(wrapIx);
     }
 
