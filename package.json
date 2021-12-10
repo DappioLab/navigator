@@ -2,9 +2,9 @@
   "name": "script",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.ts",
+  "main": "./index.ts",
   "scripts": {
-    "start": "ts-node ./src/index.ts",
+    "start": "ts-node ./index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

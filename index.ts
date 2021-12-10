@@ -10,8 +10,8 @@ import {
   } from "@solana/web3.js";
   import fs from "fs";
   import os from "os";
-  import * as solend from "../Solend";
-  import * as saber from "../Saber/src/index";
+  import * as solend from "./Solend";
+  import * as saber from "./Saber";
   import { NATIVE_MINT } from "@solana/spl-token";
   import BN from "bn.js";
   

@@ -20,7 +20,7 @@ enum LendingInstruction {
 import * as info from "./solendInfo"
 const SOLENDPROGRAMID = info.SOLENDPROGRAMID;
 import * as solendUtil from "./util"
-import * as util from "../src/util"
+import * as util from "../util"
 
 // deposit 
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
