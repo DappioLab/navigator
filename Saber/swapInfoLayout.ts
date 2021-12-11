@@ -1,9 +1,11 @@
 import { publicKey, struct, u64, u128, u8, bool, u16, i64 } from "@project-serum/borsh";
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-
-
+import { wrapInfo } from "./wrapInfo";
+import { getTokenAccountAmount } from "../util";
+import { SWAP_PROGRAM_ID } from "./saberInfo";
 export interface SwapInfo {
+    infoPublicKey: PublicKey;
     isInitialized: boolean;
     isPaused: boolean;
     nonce: BN;
@@ -14,18 +16,18 @@ export interface SwapInfo {
     futureAdminDeadline: BN;
     futureAdminKey: PublicKey;
     adminKey: PublicKey;
-    tokenAInfo: SwapTokenInfo;
-    tokenBInfo: SwapTokenInfo;
+    tokenAccountA: PublicKey;
+    tokenAccountB: PublicKey;
+    AtokenAccountAmount?: BN;
+    BtokenAccountAmount?: BN;
     poolMint: PublicKey;
+    mintA: PublicKey;
+    mintB: PublicKey;
+    adminFeeAccountA: PublicKey;
+    adminFeeAccountB: PublicKey;
 
 }
 
-export interface SwapTokenInfo {
-    reserveTokenAccount: PublicKey;
-    tokenMint: PublicKey;
-    adminFeePublickey: PublicKey;
-    index: BN;
-}
 
 
 const SWAPINFO_LAYOUT = struct([
@@ -37,24 +39,20 @@ const SWAPINFO_LAYOUT = struct([
     i64("startRampTs"),
     i64("stopRampTs"),
     i64("futureAdminDeadline"),
-    publicKey("futureAdminKey"),
     publicKey("adminKey"),
-    struct([
-        publicKey("reserveTokenAAccount"),
-        publicKey("tokenAMint"),
-        publicKey("adminTokenAFeePublickey"),
-        u8("index")
-    ], "tokenAInfo"),
-    struct([
-        publicKey("reserveTokenAAccount"),
-        publicKey("tokenBMint"),
-        publicKey("adminTokenBFeePublickey"),
-        u8("index")
-    ], "tokenBInfo"),
-    publicKey("poolMint")
+    publicKey("futureAdminKey"),
+    publicKey("tokenAccountA"),
+    publicKey("tokenAccountB"),
+    publicKey("poolMint"),
+    publicKey("mintA"),
+    publicKey("mintB"),
+    publicKey("adminFeeAccountA"),
+    publicKey("adminFeeAccountB"),
 
 ]);
 export class SwapInfo implements SwapInfo {
+    infoPublicKey: PublicKey;
+    authority: PublicKey;
     isInitialized: boolean;
     isPaused: boolean;
     nonce: BN;
@@ -65,10 +63,22 @@ export class SwapInfo implements SwapInfo {
     futureAdminDeadline: BN;
     futureAdminKey: PublicKey;
     adminKey: PublicKey;
-    tokenAInfo: SwapTokenInfo;
-    tokenBInfo: SwapTokenInfo;
+    tokenAccountA: PublicKey;
+    tokenAccountB: PublicKey;
     poolMint: PublicKey;
+    mintA: PublicKey;
+    mintB: PublicKey;
+    adminFeeAccountA: PublicKey;
+    adminFeeAccountB: PublicKey;
+    AtokenAccountAmount?: BN;
+    BtokenAccountAmount?: BN;
+    mintAWrapped?: boolean;
+    mintAWrapInfo?: wrapInfo;
+    mintBWrapped?: boolean;
+    mintBWrapInfo?: wrapInfo;
     constructor(
+        infoPublicKey: PublicKey,
+        authority: PublicKey,
         isInitialized: boolean,
         isPaused: boolean,
         nonce: BN,
@@ -79,10 +89,17 @@ export class SwapInfo implements SwapInfo {
         futureAdminDeadline: BN,
         futureAdminKey: PublicKey,
         adminKey: PublicKey,
-        tokenAInfo: SwapTokenInfo,
-        tokenBInfo: SwapTokenInfo,
+        tokenAccountA: PublicKey,
+        tokenAccountB: PublicKey,
         poolMint: PublicKey,
+        mintA: PublicKey,
+        mintB: PublicKey,
+        adminFeeAccountA: PublicKey,
+        adminFeeAccountB: PublicKey,
+
     ) {
+        this.infoPublicKey = infoPublicKey;
+        this.authority = authority;
         this.isInitialized = isInitialized;
         this.isPaused = isPaused;
         this.nonce = nonce;
@@ -93,45 +110,24 @@ export class SwapInfo implements SwapInfo {
         this.futureAdminDeadline = futureAdminDeadline;
         this.futureAdminKey = futureAdminKey;
         this.adminKey = adminKey;
-        this.tokenAInfo = tokenAInfo;
-        this.tokenBInfo = tokenBInfo;
+        this.tokenAccountA = tokenAccountA;
+        this.tokenAccountB = tokenAccountB;
         this.poolMint = poolMint;
+        this.mintA = mintA;
+        this.mintB = mintB;
+        this.adminFeeAccountA = adminFeeAccountA;
+        this.adminFeeAccountB = adminFeeAccountB;
     }
-}
-export class SwapTokenInfo implements SwapTokenInfo {
-    reserveTokenAccount: PublicKey;
-    tokenMint: PublicKey;
-    adminFeePublickey: PublicKey;
-    index: BN;
-    constructor(
-        reserveTokenAccount: PublicKey,
-        tokenMint: PublicKey,
-        adminFeePublickey: PublicKey,
-        index: BN,
-    ) {
-        this.reserveTokenAccount = reserveTokenAccount;
-        this.tokenMint = tokenMint;
-        this.adminFeePublickey = adminFeePublickey;
-        this.index = index;
+    async updateAmount(connection:Connection){
+        this.AtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountA);
     }
 }
 
-export function parseSwapInfoData(data:any):SwapInfo{
+
+export async function parseSwapInfoData(data: any, pubkey: PublicKey): Promise<SwapInfo> {
     const decodedData = SWAPINFO_LAYOUT.decode(data)
-    let {isInitialized ,
-    isPaused,
-    nonce,
-    initialAmpFactor,
-    targetAmpFactor,
-    startRampTs,
-    stopRampTs,
-    futureAdminDeadline,
-    futureAdminKey,
-    adminKey,
-    tokenAInfo,
-    tokenBInfo,
-    poolMint} = decodedData;
-    let swapInfo = new SwapInfo(isInitialized ,
+    let authority = (await PublicKey.findProgramAddress([pubkey.toBuffer()],SWAP_PROGRAM_ID))[0];
+    let { isInitialized,
         isPaused,
         nonce,
         initialAmpFactor,
@@ -141,8 +137,31 @@ export function parseSwapInfoData(data:any):SwapInfo{
         futureAdminDeadline,
         futureAdminKey,
         adminKey,
-        tokenAInfo,
-        tokenBInfo,
-        poolMint);
+        tokenAccountA,
+        tokenAccountB,
+        poolMint,
+        mintA,
+        mintB,
+        adminFeeAccountA,
+        adminFeeAccountB } = decodedData;
+    let swapInfo = new SwapInfo(pubkey,
+        authority,
+        isInitialized,
+        isPaused,
+        nonce,
+        initialAmpFactor,
+        targetAmpFactor,
+        startRampTs,
+        stopRampTs,
+        futureAdminDeadline,
+        futureAdminKey,
+        adminKey,
+        tokenAccountA,
+        tokenAccountB,
+        poolMint,
+        mintA,
+        mintB,
+        adminFeeAccountA,
+        adminFeeAccountB);
     return swapInfo;
 }
