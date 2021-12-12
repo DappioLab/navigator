@@ -12,7 +12,7 @@ import BN from 'bn.js';
 import { SwapInfo } from './swapInfoLayout';
 import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { SWAP_PROGRAM_ID } from './saberInfo';
+import { SWAP_PROGRAM_ID ,SABER_WRAP_PROGRAM_ID} from './saberInfo';
 import { wrapInfo } from './wrapInfo';
 
 enum SaberInstruction {
@@ -22,7 +22,7 @@ enum SaberInstruction {
     withdrawOne = 4,
 }
 
-export  function deposit(swapInfo :SwapInfo,AtokenAmount: BN , BtokenAmount:BN, minimalRecieve:BN, wallet:PublicKey, AtokenSourceAccount : PublicKey, BtokenSourceAccount: PublicKey ,LPtokenAccount:PublicKey){
+export function deposit(swapInfo: SwapInfo, AtokenAmount: BN, BtokenAmount: BN, minimalRecieve: BN, wallet: PublicKey, AtokenSourceAccount: PublicKey, BtokenSourceAccount: PublicKey, LPtokenAccount: PublicKey) {
     const dataLayout = struct([
         u8('instruction'),
         u64('AtokenAmount'),
@@ -33,7 +33,7 @@ export  function deposit(swapInfo :SwapInfo,AtokenAmount: BN , BtokenAmount:BN, 
     dataLayout.encode(
         {
             instruction:
-            SaberInstruction.deposit,
+                SaberInstruction.deposit,
             AtokenAmount: new BN(AtokenAmount),
             BtokenAmount: new BN(BtokenAmount),
             minimalRecieve: new BN(minimalRecieve),
@@ -41,17 +41,17 @@ export  function deposit(swapInfo :SwapInfo,AtokenAmount: BN , BtokenAmount:BN, 
         data,
     );
     const keys = [
-        {pubkey: swapInfo.infoPublicKey, isSigner: false, isWritable: false},
-        {pubkey: swapInfo.authority, isSigner: false, isWritable: false},
-        {pubkey: wallet, isSigner: true, isWritable: false},
-        {pubkey: AtokenSourceAccount, isSigner: false, isWritable: true},
-        {pubkey: BtokenSourceAccount, isSigner: false, isWritable: true},
-        {pubkey: swapInfo.tokenAccountA, isSigner: false, isWritable: true},
-        {pubkey: swapInfo.tokenAccountB, isSigner: false, isWritable: true},
-        {pubkey: swapInfo.poolMint, isSigner: false, isWritable: true},
-        {pubkey: LPtokenAccount, isSigner: false, isWritable: true},
-        {pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false},
-        {pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false},
+        { pubkey: swapInfo.infoPublicKey, isSigner: false, isWritable: false },
+        { pubkey: swapInfo.authority, isSigner: false, isWritable: false },
+        { pubkey: wallet, isSigner: true, isWritable: false },
+        { pubkey: AtokenSourceAccount, isSigner: false, isWritable: true },
+        { pubkey: BtokenSourceAccount, isSigner: false, isWritable: true },
+        { pubkey: swapInfo.tokenAccountA, isSigner: false, isWritable: true },
+        { pubkey: swapInfo.tokenAccountB, isSigner: false, isWritable: true },
+        { pubkey: swapInfo.poolMint, isSigner: false, isWritable: true },
+        { pubkey: LPtokenAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     ];
     return new TransactionInstruction({
         keys,
@@ -60,31 +60,86 @@ export  function deposit(swapInfo :SwapInfo,AtokenAmount: BN , BtokenAmount:BN, 
     });
 }
 
-export function wrapToken(wrapInfo:wrapInfo,wallet:PublicKey,amount:BN,wrapInTokenAccount:PublicKey, wrapOutTokenAccount:PublicKey){
+export function withdrawOne(swapInfo: SwapInfo, tokenType: String, LPtokenAmount: BN, minimalRecieve: BN, wallet: PublicKey, LPtokenSourceAccount: PublicKey, recieveTokenAccount: PublicKey) {
+    const dataLayout = struct([
+        u8('instruction'),
+        u64('LPtokenAmount'),
+        u64('minimalRecieve'),
+    ]);
+    const data = Buffer.alloc(dataLayout.span);
+    dataLayout.encode(
+        {
+            instruction:
+                SaberInstruction.withdrawOne,
+            LPtokenAmount: new BN(LPtokenAmount),
+            minimalRecieve: new BN(minimalRecieve),
+        },
+        data,
+    );
+    let baseTokenAccount = PublicKey.default;
+    let quoteTokenAccount = PublicKey.default;
+    let feeTokenAccount = PublicKey.default;
+    if (tokenType == "A"){
+        baseTokenAccount = swapInfo.tokenAccountA;
+        quoteTokenAccount = swapInfo.tokenAccountB;
+        feeTokenAccount = swapInfo.adminFeeAccountA;
+    }
+    else if (tokenType == "B") {
+        baseTokenAccount = swapInfo.tokenAccountB;
+        quoteTokenAccount = swapInfo.tokenAccountA;
+        feeTokenAccount = swapInfo.adminFeeAccountB;
+    }
+    else{
+        console.log("panic!!, no withdraw type provided");
+    }
+    
+    const keys = [
+        { pubkey: swapInfo.infoPublicKey, isSigner: false, isWritable: false },
+        { pubkey: swapInfo.authority, isSigner: false, isWritable: false },
+        { pubkey: wallet, isSigner: true, isWritable: false },
+        { pubkey: swapInfo.poolMint, isSigner: false, isWritable: true },
+        { pubkey: LPtokenSourceAccount, isSigner: false, isWritable: true },
+        { pubkey: baseTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: quoteTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: recieveTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: feeTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    ];
+    return new TransactionInstruction({
+        keys,
+        programId: SWAP_PROGRAM_ID,
+        data,
+    });
+}
+
+export function wrapToken(wrapInfo: wrapInfo, wallet: PublicKey, amount: BN, wrapInTokenAccount: PublicKey, wrapOutTokenAccount: PublicKey) {
     const dataLayout = struct([
         u64('amount'),
     ]);
-    const data = Buffer.alloc(dataLayout.span);
+    let data = Buffer.alloc(dataLayout.span);
     dataLayout.encode(
         {
             amount: new BN(amount),
         },
         data,
     );
-
+    let datahex = data.toString('hex');
+    let datastring = 'f223c68952e1f2b6'.concat(datahex);
+    data = Buffer.from(datastring, "hex")
     const keys = [
-        {pubkey: wrapInfo.wrapAuthority, isSigner: false, isWritable: true},
-        {pubkey: wrapInfo.wrappedTokenMint, isSigner: false, isWritable: true},
-        {pubkey: wrapInfo.underlyingTokenAccount, isSigner: false, isWritable: true},
-        {pubkey: wallet, isSigner: true, isWritable: false},
+        { pubkey: wrapInfo.wrapAuthority, isSigner: false, isWritable: true },
+        { pubkey: wrapInfo.wrappedTokenMint, isSigner: false, isWritable: true },
+        { pubkey: wrapInfo.underlyingTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: wallet, isSigner: true, isWritable: false },
 
-        {pubkey: wrapInTokenAccount, isSigner: false, isWritable: true},
-        {pubkey: wrapOutTokenAccount, isSigner: false, isWritable: true},
-        {pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false},
+        { pubkey: wrapInTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: wrapOutTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ];
     return new TransactionInstruction({
         keys,
-        programId: SWAP_PROGRAM_ID,
+        programId: SABER_WRAP_PROGRAM_ID,
         data,
     });
 }

@@ -39,8 +39,8 @@ const SWAPINFO_LAYOUT = struct([
     i64("startRampTs"),
     i64("stopRampTs"),
     i64("futureAdminDeadline"),
-    publicKey("adminKey"),
     publicKey("futureAdminKey"),
+    publicKey("adminKey"),
     publicKey("tokenAccountA"),
     publicKey("tokenAccountB"),
     publicKey("poolMint"),
@@ -120,6 +120,7 @@ export class SwapInfo implements SwapInfo {
     }
     async updateAmount(connection:Connection){
         this.AtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountA);
+        this.BtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountB);
     }
 }
 
