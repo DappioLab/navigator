@@ -67,11 +67,13 @@ export async function checkTokenAccount(publickey: PublicKey, connection: Connec
 
 
 export async function getTokenAccountAmount(connection: Connection, tokenAccountPubkey: PublicKey) {
+    let tokenLayout = struct([
+        publicKey("mint"),
+        publicKey("owner"),
+        u64("amount")
+    ])
     let accountInfo = await connection.getAccountInfo(tokenAccountPubkey);
-    let tokenAccountInfo = AccountLayout.decode(accountInfo?.data) as AccountInfo;
-    let amount = new BN(tokenAccountInfo.amount);
-    console.log(amount.toString());
-
-    return amount;
+    let tokenAccountInfo = tokenLayout.decode(accountInfo?.data);
+    return tokenAccountInfo.amount;
 }
 
