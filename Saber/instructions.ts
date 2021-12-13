@@ -151,10 +151,10 @@ export function unwrapToken(wrapInfo: wrapInfo, wallet: PublicKey, unwrapTokenAc
         u64('amount'),
     ]);
     let data = Buffer.alloc(dataLayout.span);
-    let datastring = 'd608044db4e6cf9e0a00ffffffffffffffffffffffffffffffff';
-    data = Buffer.from(datastring, "hex")
+    let datastring = '60f6a682e5322b46';
+    data = Buffer.from(datastring, "hex");
     const keys = [
-        { pubkey: wrapInfo.wrapAuthority, isSigner: false, isWritable: true },
+        { pubkey:wrapInfo.wrapAuthority, isSigner: false, isWritable: true },
         { pubkey: wrapInfo.wrappedTokenMint, isSigner: false, isWritable: true },
         { pubkey: wrapInfo.underlyingTokenAccount, isSigner: false, isWritable: true },
         { pubkey: wallet, isSigner: true, isWritable: false },

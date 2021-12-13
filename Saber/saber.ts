@@ -24,7 +24,14 @@ export async function getallSwap(connection: Connection) {
   let infoArray: layout.SwapInfo[] = [];
   let wrapInfoArray = await getAllWrap(connection);
   for (let account of allSaberAccount) {
-
+    if (
+    account.pubkey.toString() == "LeekqF2NMKiFNtYD6qXJHZaHx4hUdj4UiPu4t8sz7uK" ||
+    account.pubkey.toString() == "2jQoGQRixdcfuRPt9Zui7pk6ivnrQv79mf8h13Tyoa9K"||
+    account.pubkey.toString() == "SPaiZAYyJBQHaSjtxFBKtLtQiCuG328r1mTfmvvydR5" ||
+    account.pubkey.toString() == "HoNG9Z4jsA1qtkZhDRYBc67LF2cbusZahjyxXtXdKZgR"
+     ){
+      continue;
+    }
     let saberAccountInfo = await layout.parseSwapInfoData(account.account.data, account.pubkey);
     
     let mintAwrapped = await checkWrapped(saberAccountInfo.mintA, wrapInfoArray)
