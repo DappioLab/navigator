@@ -114,6 +114,9 @@ export function withdrawOne(swapInfo: SwapInfo, tokenType: String, LPtokenAmount
 }
 
 export function wrapToken(wrapInfo: wrapInfo, wallet: PublicKey, amount: BN, wrapInTokenAccount: PublicKey, wrapOutTokenAccount: PublicKey) {
+    if (amount.eq(new BN(0))){
+        return new Transaction;
+    }
     const dataLayout = struct([
         u64('amount'),
     ]);
@@ -125,7 +128,7 @@ export function wrapToken(wrapInfo: wrapInfo, wallet: PublicKey, amount: BN, wra
         data,
     );
     let datahex = data.toString('hex');
-    let datastring = 'f223c68952e1f2b6'.concat(datahex);
+    let datastring = 'd608044db4e6cf9e0b00'.concat(datahex).concat('0000000000000000');
     data = Buffer.from(datastring, "hex")
     const keys = [
         { pubkey: wrapInfo.wrapAuthority, isSigner: false, isWritable: true },
@@ -135,6 +138,29 @@ export function wrapToken(wrapInfo: wrapInfo, wallet: PublicKey, amount: BN, wra
 
         { pubkey: wrapInTokenAccount, isSigner: false, isWritable: true },
         { pubkey: wrapOutTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ];
+    return new TransactionInstruction({
+        keys,
+        programId: SABER_WRAP_PROGRAM_ID,
+        data,
+    });
+}
+export function unwrapToken(wrapInfo: wrapInfo, wallet: PublicKey, unwrapTokenAccount: PublicKey, originalTokenAccount: PublicKey) {
+    const dataLayout = struct([
+        u64('amount'),
+    ]);
+    let data = Buffer.alloc(dataLayout.span);
+    let datastring = 'd608044db4e6cf9e0a00ffffffffffffffffffffffffffffffff';
+    data = Buffer.from(datastring, "hex")
+    const keys = [
+        { pubkey: wrapInfo.wrapAuthority, isSigner: false, isWritable: true },
+        { pubkey: wrapInfo.wrappedTokenMint, isSigner: false, isWritable: true },
+        { pubkey: wrapInfo.underlyingTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: wallet, isSigner: true, isWritable: false },
+
+        { pubkey: originalTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: unwrapTokenAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     ];
     return new TransactionInstruction({

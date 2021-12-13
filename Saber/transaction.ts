@@ -79,15 +79,8 @@ export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, Btok
             // add a close account IX
             cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, wrapMintAtokenAddress, wallet, wallet, []))
         }
-        let wrapAIns = ins.wrapToken(swapInfo.mintAWrapInfo as wrapInfo, wallet, AtokenAmount, AtokenSourceAccount, wrapMintAtokenAddress);
-        let multiplyer = (new BN(swapInfo.mintAWrapInfo?.multiplyer as BN))
-        if (multiplyer.gt(AtokenAmount)) {
-            AtokenAmount = multiplyer;
-        }
-        else {
-            AtokenAmount = AtokenAmount.div(multiplyer);
-        }
-        AtokenAmount = AtokenAmount.div(new BN(swapInfo.mintAWrapInfo?.multiplyer as BN));
+        let multiplyer = (new BN(swapInfo.mintAWrapInfo?.multiplyer as BN));
+        let wrapAIns = ins.wrapToken(swapInfo.mintAWrapInfo as wrapInfo, wallet, AtokenAmount.div(multiplyer), AtokenSourceAccount, wrapMintAtokenAddress);
 
         tx.add(wrapAIns);
     }
@@ -102,14 +95,9 @@ export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, Btok
             // add a close account IX
             cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, wrapMintBtokenAddress, wallet, wallet, []))
         }
-        let wrapBIns = ins.wrapToken(swapInfo.mintBWrapInfo as wrapInfo, wallet, BtokenAmount, wrapMintBtokenAddress, BtokenSourceAccount);
         let multiplyer = (new BN(swapInfo.mintBWrapInfo?.multiplyer as BN))
-        if (multiplyer.gt(BtokenAmount)) {
-            BtokenAmount = multiplyer;
-        }
-        else {
-            BtokenAmount = BtokenAmount.div(multiplyer);
-        }
+        let wrapBIns = ins.wrapToken(swapInfo.mintBWrapInfo as wrapInfo, wallet, BtokenAmount.div(multiplyer), wrapMintBtokenAddress, BtokenSourceAccount);
+        
         tx.add(wrapBIns);
     }
     console.log(BtokenAmount);

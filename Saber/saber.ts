@@ -37,6 +37,9 @@ export async function getallSwap(connection: Connection) {
     if (mintBwrapped[0]) {
       saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
     }
+    if (saberAccountInfo.isPaused){
+      continue;
+    }
     infoArray.push(saberAccountInfo)
   }
   return infoArray
