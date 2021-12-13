@@ -128,7 +128,7 @@ export function wrapToken(wrapInfo: wrapInfo, wallet: PublicKey, amount: BN, wra
         data,
     );
     let datahex = data.toString('hex');
-    let datastring = 'd608044db4e6cf9e0b00'.concat(datahex).concat('0000000000000000');
+    let datastring = 'f223c68952e1f2b6'.concat(datahex);
     data = Buffer.from(datastring, "hex")
     const keys = [
         { pubkey: wrapInfo.wrapAuthority, isSigner: false, isWritable: true },
