@@ -11,7 +11,7 @@ import {
     SYSVAR_RENT_PUBKEY,
 } from '@solana/web3.js';
 import BN from 'bn.js';
-import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8, bool, u16, u32 } from "@project-serum/borsh";
 
 
 import { AccountLayout, AccountInfo } from "@solana/spl-token";
@@ -74,6 +74,16 @@ export async function getTokenAccountAmount(connection: Connection, tokenAccount
     ])
     let accountInfo = await connection.getAccountInfo(tokenAccountPubkey);
     let tokenAccountInfo = tokenLayout.decode(accountInfo?.data);
-    return tokenAccountInfo.amount;
+    return new BN(tokenAccountInfo.amount);
 }
 
+export async function getTokenSupply(connection:Connection,tokenMintPubkey: PublicKey) {
+    let mintLayout = struct([
+        u32("option"),
+        publicKey("authority"),
+        u64("amount"),
+    ])
+    let accountInfo = await connection.getAccountInfo(tokenMintPubkey);
+    let mintAccountInfo = mintLayout.decode(accountInfo?.data);
+    return new BN(mintAccountInfo.amount);
+}

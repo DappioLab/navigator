@@ -2,7 +2,7 @@ import { publicKey, struct, u64, u128, u8, bool, u16, i64 } from "@project-serum
 import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { wrapInfo } from "./wrapInfo";
-import { getTokenAccountAmount } from "../util";
+import { getTokenAccountAmount ,getTokenSupply} from "../util";
 import { SWAP_PROGRAM_ID } from "./saberInfo";
 export interface SwapInfo {
     infoPublicKey: PublicKey;
@@ -72,6 +72,7 @@ export class SwapInfo implements SwapInfo {
     adminFeeAccountB: PublicKey;
     AtokenAccountAmount?: BN;
     BtokenAccountAmount?: BN;
+    LPtokenSupply?:BN;
     mintAWrapped?: boolean;
     mintAWrapInfo?: wrapInfo;
     mintBWrapped?: boolean;
@@ -121,6 +122,7 @@ export class SwapInfo implements SwapInfo {
     async updateAmount(connection:Connection){
         this.AtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountA);
         this.BtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountB);
+        this.LPtokenSupply = await getTokenSupply(connection,this.poolMint);
     }
 }
 
