@@ -30,7 +30,7 @@ import {
       "https://rpc-mainnet-fork.dappio.xyz",{wsEndpoint :"https://rpc-mainnet-fork.dappio.xyz/ws"}
     );
     let tx = new Transaction
-    let swap = await saber.getallSwap(connection);
+    let swap = await saber.getAllSwap(connection);
     console.log(swap);
   
   
