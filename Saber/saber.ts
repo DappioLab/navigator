@@ -8,7 +8,7 @@ import * as info from "./saberInfo"
 import * as layout from "./swapInfoLayout"
 import { checkWrapped, getAllWrap } from "./wrapInfo"
 import { getTokenAccountAmount } from "../util"
-export async function getallSwap(connection: Connection) {
+export async function getAllSwap(connection: Connection) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 75,
