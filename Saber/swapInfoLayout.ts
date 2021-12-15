@@ -4,6 +4,7 @@ import BN from "bn.js";
 import { wrapInfo } from "./wrapInfo";
 import { getTokenAccountAmount ,getTokenSupply} from "../util";
 import { SWAP_PROGRAM_ID } from "./saberInfo";
+import {FarmInfo } from "./farmInfolayout"
 export interface SwapInfo {
     infoPublicKey: PublicKey;
     isInitialized: boolean;
@@ -77,6 +78,8 @@ export class SwapInfo implements SwapInfo {
     mintAWrapInfo?: wrapInfo;
     mintBWrapped?: boolean;
     mintBWrapInfo?: wrapInfo;
+    isFarming?:boolean;
+    farmingInfo?:FarmInfo;
     constructor(
         infoPublicKey: PublicKey,
         authority: PublicKey,
@@ -123,6 +126,12 @@ export class SwapInfo implements SwapInfo {
         this.AtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountA);
         this.BtokenAccountAmount = await getTokenAccountAmount(connection, this.tokenAccountB);
         this.LPtokenSupply = await getTokenSupply(connection,this.poolMint);
+    }
+    async calculateDepositRecieve(connection:Connection,AtokenIn:BN, BtokenIN:BN){
+        if (!this.AtokenAccountAmount){
+            await this.updateAmount(connection);
+        }
+        
     }
 }
 

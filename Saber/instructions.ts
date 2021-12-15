@@ -12,8 +12,10 @@ import BN from 'bn.js';
 import { SwapInfo } from './swapInfoLayout';
 import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { SWAP_PROGRAM_ID ,SABER_WRAP_PROGRAM_ID} from './saberInfo';
+import { SWAP_PROGRAM_ID ,SABER_WRAP_PROGRAM_ID ,QURARRY_MINE_PROGRAM_ID,SABER_QUARRY_REWARDER} from './saberInfo';
 import { wrapInfo } from './wrapInfo';
+import { FarmInfo, getMinerKey } from './farmInfolayout';
+import {findAssociatedTokenAddress} from '../util'
 
 enum SaberInstruction {
     swap = 1,
@@ -166,6 +168,71 @@ export function unwrapToken(wrapInfo: wrapInfo, wallet: PublicKey, unwrapTokenAc
     return new TransactionInstruction({
         keys,
         programId: SABER_WRAP_PROGRAM_ID,
+        data,
+    });
+}
+export async function depositToFarmIx(farmInfo:FarmInfo,wallet:PublicKey,amount:BN){
+    let miner = await getMinerKey(wallet,farmInfo.infoPubkey)
+    let minerVault = await findAssociatedTokenAddress(miner[0],farmInfo.tokenMintKey)
+    let minerLPAccount = await findAssociatedTokenAddress(wallet,farmInfo.tokenMintKey)
+    const dataLayout = struct([
+        u64('amount'),
+    ]);
+    let amountData = Buffer.alloc(dataLayout.span);
+    dataLayout.encode(
+        {
+            amount: new BN(amount),
+        },
+        amountData,
+    );
+    let dataString = '887e5ba228830d7f'.concat(amountData.toString('hex'));
+    let data = Buffer.from(dataString, "hex");
+    let keys = [
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: miner[0], isSigner: false, isWritable: true },
+        { pubkey: farmInfo.infoPubkey, isSigner: false, isWritable: true },
+        { pubkey: minerVault, isSigner: false, isWritable: true },
+        { pubkey: minerLPAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    ];
+    return new TransactionInstruction({
+        keys,
+        programId: QURARRY_MINE_PROGRAM_ID,
+        data,
+    });
+}
+export async function createMinerAccountIx(FarmInfo:FarmInfo,wallet:PublicKey){
+    let miner = await getMinerKey(wallet,FarmInfo.infoPubkey)
+    const dataLayout = struct([
+        u64('amount'),
+    ]);
+    let bumpData = Buffer.alloc(dataLayout.span);
+    dataLayout.encode(
+        {
+            amount: new BN(miner[1]),
+        },
+        bumpData,
+    );
+    let dataString = '7e179d01935ef545'.concat(bumpData.toString('hex'));
+    let data = Buffer.from(dataString, "hex")
+    let minerBytes = new Uint8Array(Buffer.from('Miner', 'utf-8'))
+    
+    let minerVault = await findAssociatedTokenAddress(miner[0],FarmInfo.tokenMintKey)
+    const keys =[
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: miner[0], isSigner: false, isWritable: true },
+        { pubkey: FarmInfo.infoPubkey, isSigner: false, isWritable: true },
+        { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: FarmInfo.tokenMintKey, isSigner: false, isWritable: false },
+        { pubkey: minerVault, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ];
+    return new TransactionInstruction({
+        keys,
+        programId: QURARRY_MINE_PROGRAM_ID,
         data,
     });
 }
