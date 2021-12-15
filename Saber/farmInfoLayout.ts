@@ -153,7 +153,7 @@ export async function getMinerKey(wallet:PublicKey,farmPubkey:PublicKey) {
 export async function minerCreared(wallet:PublicKey,info:FarmInfo,connection:Connection) {
     let miner = await getMinerKey(wallet,info.infoPubkey);
     let minerAccountInfo = await connection.getAccountInfo(miner[0]);
-    console.log(miner[0].toString())
+    //console.log(miner[0].toString())
     if (minerAccountInfo?.owner.toString() == QURARRY_MINE_PROGRAM_ID.toString()){
         
         return true;
