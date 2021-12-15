@@ -1,5 +1,6 @@
 
 
 export { getAllSwap } from './saber'
-export { checkWrapped } from './wrapInfo'
-export { createDepositTx ,createWithdrawTx} from './transaction'
+export { createDepositTx ,createWithdrawTx,depositToFarm} from './transaction'
+export {getAllMiner} from './minerLayout'
+export {FarmInfo} from './farmInfolayout'
