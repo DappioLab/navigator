@@ -236,3 +236,56 @@ export async function createMinerAccountIx(FarmInfo:FarmInfo,wallet:PublicKey){
         data,
     });
 }
+
+export async function withdrawFromFarmIx(farmInfo:FarmInfo,wallet:PublicKey,amount:BN){
+    let miner = await getMinerKey(wallet,farmInfo.infoPubkey)
+    let minerVault = await findAssociatedTokenAddress(miner[0],farmInfo.tokenMintKey)
+    let minerLPAccount = await findAssociatedTokenAddress(wallet,farmInfo.tokenMintKey)
+    const dataLayout = struct([
+        u64('amount'),
+    ]);
+    let amountData = Buffer.alloc(dataLayout.span);
+    dataLayout.encode(
+        {
+            amount: new BN(amount),
+        },
+        amountData,
+    );
+    let dataString = '0204e13d13b66aaa'.concat(amountData.toString('hex'));
+    let data = Buffer.from(dataString, "hex");
+    let keys = [
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: miner[0], isSigner: false, isWritable: true },
+        { pubkey: farmInfo.infoPubkey, isSigner: false, isWritable: true },
+        { pubkey: minerVault, isSigner: false, isWritable: true },
+        { pubkey: minerLPAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    ];
+    return new TransactionInstruction({
+        keys,
+        programId: QURARRY_MINE_PROGRAM_ID,
+        data,
+    });
+}
+export async function claimRewardWIP(farmInfo:FarmInfo,wallet:PublicKey) {
+    let miner = await getMinerKey(wallet,farmInfo.infoPubkey)
+    let minerVault = await findAssociatedTokenAddress(miner[0],farmInfo.tokenMintKey)
+    let minerLPAccount = await findAssociatedTokenAddress(wallet,farmInfo.tokenMintKey)
+    let dataString = '0204e13d13b66aaa'
+    let data = Buffer.from(dataString, "hex");
+    let keys = [
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: miner[0], isSigner: false, isWritable: true },
+        { pubkey: farmInfo.infoPubkey, isSigner: false, isWritable: true },
+        { pubkey: minerVault, isSigner: false, isWritable: true },
+        { pubkey: minerLPAccount, isSigner: false, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    ];
+    return new TransactionInstruction({
+        keys,
+        programId: QURARRY_MINE_PROGRAM_ID,
+        data,
+    });
+}
