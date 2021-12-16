@@ -17,6 +17,7 @@ import * as ins from "./instructions"
 import { SwapInfo } from "./swapInfoLayout";
 import { wrapInfo } from "./wrapInfo";
 import { FarmInfo, getMinerKey, minerCreared } from "./farmInfoLayout";
+import { IOU_TOKEN_MINT, SABER_TOKEN_MINT } from "./saberInfo";
 export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, BtokenAmount: BN, minimalRecieve: BN, wallet: PublicKey, connection: Connection) {
     let tx: Transaction = new Transaction;
     let cleanupTx = new Transaction;
@@ -209,5 +210,20 @@ export async function withdrawFromMiner(farm: FarmInfo, wallet: PublicKey, amoun
         let withdrawFromFarmIns =await ins.withdrawFromFarmIx(farm,wallet,amount);
         tx.add(withdrawFromFarmIns)
     }
+    
+    return tx;
+}
+export async function claimRewardTx(farm: FarmInfo, wallet: PublicKey,connection:Connection) {
+    let tx = new Transaction;
+    let iouTokenAccount = await findAssociatedTokenAddress(wallet,IOU_TOKEN_MINT);
+    if(!(await checkTokenAccount(iouTokenAccount,connection))){
+        tx.add(Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID,IOU_TOKEN_MINT,iouTokenAccount,wallet,wallet))
+    }
+    let sbrTokenAccount = await findAssociatedTokenAddress(wallet,SABER_TOKEN_MINT);
+    if(!(await checkTokenAccount(sbrTokenAccount,connection))){
+        tx.add(Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID,SABER_TOKEN_MINT,sbrTokenAccount,wallet,wallet))
+    }
+    tx.add(await ins.claimReward(farm,wallet))
+    tx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,iouTokenAccount,wallet,wallet,[]))
     return tx;
 }
