@@ -2,13 +2,14 @@ import {
   Connection,
   MemcmpFilter,
   GetProgramAccountsConfig,
-  DataSizeFilter
+  DataSizeFilter,
+  PublicKey
 } from "@solana/web3.js";
 import * as info from "./saberInfo"
 import * as layout from "./swapInfoLayout"
 import { checkWrapped, getAllWrap } from "./wrapInfo"
 import { getTokenAccountAmount } from "../util"
-import {checkFarming, getAllFarm} from "./farmInfoLayout"
+import { checkFarming, getAllFarm} from "./farmInfoLayout"
 export async function getAllSwap(connection: Connection) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
@@ -57,4 +58,40 @@ export async function getAllSwap(connection: Connection) {
     infoArray.push(saberAccountInfo)
   }
   return infoArray
+}
+
+export async function getSwap(connection: Connection, swap:PublicKey) {
+  const adminIdMemcmp: MemcmpFilter = {
+    memcmp: {
+      offset: 75,
+      bytes: info.ADMIN_KEY.toString(),
+    }
+  };
+  const sizeFilter: DataSizeFilter = {
+    dataSize: 395
+  }
+  const filters = [adminIdMemcmp, sizeFilter];
+
+  const wrapInfoArray = await getAllWrap(connection);
+  const allFarmInfo = await getAllFarm(connection,info.SABER_QUARRY_REWARDER);
+  const saberAccount: any = await connection.getAccountInfo(swap);
+  const saberAccountInfo = await layout.parseSwapInfoData(saberAccount.data, saberAccount.owner);
+  const mintAwrapped = await checkWrapped(saberAccountInfo.mintA, wrapInfoArray)
+
+  saberAccountInfo.mintAWrapped = mintAwrapped[0];
+  if (mintAwrapped[0]) {
+    saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
+  }
+  let mintBwrapped = await checkWrapped(saberAccountInfo.mintB, wrapInfoArray)
+  saberAccountInfo.mintBWrapped = mintBwrapped[0];
+  if (mintBwrapped[0]) {
+    saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
+  }
+  let farmStarted = checkFarming(allFarmInfo,saberAccountInfo.poolMint);
+  if (farmStarted[0]){
+    saberAccountInfo.isFarming = true;
+    saberAccountInfo.farmingInfo = farmStarted[1];
+  }
+
+  return saberAccountInfo
 }
