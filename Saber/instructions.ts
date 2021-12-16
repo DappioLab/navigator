@@ -14,7 +14,7 @@ import { publicKey, struct, u64, u128, u8, bool, u16 } from "@project-serum/bors
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { SWAP_PROGRAM_ID ,SABER_WRAP_PROGRAM_ID ,QURARRY_MINE_PROGRAM_ID,SABER_QUARRY_REWARDER} from './saberInfo';
 import { wrapInfo } from './wrapInfo';
-import { FarmInfo, getMinerKey } from './farmInfolayout';
+import { FarmInfo, getMinerKey } from './farmInfoLayout';
 import {findAssociatedTokenAddress} from '../util'
 
 enum SaberInstruction {
@@ -94,7 +94,7 @@ export function withdrawOne(swapInfo: SwapInfo, tokenType: String, LPtokenAmount
     else{
         console.log("panic!!, no withdraw type provided");
     }
-    
+
     const keys = [
         { pubkey: swapInfo.infoPublicKey, isSigner: false, isWritable: false },
         { pubkey: swapInfo.authority, isSigner: false, isWritable: false },
@@ -217,7 +217,7 @@ export async function createMinerAccountIx(FarmInfo:FarmInfo,wallet:PublicKey){
     let dataString = '7e179d01935ef545'.concat(bumpData.toString('hex'));
     let data = Buffer.from(dataString, "hex")
     let minerBytes = new Uint8Array(Buffer.from('Miner', 'utf-8'))
-    
+
     let minerVault = await findAssociatedTokenAddress(miner[0],FarmInfo.tokenMintKey)
     const keys =[
         { pubkey: wallet, isSigner: true, isWritable: true },

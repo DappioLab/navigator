@@ -16,7 +16,7 @@ import {
 import * as ins from "./instructions"
 import { SwapInfo } from "./swapInfoLayout";
 import { wrapInfo } from "./wrapInfo";
-import { FarmInfo, getMinerKey, minerCreared } from "./farmInfolayout";
+import { FarmInfo, getMinerKey, minerCreared } from "./farmInfoLayout";
 export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, BtokenAmount: BN, minimalRecieve: BN, wallet: PublicKey, connection: Connection) {
     let tx: Transaction = new Transaction;
     let cleanupTx = new Transaction;
@@ -166,7 +166,7 @@ export async function createWithdrawTx(swapInfo: SwapInfo, tokenType: String,far
     if (!LPtokenAmount.eq(new BN(0))){
         tx.add(ins.withdrawOne(swapInfo, tokenType, LPtokenAmount, minimalRecieve, wallet, LPtokenSourceAccount, recieveTokenAccount));
     }
-    
+
     if (tokenType == "A" && swapInfo.mintAWrapped) {
         let wrappedmint = swapInfo.mintAWrapInfo?.underlyingWrappedTokenMint as PublicKey;
         let mintAUnderlyingTokenAccount = await findAssociatedTokenAddress(wallet, wrappedmint);
@@ -201,7 +201,7 @@ export async function createWithdrawTx(swapInfo: SwapInfo, tokenType: String,far
 export async function withdrawFromMiner(farm: FarmInfo, wallet: PublicKey, amount: BN, connection: Connection , createLPaccount:boolean = true) {
     let tx = new Transaction
     let withdrawTokenAccount = await findAssociatedTokenAddress(wallet,farm.tokenMintKey);
-    
+
     if (!amount.eq(new BN(0))){
         if (!(await checkTokenAccount(withdrawTokenAccount,connection))&& createLPaccount){
             tx.add(Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID,farm.tokenMintKey,withdrawTokenAccount,wallet,wallet));

@@ -4,7 +4,7 @@ import BN from "bn.js";
 import { wrapInfo } from "./wrapInfo";
 import { getTokenAccountAmount ,getTokenSupply} from "../util";
 import { SWAP_PROGRAM_ID } from "./saberInfo";
-import {FarmInfo } from "./farmInfolayout"
+import { FarmInfo } from "./farmInfoLayout"
 export interface SwapInfo {
     infoPublicKey: PublicKey;
     isInitialized: boolean;
@@ -131,7 +131,7 @@ export class SwapInfo implements SwapInfo {
         if (!this.AtokenAccountAmount){
             await this.updateAmount(connection);
         }
-        
+
     }
 }
 

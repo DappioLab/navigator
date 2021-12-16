@@ -51,7 +51,7 @@ const MINER_LAYOUT = struct([
     u64("index"),
 ]);
 
-export function parceMinerInfo(data:any, miner:PublicKey){
+export function parseMinerInfo(data:any, miner:PublicKey){
     let dataBuffer = data as Buffer;
     let infoData = dataBuffer.slice(8);
     let newMinerInfo = MINER_LAYOUT.decode(infoData) ;
@@ -94,11 +94,11 @@ export async function getAllMiner(connection:Connection, wallet:PublicKey){
       const allMinerAccount = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
       let allMinerInfo :MinerInfo[] = [];
       for (let account of allMinerAccount){
-          let currentFarmInfo = parceMinerInfo(account.account.data,account.pubkey);
+          let currentFarmInfo = parseMinerInfo(account.account.data,account.pubkey);
           if(currentFarmInfo.balance == new BN(0)){
               continue;
           }
           allMinerInfo.push(currentFarmInfo);
-      } 
+      }
       return allMinerInfo;
 }

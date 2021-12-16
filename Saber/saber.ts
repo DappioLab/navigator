@@ -8,7 +8,7 @@ import * as info from "./saberInfo"
 import * as layout from "./swapInfoLayout"
 import { checkWrapped, getAllWrap } from "./wrapInfo"
 import { getTokenAccountAmount } from "../util"
-import {checkFarming, getAllFarm} from "./farmInfolayout"
+import {checkFarming, getAllFarm} from "./farmInfoLayout"
 export async function getAllSwap(connection: Connection) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
@@ -30,8 +30,8 @@ export async function getAllSwap(connection: Connection) {
     account.pubkey.toString() == "LeekqF2NMKiFNtYD6qXJHZaHx4hUdj4UiPu4t8sz7uK" ||
     account.pubkey.toString() == "2jQoGQRixdcfuRPt9Zui7pk6ivnrQv79mf8h13Tyoa9K"||
     account.pubkey.toString() == "SPaiZAYyJBQHaSjtxFBKtLtQiCuG328r1mTfmvvydR5" ||
-    account.pubkey.toString() == "HoNG9Z4jsA1qtkZhDRYBc67LF2cbusZahjyxXtXdKZgR"|| 
-    account.pubkey.toString() == "4Fss9Dy3vAUBuQ4SyEZz4vcLxeQqoFLZjdXhEUr3wqz3" 
+    account.pubkey.toString() == "HoNG9Z4jsA1qtkZhDRYBc67LF2cbusZahjyxXtXdKZgR"||
+    account.pubkey.toString() == "4Fss9Dy3vAUBuQ4SyEZz4vcLxeQqoFLZjdXhEUr3wqz3"
      ){
       continue;
     }
