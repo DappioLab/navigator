@@ -6,4 +6,6 @@ export {
   createDepositTx,
   createWithdrawTx
 } from './transaction';
-export {Obligation} from './obligation'
+export {
+  Obligation
+} from './obligation'

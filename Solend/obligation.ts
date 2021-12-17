@@ -122,7 +122,7 @@ export class Obligation implements obligation{
           if (depositedReserve.reserve.toString()==lendingInfo.reserveAddress.toString()){
             //console.log(lendingInfo.supplyAmount.toString(),lendingInfo.reserveInfo.collateral.mintTotalSupply.toString())
             let decimal = new BN(lendingInfo.reserveTokenDecimal).toNumber();
-            let thisDepositedValue = 
+            let thisDepositedValue =
               depositedReserve.depositedAmount
               .mul(lendingInfo.supplyAmount)
               .mul(lendingInfo.reserveInfo.liquidity.marketPrice)
@@ -132,8 +132,6 @@ export class Obligation implements obligation{
             //console.log(lendingInfo.reserveInfo.config.liquidationThreshold);
             let thisUnhealthyBorrowValue = new BN(lendingInfo.reserveInfo.config.liquidationThreshold).mul( thisDepositedValue).div(new BN(`1${''.padEnd(2, '0')}`));;
             unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
-
-            
           }
         }
       }
@@ -142,7 +140,7 @@ export class Obligation implements obligation{
           if (borrowedReserve.reserve.toString()==lendingInfo.reserveAddress.toString()){
             let decimal = new BN(lendingInfo.reserveTokenDecimal).toNumber();
             //console.log(lendingInfo.reserveInfo.liquidity.marketPrice.toString())
-            let thisborrowedValue = 
+            let thisborrowedValue =
             borrowedReserve.borrowedAmount
               .mul(lendingInfo.reserveInfo.liquidity.marketPrice)
               .div(new BN(`1${''.padEnd(decimal, '0')}`));
@@ -190,7 +188,7 @@ class obligationLiquidity implements obligationLiquidity{
 export function parseObligationData(data: any){
   let dataBuffer = data as Buffer;
   let amountData = dataBuffer.slice(OBLIGATIONLAYOUT.span+64,OBLIGATIONLAYOUT.span+64+2);
-  
+
   let decodedInfo = OBLIGATIONLAYOUT.decode(dataBuffer);
   let {version,lastUpdate,lendingMarket,owner,depositedValue,borrowedValue,allowedBorrowValue,unhealthyBorrowValue} = decodedInfo;
   let supplyedLen = U8.decode(amountData.slice(0,1)).amount as number;
@@ -200,7 +198,7 @@ export function parseObligationData(data: any){
   let borrowedLiquidity:obligationLiquidity[] = [];
   if (supplyedLen > 0 ){
     for (let index = 0; index < supplyedLen; index++){
-      
+
       let offset = (COLLATERALLAYOUT.span+32)*index
       //console.log(offset);
       let data = allPosposition.slice(offset)
@@ -210,7 +208,7 @@ export function parseObligationData(data: any){
   }
   if (borroeedLen > 0 ){
     for (let index = 0; index < borroeedLen; index++){
-      
+
       let offset = ((COLLATERALLAYOUT.span+32)* supplyedLen) + (LOANLAYOUT.span+32)*index
       //console.log(offset);
       let data = allPosposition.slice(offset)

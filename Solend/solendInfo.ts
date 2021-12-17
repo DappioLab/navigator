@@ -3,15 +3,15 @@ import BN from "bn.js";
 export const SOLENDPROGRAMID = new PublicKey(
     "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo",
   );
-  
+
 export  const SOLENDLENDINGMARKETID = new PublicKey(
     "4UpD2fh7xH3VP9QQaXtsS1YY3bxzWhtfpks7FatyKvdY",
   );
-  
+
 export  const MARKETAUTHORITY = new PublicKey(
     "GDmSxpPzLkfxxr6dHLNRnCoYVGzvgc41tozkrr4pHTjB",
   );
-  
+
   export const MARKETOWNER = new PublicKey(
     "5pHk2TmnqQzRF9L6egy5FfiyBgS7G9cMZ5RFaJAvghzw",
   );
@@ -20,7 +20,7 @@ export  const MARKETAUTHORITY = new PublicKey(
       );
   export const RESERVELAYOUTSPAN = 619;
 
-  export const MININGREVERSES = [];
+  export const MININGREVERSES:any = [];
 
   export function MININGMULTIPLIER(reserve:PublicKey)  {
     switch(reserve.toString()){
