@@ -5,4 +5,5 @@
 $ solana airdrop 10
 $ yarn deposit
 $ yarn withdraw
+$ yarn claim
 ```
