@@ -14,7 +14,7 @@ export class FarmInfo {
     tokenMintDecimals: BN;
     famineTs: BN;
     lastUpdateTs: BN;
-    rewardsPerTokenTtored: BN;
+    rewardsPerTokenStored: BN;
     annualRewardsRate: BN;
     rewardsShare: BN;
     totalTokensDeposited: BN;
@@ -28,7 +28,7 @@ export class FarmInfo {
         tokenMintDecimals: BN,
         famineTs: BN,
         lastUpdateTs: BN,
-        rewardsPerTokenTtored: BN,
+        rewardsPerTokenStored: BN,
         annualRewardsRate: BN,
         rewardsShare: BN,
         totalTokensDeposited: BN,
@@ -42,7 +42,7 @@ export class FarmInfo {
         this.tokenMintDecimals = tokenMintDecimals;
         this.famineTs = famineTs;
         this.lastUpdateTs = lastUpdateTs;
-        this.rewardsPerTokenTtored = rewardsPerTokenTtored;
+        this.rewardsPerTokenStored = rewardsPerTokenStored;
         this.annualRewardsRate = annualRewardsRate;
         this.rewardsShare = rewardsShare;
         this.totalTokensDeposited = totalTokensDeposited;
@@ -58,7 +58,7 @@ const FARM_LAYOUT = struct([
     u8("tokenMintDecimals"),
     i64("famineTs"),
     i64("lastUpdateTs"),
-    u128("rewardsPerTokenTtored"),
+    u128("rewardsPerTokenStored"),
     u64("annualRewardsRate"),
     u64("rewardsShare"),
     u64("totalTokensDeposited"),
@@ -75,7 +75,7 @@ export function parceFarmInfo(data:any, farmPubkey:PublicKey){
         tokenMintDecimals,
         famineTs,
         lastUpdateTs,
-        rewardsPerTokenTtored,
+        rewardsPerTokenStored,
         annualRewardsRate,
         rewardsShare,
         totalTokensDeposited,
@@ -88,7 +88,7 @@ export function parceFarmInfo(data:any, farmPubkey:PublicKey){
         tokenMintDecimals,
         famineTs,
         lastUpdateTs,
-        rewardsPerTokenTtored,
+        rewardsPerTokenStored,
         annualRewardsRate,
         rewardsShare,
         totalTokensDeposited,
