@@ -75,7 +75,7 @@ export async function getSwap(connection: Connection, swap:PublicKey) {
   const wrapInfoArray = await getAllWrap(connection);
   const allFarmInfo = await getAllFarm(connection,info.SABER_QUARRY_REWARDER);
   const saberAccount: any = await connection.getAccountInfo(swap);
-  const saberAccountInfo = await layout.parseSwapInfoData(saberAccount.data, saberAccount.owner);
+  const saberAccountInfo = await layout.parseSwapInfoData(saberAccount.data, swap);
   const mintAwrapped = await checkWrapped(saberAccountInfo.mintA, wrapInfoArray)
 
   saberAccountInfo.mintAWrapped = mintAwrapped[0];
