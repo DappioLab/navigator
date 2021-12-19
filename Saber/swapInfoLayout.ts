@@ -26,7 +26,6 @@ export interface SwapInfo {
     mintB: PublicKey;
     adminFeeAccountA: PublicKey;
     adminFeeAccountB: PublicKey;
-
 }
 
 
