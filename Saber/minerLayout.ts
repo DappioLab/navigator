@@ -102,3 +102,14 @@ export async function getAllMiner(connection:Connection, wallet:PublicKey){
       }
       return allMinerInfo;
 }
+export const defaultMiner = new MinerInfo(
+    PublicKey.default,
+    PublicKey.default,
+    PublicKey.default,
+    new BN(0),
+    PublicKey.default,
+    new BN(0),
+    new BN(0),
+    new BN(0),
+    new BN(0),
+)
