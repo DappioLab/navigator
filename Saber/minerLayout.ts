@@ -70,12 +70,12 @@ export function parseMinerInfo(data:any, miner:PublicKey){
         infoPubkey,
         farmKey,
         owner,
-        bump,
+        new BN (bump),
         vault,
-        rewardsEarned,
-        rewardsPerTokenPaid,
-        balance,
-        index,
+        new BN (rewardsEarned),
+        new BN (rewardsPerTokenPaid),
+        new BN (balance),
+        new BN (index),
     )
 }
 

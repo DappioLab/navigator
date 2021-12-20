@@ -80,19 +80,20 @@ export function parceFarmInfo(data:any, farmPubkey:PublicKey){
         rewardsShare,
         totalTokensDeposited,
         numMiners,} = newFarmInfo;
-    return new FarmInfo(farmPubkey,
+    return new FarmInfo(
+        farmPubkey,
         rewarderKey,
         tokenMintKey,
-        bump,
-        index,
-        tokenMintDecimals,
-        famineTs,
-        lastUpdateTs,
-        rewardsPerTokenStored,
-        annualRewardsRate,
-        rewardsShare,
-        totalTokensDeposited,
-        numMiners);
+        new BN (bump),
+        new BN (index),
+        new BN (tokenMintDecimals),
+        new BN (famineTs),
+        new BN (lastUpdateTs),
+        new BN (rewardsPerTokenStored),
+        new BN (annualRewardsRate),
+        new BN (rewardsShare),
+        new BN (totalTokensDeposited),
+        new BN (numMiners));
 }
 export async function getAllFarm(connection:Connection, rewarderKey:PublicKey){
     const adminIdMemcmp: MemcmpFilter = {
