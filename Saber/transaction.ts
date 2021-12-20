@@ -118,6 +118,14 @@ export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, Btok
 
 export async function depositToFarm(farm: FarmInfo, wallet: PublicKey, amount: BN, connection: Connection,) {
     let tx = new Transaction;
+    let createMinerIx = await createMiner(farm,wallet,connection);
+    tx.add(createMinerIx)
+    let depositToFarm = await ins.depositToFarmIx(farm, wallet, amount);
+    tx.add(depositToFarm);
+    return tx;
+}
+export async function createMiner(farm: FarmInfo, wallet: PublicKey,connection: Connection) {
+    let tx = new Transaction;
     let miner = await getMinerKey(wallet, farm.infoPubkey)
     let minerVault = await findAssociatedTokenAddress(miner[0], farm.tokenMintKey);
     if (!(await minerCreared(wallet, farm, connection))) {
@@ -129,9 +137,7 @@ export async function depositToFarm(farm: FarmInfo, wallet: PublicKey, amount: B
         let createMinerIx = await ins.createMinerAccountIx(farm as FarmInfo, wallet);
         tx.add(createMinerIx);
     }
-    let depositToFarm = await ins.depositToFarmIx(farm, wallet, amount);
-    tx.add(depositToFarm);
-    return tx;
+    return tx
 }
 export async function createWithdrawTx(swapInfo: SwapInfo, tokenType: String,farmTokenAmount:BN, LPtokenAmount: BN, minimalRecieve: BN, wallet: PublicKey, connection: Connection) {
     let tx: Transaction = new Transaction;
@@ -215,6 +221,8 @@ export async function withdrawFromMiner(farm: FarmInfo, wallet: PublicKey, amoun
 }
 export async function claimRewardTx(farm: FarmInfo, wallet: PublicKey,connection:Connection) {
     let tx = new Transaction;
+    let createMinerIx = await createMiner(farm,wallet,connection);
+    tx.add(createMinerIx);
     let iouTokenAccount = await findAssociatedTokenAddress(wallet,IOU_TOKEN_MINT);
     if(!(await checkTokenAccount(iouTokenAccount,connection))){
         tx.add(Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID,IOU_TOKEN_MINT,iouTokenAccount,wallet,wallet))
