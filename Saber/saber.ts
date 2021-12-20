@@ -92,6 +92,7 @@ export async function getSwap(connection: Connection, swap:PublicKey) {
     saberAccountInfo.isFarming = true;
     saberAccountInfo.farmingInfo = farmStarted[1];
   }
+  saberAccountInfo.infoPublicKey = swap
 
   return saberAccountInfo
 }
