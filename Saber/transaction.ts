@@ -82,7 +82,7 @@ export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, Btok
             cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, wrapMintAtokenAddress, wallet, wallet, []))
         }
         let multiplyer = (new BN(swapInfo.mintAWrapInfo?.multiplyer as BN));
-        let wrapAIns = ins.wrapToken(swapInfo.mintAWrapInfo as wrapInfo, wallet, AtokenAmount.div(multiplyer), AtokenSourceAccount, wrapMintAtokenAddress);
+        let wrapAIns = ins.wrapToken(swapInfo.mintAWrapInfo as wrapInfo, wallet, AtokenAmount.div(multiplyer),wrapMintAtokenAddress ,AtokenSourceAccount );
 
         tx.add(wrapAIns);
     }
