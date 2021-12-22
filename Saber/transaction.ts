@@ -16,7 +16,7 @@ import {
 import * as ins from "./instructions"
 import { SwapInfo } from "./swapInfoLayout";
 import { wrapInfo } from "./wrapInfo";
-import { FarmInfo, getMinerKey, minerCreared } from "./farmInfoLayout";
+import { FarmInfo, getMinerKey, minerCreated } from "./farmInfoLayout";
 import { IOU_TOKEN_MINT, SABER_TOKEN_MINT } from "./saberInfo";
 export async function createDepositTx(swapInfo: SwapInfo, AtokenAmount: BN, BtokenAmount: BN, minimalRecieve: BN, wallet: PublicKey, connection: Connection) {
     let tx: Transaction = new Transaction;
@@ -128,11 +128,14 @@ export async function createMiner(farm: FarmInfo, wallet: PublicKey,connection: 
     let tx = new Transaction;
     let miner = await getMinerKey(wallet, farm.infoPubkey)
     let minerVault = await findAssociatedTokenAddress(miner[0], farm.tokenMintKey);
-    if (!(await minerCreared(wallet, farm, connection))) {
+    console.log(minerVault.toString())
+    console.log(farm.tokenMintKey.toString())
+    console.log(miner[0].toString())
+    console.log(await minerCreated(wallet, farm, connection))
+    if (!(await minerCreated(wallet, farm, connection))) {
         if (!(await checkTokenAccount(minerVault, connection))) {
             let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, farm.tokenMintKey, minerVault, miner[0], wallet);
             tx.add(createAtaIx)
-
         }
         let createMinerIx = await ins.createMinerAccountIx(farm as FarmInfo, wallet);
         tx.add(createMinerIx);
@@ -216,7 +219,7 @@ export async function withdrawFromMiner(farm: FarmInfo, wallet: PublicKey, amoun
         let withdrawFromFarmIns =await ins.withdrawFromFarmIx(farm,wallet,amount);
         tx.add(withdrawFromFarmIns)
     }
-    
+
     return tx;
 }
 export async function claimRewardTx(farm: FarmInfo, wallet: PublicKey,connection:Connection) {
