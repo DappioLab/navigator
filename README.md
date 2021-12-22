@@ -7,3 +7,9 @@ $ yarn deposit
 $ yarn withdraw
 $ yarn claim
 ```
+
+## Larix test
+```bash
+$ solana airdrop 10
+$ yarn start
+```
