@@ -128,10 +128,6 @@ export async function createMiner(farm: FarmInfo, wallet: PublicKey,connection: 
     let tx = new Transaction;
     let miner = await getMinerKey(wallet, farm.infoPubkey)
     let minerVault = await findAssociatedTokenAddress(miner[0], farm.tokenMintKey);
-    console.log(minerVault.toString())
-    console.log(farm.tokenMintKey.toString())
-    console.log(miner[0].toString())
-    console.log(await minerCreated(wallet, farm, connection))
     if (!(await minerCreated(wallet, farm, connection))) {
         if (!(await checkTokenAccount(minerVault, connection))) {
             let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, farm.tokenMintKey, minerVault, miner[0], wallet);

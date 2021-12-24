@@ -31,12 +31,12 @@ async function main() {
   //const connection = new Connection("https://raydium.genesysgo.net");
   let tx = new Transaction
   let swap = await saber.getAllSwap(connection);
-  
-  let allMiner = await saber.getAllMiner(connection, walletPublicKey); 
+
+  let allMiner = await saber.getAllMiner(connection, walletPublicKey);
   for (let miner of allMiner) {
     for (let info of swap) {
       if (info.farmingInfo?.infoPubkey.toString() == miner.farmKey.toString()) {
-        
+
         let tx = new Transaction
         let amount = new BN(0)
 
@@ -52,12 +52,10 @@ async function main() {
         var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
         tx.recentBlockhash = recentBlockhash;
         tx.feePayer = walletPublicKey;
-        console.log(tx.serializeMessage().toString("base64"), "\n");
         //let simulation = await connection.simulateTransaction(tx.compileMessage(), [wallet])
         //console.log(simulation.value.err);
         let result = await sendAndConfirmTransaction(connection, tx, [wallet])
 
-        console.log(result);
 
 
 

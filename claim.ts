@@ -41,12 +41,10 @@ async function main() {
                 var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
                 tx.recentBlockhash = recentBlockhash;
                 tx.feePayer = walletPublicKey;
-                console.log(tx.serializeMessage().toString("base64"), "\n");
                 //let simulation = await connection.simulateTransaction(tx.compileMessage(), [wallet])
                 //console.log(simulation.value.err);
                 let result = await sendAndConfirmTransaction(connection, tx, [wallet])
 
-                console.log(result);
 
 
 

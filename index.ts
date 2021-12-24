@@ -30,7 +30,6 @@ async function main() {
   //const connection = new Connection("https://raydium.genesysgo.net");
   let swap = await saber.getAllSwap(connection);
   let allMiner = await saber.getAllMiner(connection,walletPublicKey);
-  console.log(allMiner);
 
 
 
