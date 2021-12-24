@@ -37,21 +37,19 @@ async function main() {
       await info.updateAmount(connection);
       let deposit = await saber.createDepositTx(info, new BN(0), new BN(10), new BN(0), walletPublicKey, connection);
       tx.add(deposit);
-      
+
 
 
       var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
       tx.recentBlockhash = recentBlockhash;
       tx.feePayer = walletPublicKey;
-      console.log(tx.serializeMessage().toString("base64"), "\n");
       //let simulation = await connection.simulateTransaction(tx.compileMessage(), [wallet])
       //console.log(simulation.value.err);
 
       let result = await sendAndConfirmTransaction(connection, tx, [wallet])
-      console.log(result);
 
       let amount = new BN(0)
-      
+
       let LPAccount = await util.findAssociatedTokenAddress(walletPublicKey,info.poolMint);
       if ( !(await util.checkTokenAccount(LPAccount,connection))){
         continue;
@@ -66,9 +64,8 @@ async function main() {
         let newTx = new Transaction;
         newTx.add(depositLeftToFarm);
         let newresult = await sendAndConfirmTransaction(connection, newTx, [wallet])
-        console.log(newresult);
       }
-      
+
 
 
 

@@ -22,7 +22,7 @@ const SOLENDPROGRAMID = info.SOLENDPROGRAMID;
 import * as solendUtil from "./util"
 import * as util from "../util"
 
-// deposit 
+// deposit
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
 
 import {
@@ -270,7 +270,7 @@ export async function createObligationAccountIx(wallet :PublicKey) {
     let keys = [
         { pubkey: await getObligationPublicKey(wallet), isSigner: false, isWritable: true},
         {pubkey: info.SOLENDLENDINGMARKETID, isSigner: false, isWritable: false},
-        {pubkey: wallet, isSigner: true, isWritable: true},    
+        {pubkey: wallet, isSigner: true, isWritable: true},
     ];
     keys.push({
         pubkey: SYSVAR_CLOCK_PUBKEY,

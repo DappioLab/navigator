@@ -112,7 +112,7 @@ export async function getAllFarm(connection:Connection, rewarderKey:PublicKey){
       for (let account of allFarmAccount){
           let currentFarmInfo = parceFarmInfo(account.account.data,account.pubkey);
           allFarmInfo.push(currentFarmInfo);
-      } 
+      }
       return allFarmInfo;
 }
 export function checkFarming(allFarmInfo : FarmInfo[],mintPubkey:PublicKey):[boolean,FarmInfo] {
@@ -151,12 +151,12 @@ export async function getMinerKey(wallet:PublicKey,farmPubkey:PublicKey) {
         ,QURARRY_MINE_PROGRAM_ID));
     return miner;
 }
-export async function minerCreared(wallet:PublicKey,info:FarmInfo,connection:Connection) {
+export async function minerCreated(wallet:PublicKey,info:FarmInfo,connection:Connection) {
     let miner = await getMinerKey(wallet,info.infoPubkey);
     let minerAccountInfo = await connection.getAccountInfo(miner[0]);
     //console.log(miner[0].toString())
     if (minerAccountInfo?.owner.toString() == QURARRY_MINE_PROGRAM_ID.toString()){
-        
+
         return true;
     }
     return false;
