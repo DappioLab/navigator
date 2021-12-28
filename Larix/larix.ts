@@ -78,7 +78,7 @@ export async function getAllLendingInfo(connection: Connection) {
 
     let supplyAmount = borrowedAmount.add(availableAmount);
 
-    let UtilizationRatio = reservesMeta.calculateUtilizationRatio();
+    let UtilizationRatio = Math.trunc(reservesMeta.calculateUtilizationRatio()*100)/100;
     let borrowAPY = reservesMeta.calculateBorrowAPY() as number;
     let apy = UtilizationRatio * borrowAPY *998/1000;
 
