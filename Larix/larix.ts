@@ -80,7 +80,7 @@ export async function getAllLendingInfo(connection: Connection) {
 
     let UtilizationRatio = reservesMeta.calculateUtilizationRatio();
     let borrowAPY = reservesMeta.calculateBorrowAPY() as number;
-    let apy = UtilizationRatio * borrowAPY;
+    let apy = UtilizationRatio * borrowAPY *998/1000;
 
     const newinfo = new lendingInfo(
       reservesMeta.infoPubkey,
