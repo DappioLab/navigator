@@ -77,7 +77,7 @@ export async function parceUserVaultData(data: any, infoPubkey: PublicKey) {
 
 export async function getUserVaultAddress(wallet: PublicKey, vault: PublicKey) {
     let prefix = "user-account"
-    let minerBytes = new Uint8Array(Buffer.from('prefix', 'utf-8'))
+    let minerBytes = new Uint8Array(Buffer.from(prefix, 'utf-8'))
     let address = await PublicKey.findProgramAddress(
         [   
             minerBytes,
