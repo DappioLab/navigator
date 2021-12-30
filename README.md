@@ -8,7 +8,7 @@ $ yarn withdraw
 $ yarn claim
 ```
 
-## Larix test
+## Katana test
 ```bash
 $ solana airdrop 10
 $ yarn start
