@@ -87,3 +87,11 @@ export async function getUserVaultAddress(wallet: PublicKey, vault: PublicKey) {
         KATANA_PROGRAM_ID)
     return address;
 }
+export async function checkUserVaultCreated(wallet:PublicKey,vault :PublicKey,connection:Connection) {
+    let address = await getUserVaultAddress(wallet,vault)
+    let accountInfo = await connection.getAccountInfo(address[0]);
+    if (accountInfo?.owner.toString() == KATANA_PROGRAM_ID.toString()){
+        return true;
+    }
+    return false;
+}

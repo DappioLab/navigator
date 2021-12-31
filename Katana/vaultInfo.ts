@@ -1,8 +1,9 @@
 import { publicKey, struct, u64, u128, u8, bool, u16, i64 } from "@project-serum/borsh";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
+import { KATANA_PROGRAM_ID } from "./info";
 export interface VaultInterface {
-    infoPubkey:PublicKey;
+    infoPubkey: PublicKey;
     admin: PublicKey;
     pendingAdmin: PublicKey;
     vaultAuthority: PublicKey;
@@ -45,7 +46,7 @@ export interface VaultInterface {
 }
 
 export class Vault implements VaultInterface {
-    infoPubkey:PublicKey;
+    infoPubkey: PublicKey;
     admin: PublicKey;
     pendingAdmin: PublicKey;
     vaultAuthority: PublicKey;
@@ -86,7 +87,7 @@ export class Vault implements VaultInterface {
     isPaused: boolean;
     onlyEarlyAccess: boolean;
     constructor(
-        infoPubkey:PublicKey,
+        infoPubkey: PublicKey,
         admin: PublicKey,
         pendingAdmin: PublicKey,
         vaultAuthority: PublicKey,
@@ -127,50 +128,72 @@ export class Vault implements VaultInterface {
         isPaused: boolean,
         onlyEarlyAccess: boolean,
     ) {
-        this.infoPubkey=infoPubkey
-        this.admin=admin
-        this.pendingAdmin=pendingAdmin
-        this.vaultAuthority=vaultAuthority
-        this.cap=new BN(cap)
-        this.lockedAmount=new BN(lockedAmount)
-        this.lastLockedAmount=new BN(lastLockedAmount)
-        this.totalPendingDeposits=new BN(totalPendingDeposits)
-        this.queuedWithdrawShares=new BN(queuedWithdrawShares)
-        this.totalShares=new BN(totalShares)
-        this.round=new BN(round)
-        this.underlyingTokenMint=underlyingTokenMint
-        this.quoteTokenMint=quoteTokenMint
-        this.optionTokenMint=optionTokenMint
-        this.nextOptionTokenMint=nextOptionTokenMint
-        this.nextOptionTokenVault=nextOptionTokenVault
-        this.writerTokenMint=writerTokenMint
-        this.nextWriterTokenMint=nextWriterTokenMint
-        this.nextWriterTokenVault=nextWriterTokenVault
-        this.derivativeTokenMint=derivativeTokenMint
-        this.earlyAccessTokenMint=earlyAccessTokenMint
-        this.underlyingTokenVault=underlyingTokenVault
-        this.quoteTokenVault=quoteTokenVault
-        this.optionTokenVault=optionTokenVault
-        this.writerTokenVault=writerTokenVault
-        this.derivativeTokenVault=derivativeTokenVault
-        this.openOrders=openOrders
-        this.decimals=new BN(decimals)
-        this.bump=new BN(bump)
-        this.authorityBump=new BN(authorityBump)
-        this.derivativeMintBump=new BN(derivativeMintBump)
-        this.vaultBumpsUnderlying=new BN(vaultBumpsUnderlying)
-        this.vaultBumpsQuote=new BN(vaultBumpsQuote)
-        this.vaultBumpsOption=new BN(vaultBumpsOption)
-        this.vaultBumpsWriter=new BN(vaultBumpsWriter)
-        this.vaultBumpsDerivative=new BN(vaultBumpsDerivative)
-        this.pendingvaultBumpsOption=new BN(pendingvaultBumpsOption)
-        this.pendingvaultBumpsWriter=new BN(pendingvaultBumpsWriter)
-        this.isPaused=isPaused
-        this.onlyEarlyAccess=onlyEarlyAccess
+        this.infoPubkey = infoPubkey
+        this.admin = admin
+        this.pendingAdmin = pendingAdmin
+        this.vaultAuthority = vaultAuthority
+        this.cap = new BN(cap)
+        this.lockedAmount = new BN(lockedAmount)
+        this.lastLockedAmount = new BN(lastLockedAmount)
+        this.totalPendingDeposits = new BN(totalPendingDeposits)
+        this.queuedWithdrawShares = new BN(queuedWithdrawShares)
+        this.totalShares = new BN(totalShares)
+        this.round = new BN(round)
+        this.underlyingTokenMint = underlyingTokenMint
+        this.quoteTokenMint = quoteTokenMint
+        this.optionTokenMint = optionTokenMint
+        this.nextOptionTokenMint = nextOptionTokenMint
+        this.nextOptionTokenVault = nextOptionTokenVault
+        this.writerTokenMint = writerTokenMint
+        this.nextWriterTokenMint = nextWriterTokenMint
+        this.nextWriterTokenVault = nextWriterTokenVault
+        this.derivativeTokenMint = derivativeTokenMint
+        this.earlyAccessTokenMint = earlyAccessTokenMint
+        this.underlyingTokenVault = underlyingTokenVault
+        this.quoteTokenVault = quoteTokenVault
+        this.optionTokenVault = optionTokenVault
+        this.writerTokenVault = writerTokenVault
+        this.derivativeTokenVault = derivativeTokenVault
+        this.openOrders = openOrders
+        this.decimals = new BN(decimals)
+        this.bump = new BN(bump)
+        this.authorityBump = new BN(authorityBump)
+        this.derivativeMintBump = new BN(derivativeMintBump)
+        this.vaultBumpsUnderlying = new BN(vaultBumpsUnderlying)
+        this.vaultBumpsQuote = new BN(vaultBumpsQuote)
+        this.vaultBumpsOption = new BN(vaultBumpsOption)
+        this.vaultBumpsWriter = new BN(vaultBumpsWriter)
+        this.vaultBumpsDerivative = new BN(vaultBumpsDerivative)
+        this.pendingvaultBumpsOption = new BN(pendingvaultBumpsOption)
+        this.pendingvaultBumpsWriter = new BN(pendingvaultBumpsWriter)
+        this.isPaused = isPaused
+        this.onlyEarlyAccess = onlyEarlyAccess
+    }
+    async getPricePerPage() {
+        let prefix = "price-per-share"
+        let minerBytes = new Uint8Array(Buffer.from(prefix, 'utf-8'))
+        const dataLayout = struct([
+            u128('bump'),
+        ]);
+        let page = Buffer.alloc(16);
+        dataLayout.encode(
+            {
+                amount: this.round.divRound(new BN(128)),
+            },
+            page,
+        );
+        let address = await PublicKey.findProgramAddress(
+            [
+                minerBytes,
+                this.underlyingTokenMint.toBuffer(),
+                page,
+            ],
+            KATANA_PROGRAM_ID)
+        return address[0];
     }
 
 }
-export async function parceVaultData(data:any,infoPubkey:PublicKey):Promise<Vault>{
+export async function parceVaultData(data: any, infoPubkey: PublicKey): Promise<Vault> {
     let dataBuffer = data as Buffer;
     let stateData = dataBuffer.slice(8);
     let state = STATE_LAYOUT.decode(stateData);
