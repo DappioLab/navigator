@@ -113,7 +113,7 @@ export async function getTokenSupply(
 }
 
 export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey, payer?: PublicKey) {
-  if (payer != undefined) {
+  if (payer == undefined) {
     payer = wallet as PublicKey
   }
   payer = payer as PublicKey;
