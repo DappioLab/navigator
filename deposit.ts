@@ -24,8 +24,8 @@ const walletPublicKey = wallet.publicKey;
 
 async function main() {
 
-  //const connection = new Connection(  "https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed");
-  const connection = new Connection("https://raydium.genesysgo.net");
+  const connection = new Connection(  "https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed"});
+  //const connection = new Connection("https://raydium.genesysgo.net");
   let tx = new Transaction
   let swap = await saber.getAllSwap(connection);
   //console.log(swap);
