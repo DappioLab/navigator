@@ -1,5 +1,4 @@
 import {
-  Account,
   Connection,
   Keypair,
   Ed25519Keypair,
@@ -21,7 +20,8 @@ import * as util from "./util"
 
 const keyPairPath = os.homedir() + "/.config/solana/id.json";
 const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
-const wallet = new Account(PrivateKey);
+let privateKey = Uint8Array.from(PrivateKey);
+const wallet = Keypair.fromSecretKey(privateKey)
 const walletPublicKey = wallet.publicKey;
 
 
@@ -29,21 +29,24 @@ const walletPublicKey = wallet.publicKey;
 
 async function main() {
 
-  //const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed" });
-  const connection = new Connection("https://raydium.genesysgo.net");
+  const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed" });
+  //const connection = new Connection("https://raydium.genesysgo.net");
 
   let allVault = await katana.getAllVault(connection)
   for (let vault of allVault ){
-    
-    let user = await katana.getUserVaultAddress(walletPublicKey,vault.infoPubkey)
-    console.log(user[0].toString(),vault.infoPubkey.toString(),"\n")
-    
-  }
-  let allUserVault = await katana.getAllUserVault(connection,walletPublicKey)
-  for (let userVault of allUserVault ){
-    
-    console.log(userVault.infoPubkey.toString())
-    
+    if(vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()){
+      let tx = new Transaction
+      let depositTx = await katana.deposit(vault,walletPublicKey,new BN(1000),connection)
+      tx.add(depositTx);
+      var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
+      tx.recentBlockhash = recentBlockhash;
+      tx.feePayer = walletPublicKey;
+      let simulation = await connection.simulateTransaction(tx.compileMessage(), [wallet])
+      console.log(simulation.value.err);
+      
+      let result = await sendAndConfirmTransaction(connection, tx, [wallet])
+      console.log(result);
+    }
   }
 }
 main()
