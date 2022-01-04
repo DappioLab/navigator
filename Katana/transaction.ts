@@ -36,6 +36,19 @@ export async function deposit(vault: Vault, wallet: PublicKey, amount: BN, conne
     tx.add(cleanupTx)
     return tx;
 }
+export async function instantWithdraw(vault: Vault, wallet: PublicKey, amount: BN) {
+    let tx: Transaction = new Transaction;
+    let cleanupTx = new Transaction;
+    tx.add(await createATAWithoutCheckIx(wallet, vault.underlyingTokenMint))
+    let underlyingTokenAccount = await findAssociatedTokenAddress(wallet, vault.underlyingTokenMint); 
+    tx.add(await ins.instantWithdrawIx(vault, wallet, underlyingTokenAccount, amount))
+    if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
+        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, underlyingTokenAccount, wallet, wallet
+            , []))
+    }
+    tx.add(cleanupTx)
+    return tx;
+}
 
 
     tx.add(cleanupTx)
