@@ -1,4 +1,4 @@
-import { checkTokenAccount, findAssociatedTokenAddress } from "../util";
+import { checkTokenAccount, createATAWithoutCheckIx, findAssociatedTokenAddress } from "../util";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
@@ -46,18 +46,11 @@ export async function createDepositTx(
       wallet,
       lendingInfo.supplyTokenMint,
     );
-  if (await checkTokenAccount(reserveTokenAddress, connection)) {
-  } else {
-    let createAtaIx = await Token.createAssociatedTokenAccountInstruction(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      lendingInfo.reserveTokenMint,
-      reserveTokenAddress,
-      wallet,
-      wallet,
-    );
-    tx.add(createAtaIx);
-  }
+
+
+  let createAtaIx = await createATAWithoutCheckIx(wallet, lendingInfo.reserveTokenMint)
+  tx.add(createAtaIx);
+
   /*if (await checkTokenAccount(supplyTokenAddress, connection)) { }
     else {
         let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingInfo.supplyTokenMint, supplyTokenAddress, wallet, wallet);
@@ -153,32 +146,10 @@ export async function createWithdrawTx(
       wallet,
       lendingMarketInfo.supplyTokenMint,
     );
-  if (createWithdrawTokenATA) {
-    if (await checkTokenAccount(withdrawTokenAddress, connection)) {
-    } else {
-      let wrapSolIX = await Token.createAssociatedTokenAccountInstruction(
-        ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
-        lendingMarketInfo.supplyTokenMint,
-        withdrawTokenAddress,
-        wallet,
-        wallet,
-      );
-      tx.add(wrapSolIX);
-    }
-  }
-  if (await checkTokenAccount(reserveTokenAddress, connection)) {
-  } else {
-    let createAtaIx = await Token.createAssociatedTokenAccountInstruction(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      lendingMarketInfo.reserveTokenMint,
-      reserveTokenAddress,
-      wallet,
-      wallet,
-    );
-    tx.add(createAtaIx);
-  }
+  let createWithdrawTokenATAIx = await createATAWithoutCheckIx(wallet,lendingMarketInfo.supplyTokenMint)
+  tx.add(createWithdrawTokenATAIx)
+  let createReserveATA = await createATAWithoutCheckIx(wallet,lendingMarketInfo.reserveTokenMint)
+  tx.add(createReserveATA)
 
   let withdrawFarm = await ins.withdrawFromMiner(
     amount,
@@ -257,18 +228,8 @@ export async function claimReward(
     wallet,
     info.LARIX_MINT,
   );
-  if (await checkTokenAccount(larixTokenAddress, connection)) {
-  } else {
-    let createAtaIx = await Token.createAssociatedTokenAccountInstruction(
-      ASSOCIATED_TOKEN_PROGRAM_ID,
-      TOKEN_PROGRAM_ID,
-      info.LARIX_MINT,
-      larixTokenAddress,
-      wallet,
-      wallet,
-    );
-    tx.add(createAtaIx);
-  }
+  let createLarixATA = await createATAWithoutCheckIx(wallet,info.LARIX_MINT,)
+  tx.add(createLarixATA)
   tx.add(
     ins.claimReward(larixTokenAddress, minerIn.infoPub, wallet, reservepub),
   );
