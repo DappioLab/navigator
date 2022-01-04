@@ -12,24 +12,30 @@ import { Vault } from "./vaultInfo";
 import { checkUserVaultCreated } from "./userVault";
 
 
-export async function deposit(vault:Vault,wallet:PublicKey,amount:BN,connection:Connection,tokenAccount?:PublicKey) {
+export async function deposit(vault: Vault, wallet: PublicKey, amount: BN, connection: Connection, underlyingTokenAccount?: PublicKey) {
     let tx: Transaction = new Transaction;
     let cleanupTx = new Transaction;
-    if (tokenAccount) {
-        tokenAccount = tokenAccount as PublicKey;
+    if (underlyingTokenAccount) {
+        underlyingTokenAccount = underlyingTokenAccount as PublicKey;
     }
-    else
-    tokenAccount = await findAssociatedTokenAddress(wallet, vault.underlyingTokenMint);
-    if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()){
-        tx.add(await wrapNative(amount,wallet,connection,true))
-        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,tokenAccount,wallet,wallet
-            ,[]))
+    else{
+        underlyingTokenAccount = await findAssociatedTokenAddress(wallet, vault.underlyingTokenMint);
     }
-    tx.add(await createATAWithoutCheckIx(wallet,vault.derivativeTokenMint))
-    if (!(await checkUserVaultCreated(wallet,vault.infoPubkey,connection) )){
-        tx.add(await ins.createUserVaultIx(vault,wallet));
+    if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
+        tx.add(await wrapNative(amount, wallet, connection, true))
+        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, underlyingTokenAccount, wallet, wallet
+            , []))
     }
-    tx.add(await ins.deposit(vault,wallet,tokenAccount,amount))
+    tx.add(await createATAWithoutCheckIx(wallet, vault.derivativeTokenMint))
+    if (!(await checkUserVaultCreated(wallet, vault.infoPubkey, connection))) {
+        tx.add(await ins.createUserVaultIx(vault, wallet));
+    }
+    tx.add(await ins.depositIx(vault, wallet, underlyingTokenAccount, amount))
+
+
+    tx.add(cleanupTx)
+    return tx;
+}
 
 
     tx.add(cleanupTx)
