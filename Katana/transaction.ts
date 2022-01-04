@@ -62,6 +62,23 @@ export async function initiateWithdraw(vault: Vault, wallet: PublicKey, amount: 
     return tx;
 }
 
+export async function completeWithdraw(vault: Vault, wallet: PublicKey,) {
+    let tx: Transaction = new Transaction;
+    let cleanupTx = new Transaction;
+    tx.add(await createATAWithoutCheckIx(wallet, vault.underlyingTokenMint))
+    let underlyingTokenAccount = await findAssociatedTokenAddress(wallet, vault.underlyingTokenMint);
+    tx.add(await ins.completeWithdrawIx(vault, wallet, underlyingTokenAccount))
+    if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
+        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, underlyingTokenAccount, wallet, wallet, []))
+    }
     tx.add(cleanupTx)
+    return tx;
+
+}
+export async function claimShares(vault: Vault, wallet: PublicKey,) {
+    let tx: Transaction = new Transaction;
+    tx.add(await createATAWithoutCheckIx(wallet, vault.derivativeTokenMint))
+    let shareTokenAccount = await findAssociatedTokenAddress(wallet, vault.derivativeTokenMint);
+    tx.add(await ins.claimShareIx(vault, wallet, shareTokenAccount))
     return tx;
 }
