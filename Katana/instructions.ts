@@ -80,6 +80,27 @@ export async function depositIx(vault: Vault, wallet: PublicKey,tokenAccount:Pub
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
 
 
+export async function claimShareIx(vault: Vault, wallet: PublicKey,tokenAccount:PublicKey){
+    let userVault = await getUserVaultAddress(wallet, vault.infoPubkey)
+    let data = Buffer.alloc(8);
+    let datastring = '82831ded86146ef5'
+    data = Buffer.from(datastring, "hex")
+    let keys = [
+        { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+        { pubkey: await vault.getPricePerPage(), isSigner: false, isWritable: false },
+        { pubkey: userVault[0], isSigner: false, isWritable: true },
+        { pubkey: vault.underlyingTokenMint, isSigner: false, isWritable: false },
+        { pubkey: vault.derivativeTokenMint, isSigner: false, isWritable: false },
+        { pubkey: vault.derivativeTokenVault, isSigner: false, isWritable: true },
+        { pubkey: tokenAccount, isSigner: false, isWritable: true },
+        { pubkey: vault.vaultAuthority, isSigner: false, isWritable: true },
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    ]
+    return new TransactionInstruction({
+        keys, programId: KATANA_PROGRAM_ID, data
+    })
+}
     ]
     return new TransactionInstruction({
         keys, programId: KATANA_PROGRAM_ID, data
