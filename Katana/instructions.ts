@@ -80,6 +80,11 @@ export async function depositIx(vault: Vault, wallet: PublicKey,tokenAccount:Pub
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
 
 
+    ]
+    return new TransactionInstruction({
+        keys, programId: KATANA_PROGRAM_ID, data
+    })
+}
 export async function claimShareIx(vault: Vault, wallet: PublicKey,tokenAccount:PublicKey){
     let userVault = await getUserVaultAddress(wallet, vault.infoPubkey)
     let data = Buffer.alloc(8);
