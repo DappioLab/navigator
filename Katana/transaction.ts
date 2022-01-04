@@ -50,6 +50,17 @@ export async function instantWithdraw(vault: Vault, wallet: PublicKey, amount: B
     return tx;
 }
 
+export async function initiateWithdraw(vault: Vault, wallet: PublicKey, amount: BN, shareTokenAccount?: PublicKey) {
+    let tx: Transaction = new Transaction;
+    if (shareTokenAccount) {
+        shareTokenAccount = shareTokenAccount as PublicKey;
+    }
+    else {
+        shareTokenAccount = await findAssociatedTokenAddress(wallet, vault.derivativeTokenMint);
+    }
+    tx.add(await ins.initiateWithdrawIx(vault, wallet, shareTokenAccount, amount))
+    return tx;
+}
 
     tx.add(cleanupTx)
     return tx;
