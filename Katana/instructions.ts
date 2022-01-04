@@ -53,7 +53,7 @@ export async function createUserVaultIx(vault: Vault, wallet: PublicKey) {
     })
 }
 
-export async function deposit(vault: Vault, wallet: PublicKey,tokenAccount:PublicKey, amount: BN) {
+export async function depositIx(vault: Vault, wallet: PublicKey,tokenAccount:PublicKey, amount: BN) {
     let userVault = await getUserVaultAddress(wallet, vault.infoPubkey)
     const dataLayout = struct([
         u64('amount'),
