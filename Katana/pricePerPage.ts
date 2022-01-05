@@ -41,7 +41,7 @@ export function parcePricePerSharePageData(data:any,infoPubkey:PublicKey) {
     let prices:BN[] =[]
     let PRICE_LAYOUT = struct([u128("price")])
     for (let index = 0; index < 128; index++) {
-        let data = ppspData.slice(17+index);
+        let data = ppspData.slice(17+index*16);
         let {price} = PRICE_LAYOUT.decode(data);
         prices.push(new BN(price))
     }
