@@ -191,7 +191,21 @@ export class Vault implements VaultInterface {
             KATANA_PROGRAM_ID)
         return address[0];
     }
-
+    async getOtcTerms() {
+        let prefix = "otc"
+        let minerBytes = new Uint8Array(Buffer.from(prefix, 'utf-8'))
+        
+        let address = await PublicKey.findProgramAddress(
+            [
+                minerBytes,
+                this.infoPubkey.toBuffer(),
+                this.optionTokenMint.toBuffer(),
+                this.underlyingTokenMint.toBuffer(),
+                
+            ],
+            KATANA_PROGRAM_ID)
+        return address[0];
+    }
 }
 export async function parceVaultData(data: any, infoPubkey: PublicKey): Promise<Vault> {
     let dataBuffer = data as Buffer;
