@@ -1,4 +1,4 @@
-import { checkTokenAccount, createATAWithoutCheckIx, findAssociatedTokenAddress, wrapNative } from "../util";
+import { checkTokenAccount, createATAWithoutCheckIx, findAssociatedTokenAddress, wrapNative } from "../../util";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
