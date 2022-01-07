@@ -9,6 +9,7 @@
     "withdraw": "ts-node ./withdraw.ts",
     "claim": "ts-node ./claim.ts",
     "coverCall": "ts-node ./coverCall.ts",
+    "putSell":"ts-node ./putSell.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

@@ -12,4 +12,6 @@ $ yarn claim
 ```bash
 $ solana airdrop 10
 $ yarn coverCall
+# make sure there's USDC balance in the wallet first
+$ yarn putSell
 ```
