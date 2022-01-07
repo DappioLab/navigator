@@ -11,5 +11,5 @@ $ yarn claim
 ## Katana test
 ```bash
 $ solana airdrop 10
-$ yarn start
+$ yarn coverCall
 ```
