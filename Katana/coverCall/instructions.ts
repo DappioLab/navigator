@@ -28,13 +28,7 @@ export async function createUserVaultIx(vault: Vault, wallet: PublicKey) {
     const dataLayout = struct([
         u8('bump'),
     ]);
-    let data = Buffer.alloc(dataLayout.span + 8);
-    dataLayout.encode(
-        {
-            amount: new BN(userVault[1]),
-        },
-        data,
-    );
+    let data = new BN(userVault[1]).toBuffer("le",1)
     let datahex = data.toString('hex');
     let datastring = '924464453f2eb6c7'.concat(datahex);
     data = Buffer.from(datastring, "hex")
