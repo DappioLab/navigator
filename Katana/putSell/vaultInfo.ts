@@ -1,6 +1,7 @@
 import { publicKey, struct, u64, u128, u8, bool, u16, i64 } from "@project-serum/borsh";
-import { PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
+import { getOptionMarketByOptionTokenMint } from "../../PsyOptions/optionMarket";
 import { KATANA_PROGRAM_ID } from "./info";
 export interface VaultInterface {
     infoPubkey: PublicKey;
@@ -211,6 +212,10 @@ export class Vault implements VaultInterface {
             ],
             KATANA_PROGRAM_ID)
         return address[0];
+    }
+    async getOptionMarket(connection:Connection) {
+        let optionMarket = await getOptionMarketByOptionTokenMint(this.optionTokenMint,connection)
+        return optionMarket
     }
 }
 export async function parceVaultData(data: any, infoPubkey: PublicKey): Promise<Vault> {
