@@ -15,3 +15,9 @@ $ yarn coverCall
 # make sure there's USDC balance in the wallet first
 $ yarn putSell
 ```
+
+## Larix Test
+```bash
+$ solana airdrop 1
+$ yarn larixTest  
+```
