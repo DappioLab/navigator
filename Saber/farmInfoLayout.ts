@@ -64,7 +64,7 @@ const FARM_LAYOUT = struct([
     u64("totalTokensDeposited"),
     u64("numMiners"),
 ]);
-export function parceFarmInfo(data:any, farmPubkey:PublicKey){
+export function parseFarmInfo(data:any, farmPubkey:PublicKey){
     let dataBuffer = data as Buffer;
     let infoData = dataBuffer.slice(8);
     let newFarmInfo = FARM_LAYOUT.decode(infoData);
@@ -110,7 +110,7 @@ export async function getAllFarm(connection:Connection, rewarderKey:PublicKey){
       const allFarmAccount = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
       let allFarmInfo :FarmInfo[] = [];
       for (let account of allFarmAccount){
-          let currentFarmInfo = parceFarmInfo(account.account.data,account.pubkey);
+          let currentFarmInfo = parseFarmInfo(account.account.data,account.pubkey);
           allFarmInfo.push(currentFarmInfo);
       }
       return allFarmInfo;

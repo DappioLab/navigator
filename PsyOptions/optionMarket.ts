@@ -89,7 +89,7 @@ const MARKET_LAYOUT = struct([
     u8("bumpSeed")
 ])
 
-export function parceOptionMarketInfo(data: any, infoPubkey: PublicKey) {
+export function parseOptionMarketInfo(data: any, infoPubkey: PublicKey) {
     let dataBuffer = data as Buffer;
     if ((!data)||(!infoPubkey)){
         return new OptionMarket(
@@ -158,6 +158,6 @@ export async function getOptionMarketByOptionTokenMint(optionMint:PublicKey,conn
     const filters = [mintMemcmp,sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
     const allOptionMarket = await connection.getProgramAccounts(PSY_PROGRAM_ID, config);
-    let optionMarketInfo = parceOptionMarketInfo(allOptionMarket[0]?.account.data,allOptionMarket[0]?.pubkey)
+    let optionMarketInfo = parseOptionMarketInfo(allOptionMarket[0]?.account.data,allOptionMarket[0]?.pubkey)
     return optionMarketInfo
 }

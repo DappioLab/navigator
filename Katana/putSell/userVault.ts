@@ -51,7 +51,7 @@ export const USER_VAULT_LAYOUT = struct([
     u128("PendingWithdrawDatShares"),
     u8("bump"),
 ]);
-export async function parceUserVaultData(data: any, infoPubkey: PublicKey) {
+export async function parseUserVaultData(data: any, infoPubkey: PublicKey) {
     let dataBuffer = data as Buffer;
     let userData = dataBuffer.slice(8);
     let userVault = USER_VAULT_LAYOUT.decode(userData);

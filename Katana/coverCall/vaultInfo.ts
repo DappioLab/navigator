@@ -212,7 +212,7 @@ export class Vault implements VaultInterface {
         return optionMarket
     }
 }
-export async function parceVaultData(data: any, infoPubkey: PublicKey): Promise<Vault> {
+export async function parseVaultData(data: any, infoPubkey: PublicKey): Promise<Vault> {
     let dataBuffer = data as Buffer;
     let stateData = dataBuffer.slice(8);
     let state = STATE_LAYOUT.decode(stateData);

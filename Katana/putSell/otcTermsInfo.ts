@@ -45,7 +45,7 @@ export const OTC_TERMS_LAYOUT = struct([
     u8("bump"),
 
 ]);
-export function parceOtcTermsData(data: any, infoPubkey: PublicKey) {
+export function parseOtcTermsData(data: any, infoPubkey: PublicKey) {
     let dataBuffer = data as Buffer;
     let otcData = dataBuffer.slice(8);
     let otcRaw = OTC_TERMS_LAYOUT.decode(otcData);
@@ -59,7 +59,7 @@ export async function getOtcTermsAccount(vault: Vault, connection: Connection) {
     if(account == undefined){
         return defaultOtcTerms(infoPubkey)
     }
-    let otc = parceOtcTermsData(account?.data, infoPubkey);
+    let otc = parseOtcTermsData(account?.data, infoPubkey);
     return otc;
 }
 export function defaultOtcTerms(infoPubkey: PublicKey) {

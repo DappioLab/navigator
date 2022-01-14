@@ -33,7 +33,7 @@ export const PRICE_PER_PAGE_LAYOUT = struct([
     u128("page"),
     u8("bump"),
 ]);
-export function parcePricePerSharePageData(data:any,infoPubkey:PublicKey) {
+export function parsePricePerSharePageData(data:any,infoPubkey:PublicKey) {
     let dataBuffer = data as Buffer;
     let ppspData = dataBuffer.slice(8);
     let ppspRaw = PRICE_PER_PAGE_LAYOUT.decode(ppspData);
@@ -50,6 +50,6 @@ export function parcePricePerSharePageData(data:any,infoPubkey:PublicKey) {
 export async function getPricePerPageAccount(vault:Vault,connection:Connection){
     let infoPubkey = await vault.getPricePerPage()
     let account = await connection.getAccountInfo(infoPubkey);
-    let ppsp = parcePricePerSharePageData(account?.data,infoPubkey);
+    let ppsp = parsePricePerSharePageData(account?.data,infoPubkey);
     return ppsp;
 }
