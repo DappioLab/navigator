@@ -13,6 +13,7 @@ import * as solend from "./Solend";
 import * as saber from "./Saber";
 import * as larix from "./Larix";
 import * as katana from "./Katana";
+import * as francium from "./Francium"
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
 import * as util from "./util"
@@ -29,9 +30,12 @@ const walletPublicKey = wallet.publicKey;
 
 async function main() {
 
-  //const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed" });
-  const connection = new Connection("https://raydium.genesysgo.net");
-
+  const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed" });
+  //const connection = new Connection("https://raydium.genesysgo.net");
+  console.log(await francium.orca.getAllUserPosition(walletPublicKey,connection))
+  console.log(await francium.raydium.getAllUserPosition(walletPublicKey,connection))
+  
+  
 }
 
 
