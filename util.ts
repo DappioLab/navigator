@@ -39,23 +39,8 @@ export async function wrapNative(
     walletPublicKey,
     NATIVE_MINT,
   );
-  if (createAta == true) {
-    if (
-      (await connection.getAccountInfo(destinationAta))?.owner.toString() !=
-      TOKEN_PROGRAM_ID.toString()
-    ) {
-      
-      let createAtaIx = await Token.createAssociatedTokenAccountInstruction(
-        ASSOCIATED_TOKEN_PROGRAM_ID,
-        TOKEN_PROGRAM_ID,
-        NATIVE_MINT,
-        destinationAta,
-        walletPublicKey,
-        walletPublicKey,
-      );
-      tx.add(createAtaIx);
-    }
-  }
+  let createATA = await createATAWithoutCheckIx(walletPublicKey,NATIVE_MINT)
+  tx.add(createATA)
   let transferPram = {
     fromPubkey: walletPublicKey,
     lamports: amount.toNumber(),
@@ -125,4 +110,27 @@ export async function getTokenSupply(
   let accountInfo = await connection.getAccountInfo(tokenMintPubkey);
   let mintAccountInfo = mintLayout.decode(accountInfo?.data);
   return new BN(mintAccountInfo.amount);
+}
+
+export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey, payer?: PublicKey) {
+  if (payer == undefined) {
+    payer = wallet as PublicKey
+  }
+  payer = payer as PublicKey;
+  let ATA = await findAssociatedTokenAddress(wallet, mint);
+  const programId = new PublicKey("9tiP8yZcekzfGzSBmp7n9LaDHRjxP2w7wJj8tpPJtfG")
+  let keys = [
+    { pubkey: payer, isSigner: true, isWritable: true },
+    { pubkey: ATA, isSigner: false, isWritable: true },
+    { pubkey: wallet, isSigner: false, isWritable: true },
+    { pubkey: mint, isSigner: false, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+    { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+  ];
+  return new TransactionInstruction({
+    keys,
+    programId: programId,
+  });
 }

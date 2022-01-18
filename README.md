@@ -8,8 +8,16 @@ $ yarn withdraw
 $ yarn claim
 ```
 
-## Larix test
+## Katana test
 ```bash
 $ solana airdrop 10
-$ yarn start
+$ yarn coverCall
+# make sure there's USDC balance in the wallet first
+$ yarn putSell
+```
+
+## Larix Test
+```bash
+$ solana airdrop 1
+$ yarn larixTest  
 ```

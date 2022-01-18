@@ -24,9 +24,7 @@ const walletPublicKey = wallet.publicKey;
 
 async function main() {
 
-  const connection = new Connection(
-    "https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed" }
-  );
+  const connection = new Connection(  "https://rpc-mainnet-fork.dappio.xyz", { wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws", commitment: "processed"});
   //const connection = new Connection("https://raydium.genesysgo.net");
   let tx = new Transaction
   let swap = await saber.getAllSwap(connection);
@@ -47,6 +45,8 @@ async function main() {
       //console.log(simulation.value.err);
 
       let result = await sendAndConfirmTransaction(connection, tx, [wallet])
+      console.log(result)
+
 
       let amount = new BN(0)
 
@@ -64,6 +64,7 @@ async function main() {
         let newTx = new Transaction;
         newTx.add(depositLeftToFarm);
         let newresult = await sendAndConfirmTransaction(connection, newTx, [wallet])
+        console.log(newresult)
       }
 
 
