@@ -19,6 +19,7 @@
     "@solana/web3.js": "^1.31.0",
     "bignumber.js": "^9.0.1",
     "@switchboard-xyz/switchboard-api": "^0.2.159"
+    "buffer-layout": "^1.2.2"
   },
   "devDependencies": {
     "@project-serum/borsh": "^0.2.2",
