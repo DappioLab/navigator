@@ -134,3 +134,42 @@ export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey
     programId: programId,
   });
 }
+
+export async function getTokenAccount(
+  connection: Connection,
+  tokenAccountPubkey: PublicKey,
+) {
+  
+  let accountInfo = await connection.getAccountInfo(tokenAccountPubkey);
+  return parseTokenAccount(accountInfo?.data,tokenAccountPubkey)
+}
+
+export function parseTokenAccount(data:any,infoPubkey:PublicKey){
+  let tokenLayout = struct([
+    publicKey("mint"),
+    publicKey("owner"),
+    u64("amount"),
+  ]);
+  let tokenAccountInfo = tokenLayout.decode(data);
+  let{
+    mint,owner,amount
+  } = tokenAccountInfo
+  return new TokenAccount(infoPubkey,mint,owner,amount)
+}
+export class TokenAccount{
+  infoPubkey:PublicKey;
+  mint:PublicKey;
+  owner:PublicKey;
+  amount:BN;
+  constructor(
+    infoPubkey:PublicKey,
+    mint:PublicKey,
+    owner:PublicKey,
+    amount:BN,
+  ){
+    this.infoPubkey = infoPubkey;
+    this.mint = mint;
+    this.owner = owner;
+    this.amount = new BN(amount);
+  }
+}
