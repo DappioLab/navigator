@@ -90,6 +90,7 @@ export class FarmInfo implements FarmInfoInterface {
         if (this.poolRewardTokenAccountPubkeyB) {
             this.poolRewardTokenAccountB = parseTokenAccount(allToken[2]?.data, this.poolRewardTokenAccountPubkeyB)
         }
+        return this;
     }
 }
 
@@ -195,11 +196,12 @@ export async function updateAllFarmToken(farms: FarmInfo[], connection: Connecti
         
     }
     allAccountInfo = allAccountInfo.concat((await connection.getMultipleAccountsInfo(allLPPubkey)) as AccountInfo<Buffer>[])
+    
     for (let index = 0; index < farms.length; index++) {
         //console.log(allAccountInfo[index]?.owner.toString())
         if (allAccountInfo[index]?.data) {
             farms[index].poolLpTokenAccount = parseTokenAccount(allAccountInfo[index]?.data, farms[index].poolLpTokenAccountPubkey)
         }
     }
-
+    return farms
 }
