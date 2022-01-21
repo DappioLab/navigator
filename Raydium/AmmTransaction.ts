@@ -105,8 +105,7 @@ export async function swap(
         minAmountOut,
     );
     tx.add(swapIns);
-    tx.add(cleanUpTx);
-    return tx;
+    return [tx,cleanUpTx];
 }
 
 export async function addLiquidity(
@@ -194,6 +193,6 @@ export async function addLiquidity(
         tx.add(addIns);
     }
 
-    tx.add(cleanUpTx);
-    return tx;
+    
+    return [tx,cleanUpTx];
 }
