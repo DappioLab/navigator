@@ -147,6 +147,7 @@ export async function addLiquidity(
             pool.lpMintAddress,
         );
     }
+    tx.add(await createATAWithoutCheckIx(wallet,pool.lpMintAddress))
     if (pool.coinMintAddress.toString() == NATIVE_MINT.toString()) {
         tx.add(await wrapNative(maxCoinAmount, wallet, connection, true));
         cleanUpTx.add(
