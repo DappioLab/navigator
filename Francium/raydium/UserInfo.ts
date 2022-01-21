@@ -225,3 +225,14 @@ export async function getAllUserPosition(wallet:PublicKey,connection:Connection)
     }
     return allFarm;
 }
+export async function findUserInfoAccount(wallet:PublicKey,strategyAccount:PublicKey) {
+    let seed = Buffer.from([97, 110, 99, 104, 111, 114]);
+    let [address] = await PublicKey.findProgramAddress(
+        [
+            seed,
+            wallet.toBuffer(),
+            strategyAccount.toBuffer()
+        ],info.lyfRaydiumProgramId
+    )
+    return address;
+}
