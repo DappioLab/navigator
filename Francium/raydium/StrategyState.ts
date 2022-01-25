@@ -48,7 +48,7 @@ interface StrategyStateInterface {
     ammIdForRewards: PublicKey;
     ammIdForRewardsB: PublicKey;
     stakeProgramId: PublicKey;
-    swapPoolId: PublicKey;
+    stakePoolId: PublicKey;
     stakePoolTkn: PublicKey;
 }
 
@@ -97,7 +97,7 @@ export class StrategyState implements StrategyStateInterface {
     ammIdForRewards: PublicKey;
     ammIdForRewardsB: PublicKey;
     stakeProgramId: PublicKey;
-    swapPoolId: PublicKey;
+    stakePoolId: PublicKey;
     stakePoolTkn: PublicKey;
 
     constructor(
@@ -145,7 +145,7 @@ export class StrategyState implements StrategyStateInterface {
         ammIdForRewards: PublicKey,
         ammIdForRewardsB: PublicKey,
         stakeProgramId: PublicKey,
-        swapPoolId: PublicKey,
+        stakePoolId: PublicKey,
         stakePoolTkn: PublicKey,
     ) {
         this.infoPubkey = infoPubkey
@@ -189,7 +189,7 @@ export class StrategyState implements StrategyStateInterface {
         this.strategyLendingCreditAccount1 = strategyLendingCreditAccount1
         this.rewardAccountB = rewardAccountB
         this.platformRewardsTknMint = platformRewardsTknMint
-        this.swapPoolId = swapPoolId
+        this.stakePoolId = stakePoolId
         this.ammId = ammId
         this.ammIdForRewards = ammIdForRewards
         this.ammIdForRewardsB = ammIdForRewardsB
@@ -293,7 +293,7 @@ export function parseStrategyStateData(data: any, infoPubkey: PublicKey) {
         ammIdForRewards,
         ammIdForRewardsB,
         stakeProgramId,
-        swapPoolId,
+        stakePoolId,
         stakePoolTkn,
     } = rawState;
     return new StrategyState(
@@ -341,7 +341,7 @@ export function parseStrategyStateData(data: any, infoPubkey: PublicKey) {
         ammIdForRewards,
         ammIdForRewardsB,
         stakeProgramId,
-        swapPoolId,
+        stakePoolId,
         stakePoolTkn
         )
 }
