@@ -227,12 +227,18 @@ export async function getAllUserPosition(wallet:PublicKey,connection:Connection)
 }
 export async function findUserInfoAccount(wallet:PublicKey,strategyAccount:PublicKey) {
     let seed = Buffer.from([97, 110, 99, 104, 111, 114]);
-    let [address] = await PublicKey.findProgramAddress(
+    let nonce = Math.trunc(Date.now() / 1000)
+    const nonceLeBytes = Buffer.from([0, 0, 0, 0]);
+    nonceLeBytes.writeUInt32LE(nonce);
+
+    const [pda, bump] = await PublicKey.findProgramAddress(
         [
-            seed,
-            wallet.toBuffer(),
-            strategyAccount.toBuffer()
+          Buffer.from([97, 110, 99, 104, 111, 114]),
+          wallet.toBuffer(),
+          strategyAccount.toBuffer(),
+          nonceLeBytes
         ],info.lyfRaydiumProgramId
-    )
-    return address;
+        )
+
+    return {"address": pda,"nonce": new BN(nonce),"bump":new BN(bump)};
 }
