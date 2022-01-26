@@ -11,12 +11,15 @@ import {
     Token,
 } from "@solana/spl-token";
 import BN from "bn.js";
-import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { Connection, PublicKey, Transaction,MemcmpFilter,DataSizeFilter,GetProgramAccountsConfig } from "@solana/web3.js";
 import { StrategyState } from "./StrategyState";
-import { swap, transfer, borrow, initializeUser, addLiquidity } from "./instructions";
+import { swap, transfer, borrow, initializeUser, addLiquidity,removeLiquidity,stakeLp,unstakeLp,updateLending, swapAndWithdraw} from "./instructions";
 import { parseLendingInfo } from "../lending/lendingInfo";
 import { parseV4PoolInfo } from "../../Raydium/poolInfo";
 import { Market } from "@project-serum/serum";
+import { UserInfo } from "./UserInfo";
+import { parseFarmV45 } from "../../Raydium/farmInfo";
+import { STAKE_PROGRAM_ID_V5 } from "../../Raydium/info";
 export async function getDepositTx(
     strategy: StrategyState,
     wallet: PublicKey,
@@ -93,4 +96,76 @@ export async function getDepositTx(
     )
 
     return [preTx,depositTx,swapTx,cleanUpTx]
+}
+export async function getWithdrawTx(
+    strategy: StrategyState,
+    userInfoAccount:PublicKey,
+    wallet: PublicKey,
+    LPamount:BN,
+    withdrawType:number,
+    //0,1,2 2 is without trading 
+    connection: Connection,
+) {
+    let swapTx = new Transaction();
+    let withdrawTx = new Transaction();
+    let preTx = new Transaction();
+    let cleanUpTx = new Transaction();
+    let pubkeys = [ strategy.ammId,strategy.stakePoolId];
+    let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
+    let ammInfo = parseV4PoolInfo(accountsInfo[0]?.data, pubkeys[0]);
+    let stakeInfo = parseFarmV45(accountsInfo[1]?.data, pubkeys[1],4)
+    let serumMarket = await Market.load(
+        connection,
+        ammInfo.serumMarket,
+        undefined,
+        ammInfo.serumProgramId,
+    );
+    
+    preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.pcMintAddress));
+    preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.coinMintAddress));
+    
+    let usrATA0 = await findAssociatedTokenAddress(
+        wallet, 
+        ammInfo.pcMintAddress
+    );
+    let usrATA1 = await findAssociatedTokenAddress(
+        wallet,
+        ammInfo.coinMintAddress,
+    );
+    
+    if (ammInfo.pcMintAddress.toString( ) == NATIVE_MINT.toString()){
+        cleanUpTx.add(
+            Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,usrATA0,wallet,wallet,[])
+        )
+    }
+    if (ammInfo.coinMintAddress.toString( ) == NATIVE_MINT.toString()){
+        cleanUpTx.add(
+            Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,usrATA1,wallet,wallet,[])
+        )
+    }
+    const adminIdMemcmp: MemcmpFilter = {
+        memcmp: {
+            offset: 8+32,
+            bytes: strategy.authority.toString(),
+        }
+    };
+    const sizeFilter: DataSizeFilter = {
+        dataSize: 96,
+    }
+    const filters = [adminIdMemcmp,sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    let strategyFarmInfo =await  connection.getProgramAccounts(STAKE_PROGRAM_ID_V5,config)
+    preTx.add(updateLending(strategy))
+    preTx.add(
+        await unstakeLp(strategy,stakeInfo,wallet,strategyFarmInfo[0].pubkey,userInfoAccount,LPamount,new BN(withdrawType))
+    )
+    withdrawTx.add(
+        await removeLiquidity(wallet,strategy,ammInfo,serumMarket,userInfoAccount)
+    )
+    swapTx.add(
+        await swapAndWithdraw(wallet,strategy,ammInfo,serumMarket,userInfoAccount,usrATA0,usrATA1,new BN(withdrawType))
+    )
+        
+    
+    return [preTx,withdrawTx,swapTx,cleanUpTx]
 }
