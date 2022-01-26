@@ -330,7 +330,7 @@ export async function stakeLp(
         { pubkey: strategy.stakeProgramId, isSigner: false, isWritable: false },
         { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
         //authority
-        { pubkey: stakeInfo.infoPubkey, isSigner: false, isWritable: true },
+        { pubkey: (await stakeInfo.authority())[0], isSigner: false, isWritable: true },
         {
             pubkey: stakeInfo.poolLpTokenAccountPubkey,
             isSigner: false,
@@ -392,7 +392,7 @@ export async function unstakeLp(
 
         { pubkey: strategy.stakeProgramId, isSigner: false, isWritable: false },
         { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
-        { pubkey: new PublicKey("DgbCWnbXg43nmeiAveMCkUUPEpAr3rZo3iop3TyP6S63"), isSigner: false, isWritable: true },
+        { pubkey: (await stakeInfo.authority())[0], isSigner: false, isWritable: true },
 
 
         {

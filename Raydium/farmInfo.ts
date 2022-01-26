@@ -4,7 +4,7 @@ import { blob, nu64, seq } from 'buffer-layout';
 
 import { AccountInfo, Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { } from "./info";
+import { STAKE_PROGRAM_ID, STAKE_PROGRAM_ID_V5 } from "./info";
 import { TokenAccount, parseTokenAccount } from "../util"
 export interface FarmInfoInterface {
     infoPubkey: PublicKey;
@@ -91,6 +91,13 @@ export class FarmInfo implements FarmInfoInterface {
             this.poolRewardTokenAccountB = parseTokenAccount(allToken[2]?.data, this.poolRewardTokenAccountPubkeyB)
         }
         return this;
+    }
+    async authority(){
+        let seed = [this.infoPubkey.toBuffer()]
+        if (this.version>3){
+            return await PublicKey.findProgramAddress(seed,STAKE_PROGRAM_ID_V5)
+        }
+        return await PublicKey.findProgramAddress(seed,STAKE_PROGRAM_ID)
     }
 }
 
