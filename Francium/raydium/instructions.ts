@@ -504,11 +504,7 @@ export async function removeLiquidity(
         { pubkey: strategy.tknAccount1, isSigner: false, isWritable: true },
         { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-        {
-            pubkey: LIQUIDITY_POOL_PROGRAM_ID_V4,
-            isSigner: false,
-            isWritable: false,
-        },
+       
         { pubkey: strategy.ammProgramId, isSigner: false, isWritable: false },
         { pubkey: strategy.ammId, isSigner: false, isWritable: true },
 
@@ -516,8 +512,8 @@ export async function removeLiquidity(
 
         { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
         { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
-        { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
         { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
+        { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
         { pubkey: ammInfo.lpMintAddress, isSigner: false, isWritable: true },
         { pubkey: ammInfo.poolWithdrawQueue, isSigner: false, isWritable: true },
         {
@@ -555,7 +551,9 @@ export async function swapAndWithdraw(wallet: PublicKey,
     userAccount: PublicKey, userTknAccount0: PublicKey, userTknAccount1: PublicKey,withdrawType:BN) {
     let data = Buffer.alloc(9)
     let datahex = withdrawType.toString(16)
-    let datastring = '6f607d39534edca0'.concat(datahex);
+    //console.log(datahex)
+    let datastring = '6f607d39534edca00'.concat(datahex);
+    //console.log(datastring)
     data = Buffer.from(datastring, "hex")
     let serumVaultSigner = await PublicKey.createProgramAddress(
         [
@@ -588,9 +586,8 @@ export async function swapAndWithdraw(wallet: PublicKey,
 
         { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
         { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
-        { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
         { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
-        { pubkey: ammInfo.lpMintAddress, isSigner: false, isWritable: true },
+        { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
         { pubkey: ammInfo.serumProgramId, isSigner: false, isWritable: false },
         { pubkey: ammInfo.serumMarket, isSigner: false, isWritable: true },
         { pubkey: serum.bidsAddress, isSigner: false, isWritable: true },
@@ -619,4 +616,19 @@ export async function swapAndWithdraw(wallet: PublicKey,
         data,
     });
     return ix;
+}
+
+export  function closeAccount(userInfoPubkey:PublicKey,wallet:PublicKey){
+    let keys = [
+        { pubkey: wallet, isSigner: true, isWritable: true },
+        { pubkey: userInfoPubkey, isSigner: false, isWritable: true },
+
+    ]
+    let data = Buffer.from("ca6f062b7a4edabb","hex")
+    return new TransactionInstruction({
+        keys,
+        programId: lyfRaydiumProgramId,
+        data,
+    });
+
 }
