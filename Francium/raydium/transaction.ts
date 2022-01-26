@@ -13,7 +13,7 @@ import {
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction,MemcmpFilter,DataSizeFilter,GetProgramAccountsConfig } from "@solana/web3.js";
 import { StrategyState } from "./StrategyState";
-import { swap, transfer, borrow, initializeUser, addLiquidity,removeLiquidity,stakeLp,unstakeLp,updateLending, swapAndWithdraw} from "./instructions";
+import { swap, transfer, borrow, initializeUser, addLiquidity,removeLiquidity,stakeLp,unstakeLp,updateLending, swapAndWithdraw,closeAccount} from "./instructions";
 import { parseLendingInfo } from "../lending/lendingInfo";
 import { parseV4PoolInfo } from "../../Raydium/poolInfo";
 import { Market } from "@project-serum/serum";
@@ -86,7 +86,10 @@ export async function getDepositTx(
         ),
     );
     depositTx.add(
-        await borrow(wallet,strategy,lending0,lending1,ammInfo,init.userKey,borrow0,borrow1)
+        await borrow(wallet,strategy,lending0,lending1,ammInfo,init.userKey,new BN(0),borrow1)
+    );
+    depositTx.add(
+        await borrow(wallet,strategy,lending0,lending1,ammInfo,init.userKey,borrow0,new BN(0))
     );
     swapTx.add(
         await swap(wallet,strategy,ammInfo,serumMarket,init.userKey)
@@ -154,10 +157,14 @@ export async function getWithdrawTx(
     }
     const filters = [adminIdMemcmp,sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    let strategyFarmInfo =await  connection.getProgramAccounts(STAKE_PROGRAM_ID_V5,config)
+    const [strategyFarmInfo,bump] = await PublicKey.findProgramAddress(
+        [strategy.stakePoolId.toBuffer(), strategy.authority.toBuffer(), Buffer.from("staker_info_v2_associated_seed", "utf-8")],
+        STAKE_PROGRAM_ID_V5,
+      );
+    
     preTx.add(updateLending(strategy))
     preTx.add(
-        await unstakeLp(strategy,stakeInfo,wallet,strategyFarmInfo[0].pubkey,userInfoAccount,LPamount,new BN(withdrawType))
+        await unstakeLp(strategy,stakeInfo,wallet,strategyFarmInfo,userInfoAccount,LPamount,new BN(withdrawType))
     )
     withdrawTx.add(
         await removeLiquidity(wallet,strategy,ammInfo,serumMarket,userInfoAccount)
@@ -165,7 +172,14 @@ export async function getWithdrawTx(
     swapTx.add(
         await swapAndWithdraw(wallet,strategy,ammInfo,serumMarket,userInfoAccount,usrATA0,usrATA1,new BN(withdrawType))
     )
-        
+    cleanUpTx.add(
+        await closeAccount(userInfoAccount,wallet)
+    )
     
     return [preTx,withdrawTx,swapTx,cleanUpTx]
+}
+export function getCloseAccountTx(userInfoAccount:PublicKey,wallet:PublicKey){
+    let tx = new Transaction();
+    tx.add(closeAccount(userInfoAccount,wallet))
+    return tx;
 }
