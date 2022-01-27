@@ -22,6 +22,7 @@ import { findUserInfoAccount, UserInfo } from "./UserInfo";
 import { StrategyState } from "./StrategyState";
 import { getAnchorInsByIdl } from "../../util";
 import {
+    RAYDIUM_FARM_CONFIG,
     LENDING_AUTHORITY,
     LENDING_MARKET,
     lendProgramId,
@@ -35,6 +36,7 @@ import {
     LIQUIDITY_POOL_PROGRAM_ID_V4,
 } from "../../Raydium/info";
 import { FarmInfo } from "../../Raydium";
+
 export async function initializeUser(
     wallet: PublicKey,
     strategy: StrategyState,
@@ -223,7 +225,7 @@ export async function swap(
             isSigner: false,
             isWritable: false,
         },
-        
+
         { pubkey: strategy.ammId, isSigner: false, isWritable: true },
 
         { pubkey: AMM_AUTHORITY, isSigner: false, isWritable: true },
@@ -380,6 +382,9 @@ export async function unstakeLp(
     );
     let dataString = hash.concat(seed.toString("hex"));
     data = Buffer.from(dataString, "hex");
+
+    const raydiumConfig = Object.values(RAYDIUM_FARM_CONFIG).find(config => config.strategyAccount.equals(strategy.infoPubkey))
+
     let keys = [
         { pubkey: wallet, isSigner: true, isWritable: true },
         { pubkey: userAccount, isSigner: false, isWritable: true },
@@ -387,8 +392,8 @@ export async function unstakeLp(
         { pubkey: strategy.authority, isSigner: false, isWritable: true },
         { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
         { pubkey: strategy.rewardAccount, isSigner: false, isWritable: true },
-        { pubkey: strategy.rewardAccountB, isSigner: false, isWritable: true },
-        { pubkey: strategyFarmInfo, isSigner: false, isWritable: true },
+        { pubkey: raydiumConfig?.strategyTknAccount1, isSigner: false, isWritable: true },
+        { pubkey: raydiumConfig?.strategyFarmInfo, isSigner: false, isWritable: true },
 
         { pubkey: strategy.stakeProgramId, isSigner: false, isWritable: false },
         { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
@@ -419,6 +424,7 @@ export async function unstakeLp(
     ];
 
     let ix = new TransactionInstruction({
+        // @ts-ignore
         keys,
         programId: lyfRaydiumProgramId,
         data,
@@ -504,7 +510,7 @@ export async function removeLiquidity(
         { pubkey: strategy.tknAccount1, isSigner: false, isWritable: true },
         { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
         { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-       
+
         { pubkey: strategy.ammProgramId, isSigner: false, isWritable: false },
         { pubkey: strategy.ammId, isSigner: false, isWritable: true },
 
