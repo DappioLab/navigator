@@ -9,16 +9,19 @@
     "withdraw": "ts-node ./withdraw.ts",
     "claim": "ts-node ./claim.ts",
     "coverCall": "ts-node ./coverCall.ts",
-    "putSell":"ts-node ./putSell.ts",
-    "larixTest":"ts-node ./larixTest.ts",
+    "putSell": "ts-node ./putSell.ts",
+    "larixTest": "ts-node ./larixTest.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@project-serum/borsh": "^0.2.2",
+    "@project-serum/serum": "^0.13.61",
     "@solana/spl-token": "^0.1.8",
     "@solana/web3.js": "^1.31.0",
+    "@switchboard-xyz/switchboard-api": "^0.2.159",
     "bignumber.js": "^9.0.1",
-    "@switchboard-xyz/switchboard-api": "^0.2.159"
+    "buffer-layout": "^1.2.2",
+    "js-sha256": "^0.9.0"
   },
   "devDependencies": {
     "@project-serum/borsh": "^0.2.2",

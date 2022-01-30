@@ -4,7 +4,7 @@ import {
   ASSOCIATED_TOKEN_PROGRAM_ID,
   Token,
 } from "@solana/spl-token";
-
+import * as sha256 from "js-sha256"
 import {
   PublicKey,
   SYSVAR_CLOCK_PUBKEY,
@@ -133,4 +133,54 @@ export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey
     keys,
     programId: programId,
   });
+}
+
+export async function getTokenAccount(
+  connection: Connection,
+  tokenAccountPubkey: PublicKey,
+) {
+  
+  let accountInfo = await connection.getAccountInfo(tokenAccountPubkey);
+  return parseTokenAccount(accountInfo?.data,tokenAccountPubkey)
+}
+
+export function parseTokenAccount(data:any,infoPubkey:PublicKey){
+  let tokenLayout = struct([
+    publicKey("mint"),
+    publicKey("owner"),
+    u64("amount"),
+  ]);
+  let tokenAccountInfo = tokenLayout.decode(data);
+  let{
+    mint,owner,amount
+  } = tokenAccountInfo
+  return new TokenAccount(infoPubkey,mint,owner,amount)
+}
+export class TokenAccount{
+  infoPubkey:PublicKey;
+  mint:PublicKey;
+  owner:PublicKey;
+  amount:BN;
+  constructor(
+    infoPubkey:PublicKey,
+    mint:PublicKey,
+    owner:PublicKey,
+    amount:BN,
+  ){
+    this.infoPubkey = infoPubkey;
+    this.mint = mint;
+    this.owner = owner;
+    this.amount = new BN(amount);
+  }
+}
+
+export function getAnchorInsByIdl(name: string, old?: boolean) {
+  const SIGHASH_GLOBAL_NAMESPACE = "global";
+  let preimage = `${SIGHASH_GLOBAL_NAMESPACE}::${name}`;
+  if (!old){
+     preimage = `${SIGHASH_GLOBAL_NAMESPACE}:${name}`;
+  }
+  let hash = sha256.sha256.digest(preimage)
+  let data = Buffer.from(hash).slice(0,8)
+  return data;
 }

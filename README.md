@@ -21,3 +21,8 @@ $ yarn putSell
 $ solana airdrop 1
 $ yarn larixTest  
 ```
+
+## Francium Test
+```bash
+$ yarn start
+```
