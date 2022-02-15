@@ -20,7 +20,7 @@ export async function getAllSwap(connection: Connection) {
   const sizeFilter: DataSizeFilter = {
     dataSize: 395
   }
-  const filters = [adminIdMemcmp, sizeFilter];
+  const filters = [sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
   const allSaberAccount = await connection.getProgramAccounts(info.SWAP_PROGRAM_ID, config);
   let infoArray: layout.SwapInfo[] = [];
