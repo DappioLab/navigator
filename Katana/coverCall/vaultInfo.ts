@@ -3,6 +3,7 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { getOptionMarketByOptionTokenMint } from "../../PsyOptions/optionMarket";
 import { KATANA_PROGRAM_ID } from "./info";
+import { OptionParameters } from "./optionInfo";
 export interface VaultInterface {
     infoPubkey: PublicKey;
     admin: PublicKey;
@@ -44,6 +45,7 @@ export interface VaultInterface {
     pendingvaultBumpsWriter: BN;
     isPaused: boolean;
     onlyEarlyAccess: boolean;
+    optionPrams:OptionParameters
 }
 
 export class Vault implements VaultInterface {
@@ -87,6 +89,7 @@ export class Vault implements VaultInterface {
     pendingvaultBumpsWriter: BN;
     isPaused: boolean;
     onlyEarlyAccess: boolean;
+    optionPrams:OptionParameters;
     constructor(
         infoPubkey: PublicKey,
         admin: PublicKey,
@@ -128,6 +131,7 @@ export class Vault implements VaultInterface {
         pendingvaultBumpsWriter: BN | number,
         isPaused: boolean,
         onlyEarlyAccess: boolean,
+        optionPrams:OptionParameters,
     ) {
         this.infoPubkey = infoPubkey
         this.admin = admin
@@ -169,6 +173,7 @@ export class Vault implements VaultInterface {
         this.pendingvaultBumpsWriter = new BN(pendingvaultBumpsWriter)
         this.isPaused = isPaused
         this.onlyEarlyAccess = onlyEarlyAccess
+        this.optionPrams = optionPrams
     }
     async getPricePerPage() {
         let prefix = "price-per-share"
@@ -212,7 +217,7 @@ export class Vault implements VaultInterface {
         return optionMarket
     }
 }
-export async function parseVaultData(data: any, infoPubkey: PublicKey): Promise<Vault> {
+export async function parseVaultData(data: any, infoPubkey: PublicKey,optionPram:OptionParameters): Promise<Vault> {
     let dataBuffer = data as Buffer;
     let stateData = dataBuffer.slice(8);
     let state = STATE_LAYOUT.decode(stateData);
@@ -297,7 +302,8 @@ export async function parseVaultData(data: any, infoPubkey: PublicKey): Promise<
         pendingvaultBumpsOption,
         pendingvaultBumpsWriter,
         isPaused,
-        onlyEarlyAccess)
+        onlyEarlyAccess,
+        optionPram)
     return vault;
 }
 export const STATE_LAYOUT = struct([
