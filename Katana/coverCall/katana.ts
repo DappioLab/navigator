@@ -6,6 +6,7 @@ import {
     PublicKey
 } from "@solana/web3.js";
 import * as info from './info';
+import { getAllOptionPrams } from "./optionInfo";
 import { parseUserVaultData, UserVault } from "./userVault";
 import * as vaultInfo from "./vaultInfo";
 
@@ -25,15 +26,25 @@ export async function getAllVault(connection: Connection) {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allVaultAccount = await connection.getProgramAccounts(info.KATANA_PROGRAM_ID, config);
     let allVault :vaultInfo.Vault[] = []
-    for(let accountInfo of allVaultAccount){
-        allVault.push( await vaultInfo.parseVaultData(accountInfo.account.data,accountInfo.pubkey))
+    let optionPrams = await getAllOptionPrams(connection);
+    for (let accountInfo of allVaultAccount) {
+        for (let optionPram of optionPrams) {
+            if (optionPram.vault.toString() == accountInfo.pubkey.toString()) {
+                allVault.push(await vaultInfo.parseVaultData(accountInfo.account.data, accountInfo.pubkey, optionPram))
+            }
+        }
     }
     return allVault;
 }
 export async function getVault(connection: Connection, infoPubkey: PublicKey) {
     const vaultAccount = await connection.getAccountInfo(infoPubkey);
-    let vault = await vaultInfo.parseVaultData(vaultAccount?.data, infoPubkey);
-    
+    let optionPrams = await getAllOptionPrams(connection);
+    let vault!: vaultInfo.Vault ;
+    for (let optionPram of optionPrams) {
+        if (optionPram.vault.toString() == infoPubkey.toString()) {
+            vault = await vaultInfo.parseVaultData(vaultAccount?.data, infoPubkey, optionPram);
+        }
+    }
     return vault;
 }
 
