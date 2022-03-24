@@ -1,6 +1,16 @@
 # Dappio typescript library
 
+# Update history
+
+## 2022/3/24
+
+- Raydium protocol: Add getAllLedgers function
+- Raydium protocol: Add some Raydium struct (does not have breaking change)
+
+# Usage
+
 ## Saber test
+
 ```bash
 $ solana airdrop 10
 $ yarn deposit
@@ -9,6 +19,7 @@ $ yarn claim
 ```
 
 ## Katana test
+
 ```bash
 $ solana airdrop 10
 $ yarn coverCall
@@ -17,12 +28,14 @@ $ yarn putSell
 ```
 
 ## Larix Test
+
 ```bash
 $ solana airdrop 1
-$ yarn larixTest  
+$ yarn larixTest
 ```
 
 ## Francium Test
+
 ```bash
 $ yarn start
 ```
