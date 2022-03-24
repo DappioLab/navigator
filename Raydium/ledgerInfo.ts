@@ -22,7 +22,7 @@ type LedgerInfo = {
   owner: string;
   deposited: number;
   rewardDebts: number[];
-  mints: { farmLpMint: string; rewardAMint: string; rewardBMint: string };
+  mints: { stakedTokenMint: string; rewardAMint: string; rewardBMint?: string };
 };
 // Get all ledgers for certain user wallet.
 export async function getAllLedgers(
@@ -146,7 +146,7 @@ async function getFarmRelatedMints(
     farmVersion === 3
       ? parseFarmV1(farmAccInfo?.data, farmIdPubkey)
       : parseFarmV45(farmAccInfo?.data, farmIdPubkey, farmVersion);
-  let farmLpMint = (
+  let stakedTokenMint = (
     await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)
   ).mint.toBase58();
 
@@ -162,5 +162,5 @@ async function getFarmRelatedMints(
           )
         ).mint.toBase58()
       : undefined;
-  return { farmLpMint, rewardAMint, rewardBMint };
+  return { stakedTokenMint, rewardAMint, rewardBMint };
 }
