@@ -1,4 +1,4 @@
-import { checkTokenAccount, findAssociatedTokenAddress, wrapNative } from "../util";
+import { checkTokenAccount, createATAWithoutCheckIx, findAssociatedTokenAddress, wrapNative } from "../util";
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token, MintInfo } from '@solana/spl-token';
 import BN from "bn.js";
 import {
@@ -223,13 +223,8 @@ export async function claimRewardTx(farm: FarmInfo, wallet: PublicKey,connection
     let createMinerIx = await createMiner(farm,wallet,connection);
     tx.add(createMinerIx);
     let iouTokenAccount = await findAssociatedTokenAddress(wallet,IOU_TOKEN_MINT);
-    if(!(await checkTokenAccount(iouTokenAccount,connection))){
-        tx.add(Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID,IOU_TOKEN_MINT,iouTokenAccount,wallet,wallet))
-    }
-    let sbrTokenAccount = await findAssociatedTokenAddress(wallet,SABER_TOKEN_MINT);
-    if(!(await checkTokenAccount(sbrTokenAccount,connection))){
-        tx.add(Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID,SABER_TOKEN_MINT,sbrTokenAccount,wallet,wallet))
-    }
+    tx.add(await createATAWithoutCheckIx(wallet,IOU_TOKEN_MINT))
+    tx.add(await createATAWithoutCheckIx(wallet,SABER_TOKEN_MINT))
     tx.add(await ins.claimReward(farm,wallet))
     tx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,iouTokenAccount,wallet,wallet,[]))
     return tx;
