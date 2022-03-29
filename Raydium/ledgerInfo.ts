@@ -17,6 +17,7 @@ import {
 } from "./info";
 
 type LedgerInfo = {
+  pubkey: PublicKey;
   farmVersion: number;
   farmId: string;
   owner: string;
@@ -103,8 +104,7 @@ export async function getAllLedgers(
   ];
 }
 
-// Inner function used by getAllLedgers
-async function getLegerInfos(
+export async function getLegerInfos(
   connection: Connection,
   ledgers: {
     pubkey: PublicKey;
@@ -121,7 +121,9 @@ async function getLegerInfos(
         decoded,
         farmVersion
       );
+
       return {
+        pubkey: ledger.pubkey,
         farmVersion: farmVersion,
         mints: relatedMints,
         farmId: decoded.id.toBase58(),
@@ -163,4 +165,24 @@ async function getFarmRelatedMints(
         ).mint.toBase58()
       : undefined;
   return { stakedTokenMint, rewardAMint, rewardBMint };
+}
+
+export async function getAssociatedLedgerAccount({
+  programId,
+  poolId,
+  owner,
+}: {
+  programId: PublicKey;
+  poolId: PublicKey;
+  owner: PublicKey;
+}) {
+  const [publicKey] = await PublicKey.findProgramAddress(
+    [
+      poolId.toBuffer(),
+      owner.toBuffer(),
+      Buffer.from("staker_info_v2_associated_seed", "utf-8"),
+    ],
+    programId
+  );
+  return publicKey;
 }
