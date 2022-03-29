@@ -2,6 +2,22 @@
 
 # Update history
 
+## 2022/3/29
+
+- Update [documentation](https://hackmd.io/@happyeric77/H1iJ_6xWc) & some new functions
+- No breaking change
+
+### Raydium:
+
+- Update deposit & withdraw instruction
+- Deprecate old version of deposit & withdraw instruction
+- Add new feature: getLedgerInfos & getAssociatedLedgerAccount
+- Slightly classify the Raydium/index routing status (Adding missing items).
+
+### Saber
+
+- Slightly classify the Raydium/index routing status (Adding missing items).
+
 ## [2022/3/24](https://hackmd.io/@happyeric77/rJiaLRYfq)
 
 - Raydium protocol: Add getAllLedgers function
