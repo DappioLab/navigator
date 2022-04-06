@@ -55,7 +55,7 @@ export const depositReserveLiquidity = (
 
   lendingMarket: PublicKey,
   lendingMarketAuthority: PublicKey,
-  transferAuthority: PublicKey,
+  transferAuthority: PublicKey
 ): TransactionInstruction => {
   const dataLayout = struct([u8("instruction"), u64("liquidityAmount")]);
 
@@ -65,7 +65,7 @@ export const depositReserveLiquidity = (
       instruction: LendingInstruction.DepositReserveLiquidity,
       liquidityAmount: new BN(liquidityAmount),
     },
-    data,
+    data
   );
 
   const keys = [
@@ -78,7 +78,7 @@ export const depositReserveLiquidity = (
     { pubkey: lendingMarket, isSigner: false, isWritable: true },
     { pubkey: lendingMarketAuthority, isSigner: false, isWritable: false },
     { pubkey: transferAuthority, isSigner: true, isWritable: false },
-    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    // { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false }, // TODO Breaking change (Removed)
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
   return new TransactionInstruction({
@@ -97,22 +97,23 @@ export const RedeemReserveLiquidity = (
   withdrawReserve: PublicKey,
   reserveCollateralMint: PublicKey,
   reserveLiquiditySupply: PublicKey,
-  wallet: PublicKey,
+  wallet: PublicKey
 ): TransactionInstruction => {
   let dataString = "05ffffffffffffffff";
   let data = Buffer.from(dataString, "hex");
 
   const keys = [
     { pubkey: sourceCollateral, isSigner: false, isWritable: true },
-    { pubkey: destinationLiquidity, isSigner: false, isWritable: true },
+
     { pubkey: withdrawReserve, isSigner: false, isWritable: true },
     { pubkey: reserveCollateralMint, isSigner: false, isWritable: true },
     { pubkey: reserveLiquiditySupply, isSigner: false, isWritable: true },
     { pubkey: info.LARIX_MARKET_ID, isSigner: false, isWritable: false },
     { pubkey: info.MARKETAUTHORITY, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
-    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    // { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },  // TODO Breaking change (Removed)
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+    { pubkey: destinationLiquidity, isSigner: false, isWritable: true }, // TODO Breaking change, moving the position from 2nd two 9th
   ];
   return new TransactionInstruction({
     keys,
@@ -135,7 +136,7 @@ export const RedeemReserveLiquidity = (
 export const refreshReserveInstruction = (
   reserve: PublicKey,
   oracle?: PublicKey,
-  larixOracle?: PublicKey,
+  larixOracle?: PublicKey
 ): TransactionInstruction => {
   const dataLayout = struct([u8("instruction")]);
 
@@ -173,7 +174,7 @@ export async function createInitMinningIx(wallet: PublicKey) {
   let newMiner = await PublicKey.createWithSeed(
     wallet,
     "Dappio",
-    info.LARIX_PROGRAM_ID,
+    info.LARIX_PROGRAM_ID
   );
   let config = {
     basePubkey: wallet,
@@ -194,14 +195,14 @@ export async function createInitMinningIx(wallet: PublicKey) {
     { pubkey: newMiner, isSigner: false, isWritable: true },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: info.LARIX_MARKET_ID, isSigner: false, isWritable: true },
-    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+    // { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }, // TODO checked (Removed), no breaking
   ];
   tx.add(
     new TransactionInstruction({
       keys,
       programId: info.LARIX_PROGRAM_ID,
       data,
-    }),
+    })
   );
   return tx;
 }
@@ -211,10 +212,20 @@ export async function depositToMiner(
   mining: PublicKey,
   reservePub: PublicKey,
   sourceAccount: PublicKey,
-  wallet: PublicKey,
+  wallet: PublicKey
 ) {
   let dataString = "12ffffffffffffffff";
   let data = Buffer.from(dataString, "hex");
+  // const dataLayout = struct([u8("instruction"), u64("depositAmount")]);
+  // const data = Buffer.alloc(dataLayout.span);
+  // dataLayout.encode(
+  //   {
+  //     instruction: LendingInstruction.DepositMining,
+  //     depositAmount: new BN(10),
+  //   },
+  //   data
+  // );
+
   const keys = [
     { pubkey: sourceAccount, isSigner: false, isWritable: true },
     { pubkey: unCollSupply, isSigner: false, isWritable: true },
@@ -222,13 +233,13 @@ export async function depositToMiner(
 
     { pubkey: reservePub, isSigner: false, isWritable: false },
     { pubkey: info.LARIX_MARKET_ID, isSigner: false, isWritable: false },
-    { pubkey: info.MARKETAUTHORITY, isSigner: false, isWritable: false },
+    // { pubkey: info.MARKETAUTHORITY, isSigner: false, isWritable: false }, // TODO Breaking change (Removed)
 
     { pubkey: wallet, isSigner: true, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
 
-    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    // { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },  // TODO checked (Removed), no breaking
   ];
 
   return new TransactionInstruction({
@@ -245,7 +256,7 @@ export async function withdrawFromMiner(
   mining: PublicKey,
   reservePub: PublicKey,
 
-  wallet: PublicKey,
+  wallet: PublicKey
 ) {
   const dataLayout = struct([u8("instruction"), u64("liquidityAmount")]);
 
@@ -255,7 +266,7 @@ export async function withdrawFromMiner(
       instruction: LendingInstruction.WithdrawMining,
       liquidityAmount: new BN(amount),
     },
-    data,
+    data
   );
   const keys = [
     { pubkey: unCollSupply, isSigner: false, isWritable: true },
@@ -279,7 +290,7 @@ export function claimReward(
   desAccount: PublicKey,
   miner: PublicKey,
   wallet: PublicKey,
-  reservePub: PublicKey[],
+  reservePub: PublicKey[]
 ) {
   const dataLayout = struct([u8("instruction")]);
 
@@ -295,7 +306,7 @@ export function claimReward(
     { pubkey: info.LARIX_MARKET_ID, isSigner: false, isWritable: false },
     { pubkey: info.MARKETAUTHORITY, isSigner: false, isWritable: false },
 
-    { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
+    // { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
   for (let reserve of reservePub) {

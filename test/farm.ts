@@ -41,6 +41,10 @@ describe("Deposit & Withdraw Test", async () => {
     wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws",
     commitment: "processed",
   });
+  // let connection = new Connection("https://solana-api.projectserum.com", {
+  //   wsEndpoint: "wss://solana-api.projectserum.com/",
+  //   commitment: "processed",
+  // });
   let wallet = (() => {
     const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
     let u8Key = new Uint8Array(PrivateKey);
