@@ -2,6 +2,12 @@
 
 # Update history
 
+## 2022/4/6
+
+- Fix Larix protocol update. See detail [here](https://hackmd.io/@happyeric77/r1ca-YuQ5)
+- Move Larix test to mocha test in /test/
+  `npm run test_lend`
+
 ## 2022/3/29
 
 - Update [documentation](https://hackmd.io/@happyeric77/H1iJ_6xWc) & some new functions
