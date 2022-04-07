@@ -66,6 +66,9 @@ const SWAPINFO_LAYOUT = struct([
   u64("withdrawFeeNumerator"),
   u64("withdrawFeeDenominator"),
 ]);
+/**
+ * tradingFee and withdrawFee are in units of 6 decimals
+ */
 export class SwapInfo implements SwapInfoInterface {
   infoPublicKey: PublicKey;
   authority: PublicKey;
