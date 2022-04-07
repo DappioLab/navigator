@@ -2,6 +2,11 @@
 
 # Update history
 
+# 2022/4/7
+
+- Fix Duplicated output from Raydium/ledgerInfo.ts --> getAllLedgers
+- Remove the console.assert
+
 ## 2022/4/6
 
 - Fix Larix protocol update. See detail [here](https://hackmd.io/@happyeric77/r1ca-YuQ5)
