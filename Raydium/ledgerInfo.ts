@@ -8,9 +8,9 @@ import {
 import { getTokenAccount } from "../util";
 import { FarmInfo, parseFarmV1, parseFarmV45 } from "./farmInfo";
 import {
-  FARM_LEDGER_LAYOUT_V3_1,
+  // FARM_LEDGER_LAYOUT_V3_1,
   FARM_LEDGER_LAYOUT_V3_2,
-  FARM_LEDGER_LAYOUT_V5_1,
+  // FARM_LEDGER_LAYOUT_V5_1,
   FARM_LEDGER_LAYOUT_V5_2,
   STAKE_PROGRAM_ID,
   STAKE_PROGRAM_ID_V5,
@@ -39,67 +39,73 @@ export async function getAllLedgers(
   let dataSizeFilter = (datasize: any): DataSizeFilter => {
     return { dataSize: datasize };
   };
-  let filters_v3_1 = [
-    memcmpFilter,
-    dataSizeFilter(FARM_LEDGER_LAYOUT_V3_1.span),
-  ];
+  // let filters_v3_1 = [
+  //   memcmpFilter,
+  //   dataSizeFilter(FARM_LEDGER_LAYOUT_V3_1.span),
+  // ];
   let filters_v3_2 = [
     memcmpFilter,
     dataSizeFilter(FARM_LEDGER_LAYOUT_V3_2.span),
   ];
-  let filters_v5_1 = [
-    memcmpFilter,
-    dataSizeFilter(FARM_LEDGER_LAYOUT_V5_1.span),
-  ];
+  // let filters_v5_1 = [
+  //   memcmpFilter,
+  //   dataSizeFilter(FARM_LEDGER_LAYOUT_V5_1.span),
+  // ];
   let filters_v5_2 = [
     memcmpFilter,
     dataSizeFilter(FARM_LEDGER_LAYOUT_V5_2.span),
   ];
 
-  let allLedgersInV3_1 = await connection.getProgramAccounts(STAKE_PROGRAM_ID, {
-    filters: filters_v3_1,
-  });
+  // let allLedgersInV3_1 = await connection.getProgramAccounts(STAKE_PROGRAM_ID, {
+  //   filters: filters_v3_1,
+  // });
   let allLedgersInV3_2 = await connection.getProgramAccounts(STAKE_PROGRAM_ID, {
     filters: filters_v3_2,
   });
-  let allLedgersInV5_1 = await connection.getProgramAccounts(
-    STAKE_PROGRAM_ID_V5,
-    { filters: filters_v5_1 }
-  );
+  // let allLedgersInV5_1 = await connection.getProgramAccounts(
+  //   STAKE_PROGRAM_ID_V5,
+  //   { filters: filters_v5_1 }
+  // );
   let allLedgersInV5_2 = await connection.getProgramAccounts(
     STAKE_PROGRAM_ID_V5,
     { filters: filters_v5_2 }
   );
 
-  let ledgerInfoV3_1 = await getLegerInfos(
-    connection,
-    allLedgersInV3_1,
-    FARM_LEDGER_LAYOUT_V3_1,
-    3
-  );
+  // let ledgerInfoV3_1 = await getLegerInfos(
+  //   connection,
+  //   allLedgersInV3_1,
+  //   FARM_LEDGER_LAYOUT_V3_1,
+  //   3
+  // );
   let ledgerInfoV3_2 = await getLegerInfos(
     connection,
     allLedgersInV3_2,
     FARM_LEDGER_LAYOUT_V3_2,
     3
   );
-  let ledgerInfoV5_1 = await getLegerInfos(
-    connection,
-    allLedgersInV5_1,
-    FARM_LEDGER_LAYOUT_V5_1,
-    5
-  );
+  // let ledgerInfoV5_1 = await getLegerInfos(
+  //   connection,
+  //   allLedgersInV5_1,
+  //   FARM_LEDGER_LAYOUT_V5_1,
+  //   5
+  // );
   let ledgerInfoV5_2 = await getLegerInfos(
     connection,
     allLedgersInV5_2,
     FARM_LEDGER_LAYOUT_V5_2,
     5
   );
+  console.log(
+    // ledgerInfoV3_1.length,
+    ledgerInfoV3_2.length,
+    // ledgerInfoV5_1.length,
+    ledgerInfoV5_2.length
+  );
 
   return [
-    ...ledgerInfoV3_1,
+    // ...ledgerInfoV3_1,
     ...ledgerInfoV3_2,
-    ...ledgerInfoV5_1,
+    // ...ledgerInfoV5_1,
     ...ledgerInfoV5_2,
   ];
 }
@@ -136,7 +142,7 @@ export async function getLegerInfos(
     })
   );
 }
-// Inner fucntion used by getLedgerInfos
+// Inner fucntions used by getLedgerInfos
 async function getFarmRelatedMints(
   connection: Connection,
   decoded: any,

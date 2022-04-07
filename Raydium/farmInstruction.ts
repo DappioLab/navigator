@@ -15,7 +15,7 @@ import {
 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import BN from "bn.js";
-import { assert } from "console";
+// import { assert } from "console";
 
 export type FarmPoolKeys = {
   readonly id: PublicKey;
@@ -58,14 +58,22 @@ export async function makeDepositInstructionV3({
   userKeys,
   amount,
 }: FarmDepositInstructionParams) {
-  assert(
-    poolKeys.rewardVaults.length === 1,
-    "poolKeys.rewardVaults lengths not equal 1"
-  );
-  assert(
-    userKeys.rewardTokenAccounts.length === 1,
-    "userKeys.rewardTokenAccounts lengths not equal 1"
-  );
+  // assert(
+  //   poolKeys.rewardVaults.length === 1,
+  //   "poolKeys.rewardVaults lengths not equal 1"
+  // );
+  if (poolKeys.rewardVaults.length !== 1) {
+    console.log("poolKeys.rewardVaults lengths not equal 1");
+    // return new Error(`"poolKeys.rewardVaults lengths not equal 1"`);
+  }
+  // assert(
+  //   userKeys.rewardTokenAccounts.length === 1,
+  //   "userKeys.rewardTokenAccounts lengths not equal 1"
+  // );
+  if (userKeys.rewardTokenAccounts.length !== 1) {
+    console.log("poolKeys.rewardVaults lengths not equal 1");
+    // return new Error("poolKeys.rewardVaults lengths not equal 1");
+  }
 
   const LAYOUT = struct([u8("instruction"), u64("amount")]);
   const data = Buffer.alloc(LAYOUT.span);
@@ -114,10 +122,18 @@ export async function makeDepositInstructionV5({
   userKeys,
   amount,
 }: FarmDepositInstructionParams) {
-  assert(
-    userKeys.rewardTokenAccounts.length === poolKeys.rewardVaults.length,
-    "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
-  );
+  // assert(
+  //   userKeys.rewardTokenAccounts.length === poolKeys.rewardVaults.length,
+  //   "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
+  // );
+  if (userKeys.rewardTokenAccounts.length !== poolKeys.rewardVaults.length) {
+    console.log(
+      "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
+    );
+    // return new Error(
+    //   "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
+    // );
+  }
 
   const LAYOUT = struct([u8("instruction"), u64("amount")]);
   const data = Buffer.alloc(LAYOUT.span);
@@ -197,14 +213,22 @@ export async function makeWithdrawInstructionV3({
   userKeys,
   amount,
 }: FarmWithdrawInstructionParams) {
-  assert(
-    poolKeys.rewardVaults.length === 1,
-    "poolKeys.rewardVaults lengths not equal 1"
-  );
-  assert(
-    userKeys.rewardTokenAccounts.length === 1,
-    "userKeys.rewardTokenAccounts lengths not equal 1"
-  );
+  // assert(
+  //   poolKeys.rewardVaults.length === 1,
+  //   "poolKeys.rewardVaults lengths not equal 1"
+  // );
+  if (poolKeys.rewardVaults.length !== 1) {
+    console.log("poolKeys.rewardVaults lengths not equal 1");
+    // return new Error("poolKeys.rewardVaults lengths not equal 1");
+  }
+  // assert(
+  //   userKeys.rewardTokenAccounts.length === 1,
+  //   "userKeys.rewardTokenAccounts lengths not equal 1"
+  // );
+  if (userKeys.rewardTokenAccounts.length !== 1) {
+    console.log("userKeys.rewardTokenAccounts lengths not equal 1");
+    return new Error("userKeys.rewardTokenAccounts lengths not equal 1");
+  }
 
   const LAYOUT = struct([u8("instruction"), u64("amount")]);
   const data = Buffer.alloc(LAYOUT.span);
@@ -264,10 +288,18 @@ export async function makeWithdrawInstructionV5({
   userKeys,
   amount,
 }: FarmWithdrawInstructionParams) {
-  assert(
-    userKeys.rewardTokenAccounts.length === poolKeys.rewardVaults.length,
-    "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
-  );
+  // assert(
+  //   userKeys.rewardTokenAccounts.length === poolKeys.rewardVaults.length,
+  //   "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
+  // );
+  if (userKeys.rewardTokenAccounts.length !== poolKeys.rewardVaults.length) {
+    console.log(
+      "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
+    );
+    // return new Error(
+    //   "lengths not equal with poolKeys.rewardVaults userKeys.rewardTokenAccounts"
+    // );
+  }
 
   const LAYOUT = struct([u8("instruction"), u64("amount")]);
   const data = Buffer.alloc(LAYOUT.span);
