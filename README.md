@@ -2,6 +2,11 @@
 
 # Update history
 
+## 2022/4/8
+
+- Change the routing method of farmInstructions in Raydium/index.ts to avoid double exporting interface issue in frontend.
+  > export \* from "./farmInstruction";
+
 # 2022/4/7
 
 - Fix Duplicated output from Raydium/ledgerInfo.ts --> getAllLedgers

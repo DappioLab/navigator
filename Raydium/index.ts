@@ -1,13 +1,6 @@
 export { getAllAmmPool, getAllFarm } from "./raydium";
 export { swap, addLiquidity } from "./AmmTransaction";
-export {
-  makeDepositInstruction,
-  makeWithdrawInstruction,
-  FarmDepositInstructionParams,
-  FarmWithdrawInstructionParams,
-  FarmPoolKeys,
-  FarmUserKeys,
-} from "./farmInstruction";
+export * from "./farmInstruction";
 export {
   getAllLedgers,
   getLegerInfos,
