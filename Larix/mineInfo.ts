@@ -17,6 +17,7 @@ import {
 } from "@solana/web3.js";
 import { LARIX_PROGRAM_ID } from "./larixInfo";
 import BN from "bn.js";
+import { lendingInfo } from "./larix";
 
 export class MinerInfo {
   infoPub: PublicKey;
@@ -93,7 +94,11 @@ export function parseMinerInfo(data: any, miner: PublicKey) {
   );
 }
 
-export async function getMiner(connection: Connection, wallet: PublicKey) {
+export async function getMiner(
+  connection: Connection,
+  wallet: PublicKey,
+  lendingInfo?: lendingInfo[],
+) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 1,
@@ -113,6 +118,23 @@ export async function getMiner(connection: Connection, wallet: PublicKey) {
   for (let account of allMinerAccount) {
     let currentFarmInfo = parseMinerInfo(account.account.data, account.pubkey);
     allMinerInfo.push(currentFarmInfo);
+  }
+  if (lendingInfo) {
+    for (let miner of allMinerInfo) {
+      for (let indexData of miner.indexs) {
+        for (let reserve of lendingInfo) {
+          if (indexData.reserve.equals(reserve.reserveInfo.infoPubkey)) {
+            let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(
+              indexData.index,
+            );
+
+            let reward = indexSub.mul(indexData.unCollLTokenAmount);
+
+            miner.unclaimedMine = miner.unclaimedMine.add(reward);
+          }
+        }
+      }
+    }
   }
   return allMinerInfo;
 }
