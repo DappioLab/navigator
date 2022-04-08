@@ -58,7 +58,7 @@ describe("Lend Unit Test", async () => {
           minerPub
         );
         tx.add(deposit);
-        var recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
         tx.recentBlockhash = recentBlockhash;
         tx.feePayer = wallet.publicKey;
         let result = await sendAndConfirmTransaction(connection, tx, [wallet]);
@@ -83,7 +83,7 @@ describe("Lend Unit Test", async () => {
           connection
         );
         tx.add(deposit);
-        var recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+        var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
         tx.recentBlockhash = recentBlockhash;
         tx.feePayer = wallet.publicKey;
         let result = await sendAndConfirmTransaction(connection, tx, [wallet]);
@@ -100,7 +100,7 @@ describe("Lend Unit Test", async () => {
       connection
     );
     tx.add(claim);
-    var recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+    var recentBlockhash = (await connection.getRecentBlockhash()).blockhash;
     tx.recentBlockhash = recentBlockhash;
     tx.feePayer = wallet.publicKey;
     //console.log(tx.serializeMessage().toString("base64"), "\n");
