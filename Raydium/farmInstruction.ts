@@ -2,6 +2,8 @@ import {
   PublicKey,
   TransactionInstruction,
   SYSVAR_CLOCK_PUBKEY,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import {
   publicKey,
@@ -40,6 +42,13 @@ export interface FarmDepositInstructionParams {
   amount: string | number | bigint | BN;
 }
 export type FarmWithdrawInstructionParams = FarmDepositInstructionParams;
+export interface FarmCreateAssociatedLedgerAccountInstructionParams {
+  poolKeys: FarmPoolKeys;
+  userKeys: {
+    ledger: PublicKey;
+    owner: PublicKey;
+  };
+}
 
 export function makeDepositInstruction(params: FarmDepositInstructionParams) {
   const { poolKeys } = params;
@@ -566,6 +575,77 @@ export function withdrawInstructionV4(
   return new TransactionInstruction({
     keys,
     programId,
+    data,
+  });
+}
+
+export function makeCreateAssociatedLedgerAccountInstruction(
+  params: FarmCreateAssociatedLedgerAccountInstructionParams
+) {
+  const { poolKeys } = params;
+  const { version } = poolKeys;
+
+  if (version === 3) {
+    return makeCreateAssociatedLedgerAccountInstructionV3(params);
+  } else if (version === 5) {
+    return makeCreateAssociatedLedgerAccountInstructionV5(params);
+  }
+
+  return new Error(`invalid version, poolKeys.version ${version}`);
+}
+
+export function makeCreateAssociatedLedgerAccountInstructionV3({
+  poolKeys,
+  userKeys,
+}: FarmCreateAssociatedLedgerAccountInstructionParams) {
+  const LAYOUT = struct([u8("instruction")]);
+  const data = Buffer.alloc(LAYOUT.span);
+  LAYOUT.encode(
+    {
+      instruction: 9,
+    },
+    data
+  );
+
+  const keys = [
+    { pubkey: poolKeys.id, isSigner: false, isWritable: true },
+    { pubkey: userKeys.ledger, isSigner: false, isWritable: true },
+    { pubkey: userKeys.owner, isSigner: true, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+  ];
+
+  return new TransactionInstruction({
+    programId: poolKeys.programId,
+    keys,
+    data,
+  });
+}
+
+export function makeCreateAssociatedLedgerAccountInstructionV5({
+  poolKeys,
+  userKeys,
+}: FarmCreateAssociatedLedgerAccountInstructionParams) {
+  const LAYOUT = struct([u8("instruction")]);
+  const data = Buffer.alloc(LAYOUT.span);
+  LAYOUT.encode(
+    {
+      instruction: 10,
+    },
+    data
+  );
+
+  const keys = [
+    { pubkey: poolKeys.id, isSigner: false, isWritable: true },
+    { pubkey: userKeys.ledger, isSigner: false, isWritable: true },
+    { pubkey: userKeys.owner, isSigner: true, isWritable: false },
+    { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
+  ];
+
+  return new TransactionInstruction({
+    programId: poolKeys.programId,
+    keys,
     data,
   });
 }
