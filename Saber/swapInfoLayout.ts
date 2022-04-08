@@ -148,7 +148,7 @@ export class SwapInfo implements SwapInfoInterface {
       .mul(DIGIT)
       .div(withdrawFeeDenominator);
     this.tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
-    console.log(tradeFeeNumerator.toNumber(), tradeFeeDenominator.toNumber());
+    
   }
   async updateAmount(connection: Connection) {
     this.AtokenAccountAmount = await getTokenAccountAmount(

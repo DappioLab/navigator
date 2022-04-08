@@ -95,12 +95,12 @@ export async function getAllLedgers(
     FARM_LEDGER_LAYOUT_V5_2,
     5
   );
-  console.log(
-    // ledgerInfoV3_1.length,
-    ledgerInfoV3_2.length,
-    // ledgerInfoV5_1.length,
-    ledgerInfoV5_2.length
-  );
+  // console.log(
+  //   // ledgerInfoV3_1.length,
+  //   ledgerInfoV3_2.length,
+  //   // ledgerInfoV5_1.length,
+  //   ledgerInfoV5_2.length
+  // );
 
   return [
     // ...ledgerInfoV3_1,

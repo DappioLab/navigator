@@ -30,7 +30,6 @@ export async function createUserVaultIx(vault: Vault, wallet: PublicKey) {
     ]);
     let data = Buffer.alloc(9)
     let datahex = userVault[1].toString(16)
-    console.log(data);
     let datastring = '924464453f2eb6c7'.concat(datahex);
     data = Buffer.from(datastring, "hex")
 
