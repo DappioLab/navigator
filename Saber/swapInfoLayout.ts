@@ -38,7 +38,7 @@ export interface SwapInfoInterface {
   tradingFee: BN;
   withdrawFee: BN;
 }
-const DIGIT = new BN(1000000);
+const DIGIT = new BN(10000000000);
 const SWAPINFO_LAYOUT = struct([
   bool("isInitialized"),
   bool("isPaused"),
@@ -123,7 +123,7 @@ export class SwapInfo implements SwapInfoInterface {
     tradeFeeNumerator: BN,
     tradeFeeDenominator: BN,
     withdrawFeeNumerator: BN,
-    withdrawFeeDenominator: BN,
+    withdrawFeeDenominator: BN
   ) {
     this.infoPublicKey = infoPublicKey;
     this.authority = authority;
@@ -153,18 +153,18 @@ export class SwapInfo implements SwapInfoInterface {
   async updateAmount(connection: Connection) {
     this.AtokenAccountAmount = await getTokenAccountAmount(
       connection,
-      this.tokenAccountA,
+      this.tokenAccountA
     );
     this.BtokenAccountAmount = await getTokenAccountAmount(
       connection,
-      this.tokenAccountB,
+      this.tokenAccountB
     );
     this.LPtokenSupply = await getTokenSupply(connection, this.poolMint);
   }
   async calculateDepositRecieve(
     connection: Connection,
     AtokenIn: BN,
-    BtokenIN: BN,
+    BtokenIN: BN
   ) {
     if (!this.AtokenAccountAmount) {
       await this.updateAmount(connection);
@@ -174,7 +174,7 @@ export class SwapInfo implements SwapInfoInterface {
 
 export async function parseSwapInfoData(
   data: any,
-  pubkey: PublicKey,
+  pubkey: PublicKey
 ): Promise<SwapInfo> {
   const decodedData = SWAPINFO_LAYOUT.decode(data);
   let authority = (
@@ -226,7 +226,7 @@ export async function parseSwapInfoData(
     tradeFeeNumerator,
     tradeFeeDenominator,
     withdrawFeeNumerator,
-    withdrawFeeDenominator,
+    withdrawFeeDenominator
   );
   return swapInfo;
 }
