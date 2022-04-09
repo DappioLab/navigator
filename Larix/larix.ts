@@ -17,7 +17,7 @@ interface lendingMarketInfo {
   supplyAmount: BN;
   supplyApy: number;
   miningApy: number;
-  miningEnble: boolean;
+  miningEnable: boolean;
   reserveInfo: state.Reserve;
 }
 import * as state from "./state";
@@ -32,7 +32,7 @@ export class lendingInfo implements lendingMarketInfo {
   supplyAmount: BN;
   supplyApy: number;
   miningApy: number;
-  miningEnble: boolean;
+  miningEnable: boolean;
   reserveInfo: state.Reserve;
   //totalUsdValue: BN;
   constructor(
@@ -45,7 +45,7 @@ export class lendingInfo implements lendingMarketInfo {
     supplyAmount: BN,
     supplyApy: number,
     miningApy: number,
-    miningEnble: boolean,
+    miningEnable: boolean,
     reserveInfo: state.Reserve,
     //totalUsdValue: BN,
   ) {
@@ -58,7 +58,7 @@ export class lendingInfo implements lendingMarketInfo {
     this.supplyAmount = supplyAmount;
     this.supplyApy = supplyApy;
     this.miningApy = miningApy;
-    this.miningEnble = miningEnble;
+    this.miningEnable = miningEnable;
     this.reserveInfo = reserveInfo;
     //this.totalUsdValue = totalUsdValue;
   }
@@ -78,10 +78,11 @@ export async function getAllLendingInfo(connection: Connection) {
 
     let supplyAmount = borrowedAmount.add(availableAmount);
 
-    let UtilizationRatio = Math.trunc(reservesMeta.calculateUtilizationRatio()*100)/100;
+    let UtilizationRatio =
+      Math.trunc(reservesMeta.calculateUtilizationRatio() * 100) / 100;
     let borrowAPY = reservesMeta.calculateBorrowAPY() as number;
-    let apy = UtilizationRatio * borrowAPY *998/1000;
-
+    let apy = (UtilizationRatio * borrowAPY * 998) / 1000;
+    let isMining = reservesMeta.farm.kinkUtilRate.gt(new BN(0));
     const newinfo = new lendingInfo(
       reservesMeta.infoPubkey,
       reservesMeta.liquidity.mintPubkey,
@@ -92,7 +93,7 @@ export async function getAllLendingInfo(connection: Connection) {
       supplyAmount,
       apy,
       miningApy,
-      true,
+      isMining,
       reservesMeta,
     );
     lendingInfos.push(newinfo);
