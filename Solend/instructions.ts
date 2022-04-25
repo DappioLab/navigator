@@ -23,7 +23,7 @@ import * as solendUtil from "./util"
 import * as util from "../util"
 
 // deposit
-import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 import {
     PublicKey,

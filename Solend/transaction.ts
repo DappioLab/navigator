@@ -1,6 +1,6 @@
 
-import { checkTokenAccount, findAssociatedTokenAddress } from "../util";
-import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
+import { checkTokenAccount, findAssociatedTokenAddress,createATAWithoutCheckIx } from "../util";
+import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, createCloseAccountInstruction } from '@solana/spl-token';
 import BN from "bn.js";
 import {
     AccountMeta,
@@ -40,16 +40,10 @@ export async function createDepositTx(lendingInfo: lendingInfo, wallet: PublicKe
     }
     else
         supplyTokenAddress = await findAssociatedTokenAddress(wallet, lendingInfo.supplyTokenMint);
-    if (await checkTokenAccount(reserveTokenAddress, connection)) { }
-    else {
-        let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingInfo.reserveTokenMint, reserveTokenAddress, wallet, wallet);
-        tx.add(createAtaIx);
-    }
-    /*if (await checkTokenAccount(supplyTokenAddress, connection)) { }
-    else {
-        let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingInfo.supplyTokenMint, supplyTokenAddress, wallet, wallet);
-        tx.add(createAtaIx);
-    }*/
+    
+    tx.add(await createATAWithoutCheckIx(wallet,lendingInfo.reserveTokenMint,))
+
+    
     let refreshIx = await ins.refreshReserveInstruction(lendingInfo.reserveAddress, lendingInfo.reserveInfo.liquidity.pythOraclePubkey, lendingInfo.reserveInfo.liquidity.switchboardOraclePubkey);
     //console.log(refreshIx);
     tx.add(refreshIx);
@@ -103,17 +97,9 @@ export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey
     else
         withdrawTokenAddress = await findAssociatedTokenAddress(wallet, lendingMarketInfo.supplyTokenMint);
     if (createWithdrawTokenATA){
-        if (await checkTokenAccount(withdrawTokenAddress, connection)) { }
-        else {
-            let wrapSolIX = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID,TOKEN_PROGRAM_ID,lendingMarketInfo.supplyTokenMint,withdrawTokenAddress,wallet,wallet);
-            tx.add(wrapSolIX);
-        }
+        tx.add(await createATAWithoutCheckIx(wallet,lendingMarketInfo.supplyTokenMint,));
     }
-    if (await checkTokenAccount(reserveTokenAddress, connection)) { }
-    else {
-        let createAtaIx = await Token.createAssociatedTokenAccountInstruction(ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, lendingMarketInfo.reserveTokenMint, reserveTokenAddress, wallet, wallet);
-        tx.add(createAtaIx);
-    }
+    tx.add(await createATAWithoutCheckIx(wallet,lendingMarketInfo.reserveTokenMint));
     
     let withdrawIns = ins.withdrawObligationCollateralAndRedeemReserveLiquidity(
         amount,
@@ -122,7 +108,7 @@ export async function createWithdrawTx(wallet:PublicKey,reserveAddress:PublicKey
     
     tx.add(withdrawIns);
     if (lendingMarketInfo.supplyTokenMint.toString()== NATIVE_MINT.toString()){
-        tx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,withdrawTokenAddress,wallet,wallet,[]))
+        tx.add(createCloseAccountInstruction(withdrawTokenAddress,wallet,wallet,[]))
     }
     return tx;
 
