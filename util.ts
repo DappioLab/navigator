@@ -205,6 +205,7 @@ export async function signAndSendAll(
   allTx: Transaction,
   connection: Connection,
   wallet: Keypair[],
+  printRaw?:boolean
 ): Promise<string> {
   const walletPublicKey = wallet[0].publicKey;
   const tx = new Transaction();
@@ -212,6 +213,9 @@ export async function signAndSendAll(
   const recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
   tx.recentBlockhash = recentBlockhash;
   tx.feePayer = walletPublicKey;
+  if (printRaw){
+    console.log(tx.serializeMessage().toString("base64"))
+  }
   const result = sendAndConfirmTransaction(connection, tx, wallet);
   return result;
 }
