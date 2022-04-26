@@ -97,6 +97,23 @@ export async function getTokenAccountAmount(
   return new BN(tokenAccountInfo.amount);
 }
 
+export async function getAllTokenAccount(
+  wallet: PublicKey,
+  connection: Connection,
+): Promise<TokenAccount[]> {
+  const tokenAccountInfos = await (
+    await connection.getTokenAccountsByOwner(wallet, {
+      programId: TOKEN_PROGRAM_ID,
+    })
+  ).value;
+  const tokenAccounts = [];
+  for (const info of tokenAccountInfos) {
+    const tokenAccount = parseTokenAccount(info.account.data, info.pubkey);
+    tokenAccounts.push(tokenAccount);
+  }
+  return tokenAccounts;
+}
+
 export async function getTokenSupply(
   connection: Connection,
   tokenMintPubkey: PublicKey,
