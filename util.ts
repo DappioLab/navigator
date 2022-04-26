@@ -30,8 +30,8 @@ import {
 export async function wrapNative(
   amount: BN,
   walletPublicKey: PublicKey,
-  connection: Connection,
-  createAta: boolean,
+  connection?: Connection,
+  createAta?: boolean,
 ) {
   let tx = new Transaction();
   let destinationAta = await findAssociatedTokenAddress(
