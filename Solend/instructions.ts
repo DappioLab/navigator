@@ -23,7 +23,7 @@ import * as solendUtil from "./util"
 import * as util from "../util"
 
 // deposit
-import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
+import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 import {
     PublicKey,
@@ -255,10 +255,16 @@ export const refreshObligationInstruction = (
 };
 
 
-export async function createObligationAccountIx(wallet :PublicKey) {
+export async function createObligationAccountIx(wallet :PublicKey,payer?:PublicKey) {
     let tx = new Transaction;
     const seed = info.SOLENDLENDINGMARKETID.toString().slice(0, 32);
-    let createAccountFromSeedIx = await  SystemProgram.createAccountWithSeed({fromPubkey:wallet,seed:seed,space:1300,newAccountPubkey:await getObligationPublicKey(wallet),basePubkey:wallet,lamports:9938880,programId:info.SOLENDPROGRAMID});
+    if (payer){
+
+    }
+    else{
+        payer = wallet;
+    }
+    let createAccountFromSeedIx = await  SystemProgram.createAccountWithSeed({fromPubkey:payer,seed:seed,space:1300,newAccountPubkey:await getObligationPublicKey(wallet),basePubkey:wallet,lamports:9938880,programId:info.SOLENDPROGRAMID});
     //console.log(createAccountFromSeedIx);
     tx.add(createAccountFromSeedIx);
     const dataLayout = struct([u8('instruction')]);

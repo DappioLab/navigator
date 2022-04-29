@@ -8,7 +8,7 @@ import {
     TOKEN_PROGRAM_ID,
     NATIVE_MINT,
     ASSOCIATED_TOKEN_PROGRAM_ID,
-    Token,
+    createCloseAccountInstruction,
 } from "@solana/spl-token";
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction,MemcmpFilter,DataSizeFilter,GetProgramAccountsConfig } from "@solana/web3.js";
@@ -63,13 +63,13 @@ export async function getDepositTx(
     if (ammInfo.pcMintAddress.toString( ) == NATIVE_MINT.toString()){
         preTx.add(await wrapNative(amount0,wallet,connection,false))
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,usrATA0,wallet,wallet,[])
+            createCloseAccountInstruction(usrATA0,wallet,wallet,[])
         )
     }
     if (ammInfo.coinMintAddress.toString( ) == NATIVE_MINT.toString()){
         preTx.add(await wrapNative(amount1,wallet,connection,false))
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,usrATA1,wallet,wallet,[])
+            createCloseAccountInstruction(usrATA1,wallet,wallet,[])
         )
     }
 
@@ -138,12 +138,12 @@ export async function getWithdrawTx(
     
     if (ammInfo.pcMintAddress.toString( ) == NATIVE_MINT.toString()){
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,usrATA0,wallet,wallet,[])
+            createCloseAccountInstruction(usrATA0,wallet,wallet,[])
         )
     }
     if (ammInfo.coinMintAddress.toString( ) == NATIVE_MINT.toString()){
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID,usrATA1,wallet,wallet,[])
+            createCloseAccountInstruction(usrATA1,wallet,wallet,[])
         )
     }
     const adminIdMemcmp: MemcmpFilter = {

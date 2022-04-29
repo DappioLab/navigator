@@ -7,8 +7,7 @@ import {
 import {
     TOKEN_PROGRAM_ID,
     NATIVE_MINT,
-    ASSOCIATED_TOKEN_PROGRAM_ID,
-    Token,
+    ASSOCIATED_TOKEN_PROGRAM_ID,createCloseAccountInstruction
 } from "@solana/spl-token";
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
@@ -43,8 +42,7 @@ export async function swap(
     if (fromMint.toString() == NATIVE_MINT.toString()) {
         tx.add(await wrapNative(amountIn, wallet, connection, true));
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(
-                TOKEN_PROGRAM_ID,
+            createCloseAccountInstruction(
                 fromTokenAccount,
                 wallet,
                 wallet,
@@ -54,8 +52,7 @@ export async function swap(
     }
     if (toMint.toString() == NATIVE_MINT.toString()) {
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(
-                TOKEN_PROGRAM_ID,
+            createCloseAccountInstruction(
                 toTokenAccount,
                 wallet,
                 wallet,
@@ -150,8 +147,7 @@ export async function addLiquidity(
     if (pool.coinMintAddress.toString() == NATIVE_MINT.toString()) {
         tx.add(await wrapNative(maxCoinAmount, wallet, connection, true));
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(
-                TOKEN_PROGRAM_ID,
+            createCloseAccountInstruction(
                 await findAssociatedTokenAddress(wallet, pool.coinMintAddress),
                 wallet,
                 wallet,
@@ -162,8 +158,7 @@ export async function addLiquidity(
     if (pool.pcMintAddress.toString() == NATIVE_MINT.toString()) {
         tx.add(await wrapNative(maxPcAmount, wallet, connection, true));
         cleanUpTx.add(
-            Token.createCloseAccountInstruction(
-                TOKEN_PROGRAM_ID,
+            createCloseAccountInstruction(
                 await findAssociatedTokenAddress(wallet, pool.pcMintAddress),
                 wallet,
                 wallet,

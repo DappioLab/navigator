@@ -3,7 +3,7 @@ import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
   ASSOCIATED_TOKEN_PROGRAM_ID,
-  Token,
+  createCloseAccountInstruction
 } from "@solana/spl-token";
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
@@ -23,7 +23,7 @@ export async function deposit(vault: Vault, wallet: PublicKey, amount: BN, conne
     }
     if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
         tx.add(await wrapNative(amount, wallet, connection, true))
-        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, underlyingTokenAccount, wallet, wallet
+        cleanupTx.add(createCloseAccountInstruction( underlyingTokenAccount, wallet, wallet
             , []))
     }
     tx.add(await createATAWithoutCheckIx(wallet, vault.derivativeTokenMint))
@@ -43,7 +43,7 @@ export async function instantWithdraw(vault: Vault, wallet: PublicKey, amount: B
     let underlyingTokenAccount = await findAssociatedTokenAddress(wallet, vault.underlyingTokenMint); 
     tx.add(await ins.instantWithdrawIx(vault, wallet, underlyingTokenAccount, amount))
     if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
-        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, underlyingTokenAccount, wallet, wallet
+        cleanupTx.add(createCloseAccountInstruction(underlyingTokenAccount, wallet, wallet
             , []))
     }
     tx.add(cleanupTx)
@@ -69,7 +69,7 @@ export async function completeWithdraw(vault: Vault, wallet: PublicKey,) {
     let underlyingTokenAccount = await findAssociatedTokenAddress(wallet, vault.underlyingTokenMint);
     tx.add(await ins.completeWithdrawIx(vault, wallet, underlyingTokenAccount))
     if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
-        cleanupTx.add(Token.createCloseAccountInstruction(TOKEN_PROGRAM_ID, underlyingTokenAccount, wallet, wallet, []))
+        cleanupTx.add(createCloseAccountInstruction( underlyingTokenAccount, wallet, wallet, []))
     }
     tx.add(cleanupTx)
     return tx;
