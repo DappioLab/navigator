@@ -1,9 +1,6 @@
 import {
-  Account,
   Connection,
   Keypair,
-  Ed25519Keypair,
-  Ed25519Program,
   Transaction,
   sendAndConfirmTransaction,
   PublicKey,
@@ -13,30 +10,27 @@ import os from "os";
 import * as saber from "../Saber";
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
-import * as util from "../util";
-import { getAllLedgers } from "../Raydium";
-import { parseFarmV1, parseFarmV45 } from "../Raydium/farmInfo";
-import {
-  FarmPoolKeys,
-  FarmUserKeys,
-  makeDepositInstructionV3,
-  makeDepositInstructionV5,
-  makeWithdrawInstruction,
-} from "../Raydium/farmInstruction";
+import * as util from "../src/util";
 import {
   FARM_LEDGER_LAYOUT_V3_1,
   FARM_LEDGER_LAYOUT_V5_1,
   STAKE_PROGRAM_ID,
   STAKE_PROGRAM_ID_V5,
-} from "../Raydium/info";
-import {
+  FarmPoolKeys,
+  FarmUserKeys,
+  getAllLedgers,
   getAssociatedLedgerAccount,
   getLegerInfos,
-} from "../Raydium/ledgerInfo";
-// import { assert } from "console";
+  makeDepositInstructionV3,
+  makeDepositInstructionV5,
+  makeWithdrawInstruction,
+  parseFarmV1,
+  parseFarmV45,
+} from "../src/raydium";
+
 const keyPairPath = os.homedir() + "/.config/solana/dappio-1.json";
 
-describe("Deposit & Withdraw Test", async () => {
+describe("Farm Test", async () => {
   let connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
     wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws",
     commitment: "processed",
@@ -50,11 +44,12 @@ describe("Deposit & Withdraw Test", async () => {
     let u8Key = new Uint8Array(PrivateKey);
     return Keypair.fromSecretKey(u8Key);
   })();
+
   it("get Ledgers", async () => {
     let res = await getAllLedgers(
       connection,
-      // new PublicKey("BgdtDEEmn95wakgQRx4jAVqn8jsSPBhDwxE8NTPnmyon") // JIM
-      new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4") // MC
+      new PublicKey("BgdtDEEmn95wakgQRx4jAVqn8jsSPBhDwxE8NTPnmyon") // JIM
+      // new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4") // MC
     );
     console.log(res.map((i) => i.farmId));
     // for (let i of res) {
@@ -62,6 +57,7 @@ describe("Deposit & Withdraw Test", async () => {
     // }
     // console.log(res);
   });
+
   it("can deposit through Raydium protocol", async () => {
     console.log("The public key of wallet: ", wallet.publicKey.toBase58());
     let depositAmt = "100";
@@ -173,8 +169,8 @@ describe("Deposit & Withdraw Test", async () => {
       );
       let farmInfo =
         version === 3
-          ? await parseFarmV1(farm?.data, new PublicKey(ledger.farmId))
-          : await parseFarmV45(farm?.data, new PublicKey(ledger.farmId), 5);
+          ? parseFarmV1(farm?.data, new PublicKey(ledger.farmId))
+          : parseFarmV45(farm?.data, new PublicKey(ledger.farmId), 5);
       let poolKeys: FarmPoolKeys = {
         id: new PublicKey(ledger.farmId),
         lpMint: new PublicKey(ledger.mints.stakedTokenMint),
@@ -324,7 +320,7 @@ describe("Deposit & Withdraw Test", async () => {
   async function depositWithSaber() {
     let tx = new Transaction();
     let swap = await saber.getAllSwap(connection);
-    console.log(swap);
+    // console.log(swap);
     for (let info of swap) {
       if (info.mintB.toString() == NATIVE_MINT.toString()) {
         let tx = new Transaction();
@@ -343,7 +339,7 @@ describe("Deposit & Withdraw Test", async () => {
         tx.feePayer = wallet.publicKey;
 
         let result = await sendAndConfirmTransaction(connection, tx, [wallet]);
-        console.log(result);
+        // console.log(result);
         let amount = new BN(0);
         let LPAccount = await util.findAssociatedTokenAddress(
           wallet.publicKey,
@@ -371,7 +367,7 @@ describe("Deposit & Withdraw Test", async () => {
           let newresult = await sendAndConfirmTransaction(connection, newTx, [
             wallet,
           ]);
-          console.log(newresult);
+          // console.log(newresult);
         }
       }
     }

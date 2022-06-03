@@ -2,7 +2,7 @@ import {
   checkTokenAccount,
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
-} from "../util";
+} from "../src/util";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
@@ -16,7 +16,7 @@ import { lendingInfo } from "./larix";
 import * as info from "./larixInfo";
 import * as state from "./state";
 import * as miner from "./mineInfo";
-import { wrapNative } from "../util";
+import { wrapNative } from "../src/util";
 export async function createDepositTx(
   lendingInfo: lendingInfo,
   wallet: PublicKey,
@@ -24,7 +24,7 @@ export async function createDepositTx(
   connection: Connection,
   minerPubKey?: PublicKey,
   supplyTokenAddress?: PublicKey,
-  reserveTokenAddress?: PublicKey,
+  reserveTokenAddress?: PublicKey
 ) {
   let tx: Transaction = new Transaction();
   let cleanupTx = new Transaction();
@@ -42,34 +42,33 @@ export async function createDepositTx(
   } else
     reserveTokenAddress = await findAssociatedTokenAddress(
       wallet,
-      lendingInfo.reserveTokenMint,
+      lendingInfo.reserveTokenMint
     );
   if (supplyTokenAddress) {
     supplyTokenAddress = supplyTokenAddress as PublicKey;
   } else
     supplyTokenAddress = await findAssociatedTokenAddress(
       wallet,
-      lendingInfo.supplyTokenMint,
+      lendingInfo.supplyTokenMint
     );
 
   let createAtaIx = await createATAWithoutCheckIx(
     wallet,
-    lendingInfo.reserveTokenMint,
+    lendingInfo.reserveTokenMint
   );
   tx.add(createAtaIx);
 
-  
   let refreshIx = await ins.refreshReserveInstruction(
     lendingInfo.reserveAddress,
     lendingInfo.reserveInfo.liquidity.OraclePubkey,
-    lendingInfo.reserveInfo.liquidity.larixOraclePubkey,
+    lendingInfo.reserveInfo.liquidity.larixOraclePubkey
   );
   //console.log(refreshIx);
   tx.add(refreshIx);
   if (lendingInfo.supplyTokenMint.toString() == NATIVE_MINT.toString()) {
     let wrapIx = await wrapNative(amount, wallet, connection, true);
     cleanupTx.add(
-      createCloseAccountInstruction(supplyTokenAddress, wallet, wallet, []),
+      createCloseAccountInstruction(supplyTokenAddress, wallet, wallet, [])
     );
     tx.add(wrapIx);
   }
@@ -85,7 +84,7 @@ export async function createDepositTx(
 
     info.LARIX_MARKET_ID,
     info.MARKETPDA,
-    wallet,
+    wallet
   );
   //console.log(supplyIx.keys[0].pubkey.toString());
 
@@ -96,11 +95,11 @@ export async function createDepositTx(
     minerPubKey,
     lendingInfo.reserveAddress,
     reserveTokenAddress,
-    wallet,
+    wallet
   );
   tx.add(miningIx);
   cleanupTx.add(
-    createCloseAccountInstruction(reserveTokenAddress, wallet, wallet, []),
+    createCloseAccountInstruction(reserveTokenAddress, wallet, wallet, [])
   );
   tx.add(cleanupTx);
   return tx;
@@ -114,7 +113,7 @@ export async function createWithdrawTx(
   connection: Connection,
   createWithdrawTokenATA: boolean = true,
   withdrawTokenAddress?: PublicKey,
-  reserveTokenAddress?: PublicKey,
+  reserveTokenAddress?: PublicKey
 ) {
   let tx = new Transaction();
   let cleanupTx = new Transaction();
@@ -122,7 +121,7 @@ export async function createWithdrawTx(
   let refreshIx = await ins.refreshReserveInstruction(
     lendingMarketInfo.reserveAddress,
     lendingMarketInfo.reserveInfo.liquidity.OraclePubkey,
-    lendingMarketInfo.reserveInfo.liquidity.larixOraclePubkey,
+    lendingMarketInfo.reserveInfo.liquidity.larixOraclePubkey
   );
   tx.add(refreshIx);
   if (reserveTokenAddress) {
@@ -130,23 +129,23 @@ export async function createWithdrawTx(
   } else
     reserveTokenAddress = await findAssociatedTokenAddress(
       wallet,
-      lendingMarketInfo.reserveTokenMint,
+      lendingMarketInfo.reserveTokenMint
     );
   if (withdrawTokenAddress) {
     withdrawTokenAddress = withdrawTokenAddress as PublicKey;
   } else
     withdrawTokenAddress = await findAssociatedTokenAddress(
       wallet,
-      lendingMarketInfo.supplyTokenMint,
+      lendingMarketInfo.supplyTokenMint
     );
   let createWithdrawTokenATAIx = await createATAWithoutCheckIx(
     wallet,
-    lendingMarketInfo.supplyTokenMint,
+    lendingMarketInfo.supplyTokenMint
   );
   tx.add(createWithdrawTokenATAIx);
   let createReserveATA = await createATAWithoutCheckIx(
     wallet,
-    lendingMarketInfo.reserveTokenMint,
+    lendingMarketInfo.reserveTokenMint
   );
   tx.add(createReserveATA);
 
@@ -157,7 +156,7 @@ export async function createWithdrawTx(
     minerPub,
     lendingMarketInfo.reserveAddress,
 
-    wallet,
+    wallet
   );
   tx.add(withdrawFarm);
 
@@ -169,17 +168,17 @@ export async function createWithdrawTx(
     lendingMarketInfo.reserveAddress,
     lendingMarketInfo.reserveTokenMint,
     lendingMarketInfo.reserveInfo.liquidity.supplyPubkey,
-    wallet,
+    wallet
   );
 
   tx.add(withdrawIns);
   if (lendingMarketInfo.supplyTokenMint.toString() == NATIVE_MINT.toString()) {
     cleanupTx.add(
-      createCloseAccountInstruction(withdrawTokenAddress, wallet, wallet, []),
+      createCloseAccountInstruction(withdrawTokenAddress, wallet, wallet, [])
     );
   }
   cleanupTx.add(
-    createCloseAccountInstruction(reserveTokenAddress, wallet, wallet, []),
+    createCloseAccountInstruction(reserveTokenAddress, wallet, wallet, [])
   );
   tx.add(cleanupTx);
   return tx;
@@ -188,7 +187,7 @@ export async function createWithdrawTx(
 export async function claimReward(
   wallet: PublicKey,
   minerIn: miner.MinerInfo,
-  connection: Connection,
+  connection: Connection
 ) {
   let tx: Transaction = new Transaction();
   let reservepub: PublicKey[] = [];
@@ -199,7 +198,7 @@ export async function claimReward(
   let allReserve: state.Reserve[] = [];
   for (let index = 0; index < reserveAccounts.length; index++) {
     allReserve.push(
-      state.parseReserveData(reserveAccounts[index]?.data, reservepub[index]),
+      state.parseReserveData(reserveAccounts[index]?.data, reservepub[index])
     );
   }
   for (let reserve of allReserve) {
@@ -207,18 +206,18 @@ export async function claimReward(
       ins.refreshReserveInstruction(
         reserve.infoPubkey,
         reserve.liquidity.OraclePubkey,
-        reserve.liquidity.larixOraclePubkey,
-      ),
+        reserve.liquidity.larixOraclePubkey
+      )
     );
   }
   let larixTokenAddress = await findAssociatedTokenAddress(
     wallet,
-    info.LARIX_MINT,
+    info.LARIX_MINT
   );
   let createLarixATA = await createATAWithoutCheckIx(wallet, info.LARIX_MINT);
   tx.add(createLarixATA);
   tx.add(
-    ins.claimReward(larixTokenAddress, minerIn.infoPub, wallet, reservepub),
+    ins.claimReward(larixTokenAddress, minerIn.infoPub, wallet, reservepub)
   );
   return tx;
 }

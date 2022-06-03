@@ -11,7 +11,7 @@ import {
 import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { wrapInfo } from "./wrapInfo";
-import { getTokenAccountAmount, getTokenSupply } from "../util";
+import { getTokenAccountAmount, getTokenSupply } from "../src/util";
 import { SWAP_PROGRAM_ID } from "./saberInfo";
 import { FarmInfo } from "./farmInfoLayout";
 export interface SwapInfoInterface {
@@ -148,7 +148,6 @@ export class SwapInfo implements SwapInfoInterface {
       .mul(DIGIT)
       .div(withdrawFeeDenominator);
     this.tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
-    
   }
   async updateAmount(connection: Connection) {
     this.AtokenAccountAmount = await getTokenAccountAmount(

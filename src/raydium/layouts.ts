@@ -1,31 +1,6 @@
-import { PublicKey } from "@solana/web3.js";
 import { publicKey, u8, u64, u128 } from "@project-serum/borsh";
 //@ts-ignore
 import { blob, seq, struct } from "buffer-layout";
-
-// Deprecated name below, already not in Raydium SDK
-export const LIQUIDITY_POOL_PROGRAM_ID_V3 = new PublicKey(
-  "27haf8L6oxUeXrHrgEgsexjSY5hbVUWEmvv9Nyxg8vQv"
-);
-// Deprecated name below, new one is LIQUIDITY_PROGRAM_ID_V4
-export const LIQUIDITY_POOL_PROGRAM_ID_V4 = new PublicKey(
-  "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
-);
-// New Liquidity pool from 2022/3
-export const LIQUIDITY_PROGRAM_ID_V5 = new PublicKey(
-  "5quBtoiQqxF9Jv6KYKctB59NT3gtJD2Y65kdnB1Uev3h"
-);
-// Deprecated name below, new one is FARM_PROGRAM_ID_V3
-export const STAKE_PROGRAM_ID = new PublicKey(
-  "EhhTKczWMGQt46ynNeRX1WfeagwwJd7ufHvCDjRxjo5Q"
-);
-// Deprecated name below, new one is FARM_PROGRAM_ID_V5
-export const STAKE_PROGRAM_ID_V5 = new PublicKey(
-  "9KEPoZmtHUrBbhWN1v1KWLMkkvwY6WLtAVUCPRtRjP4z"
-);
-export const AMM_AUTHORITY = new PublicKey(
-  "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1"
-);
 
 // For summarized lp & farm info, refer to Raydium of SDK
 // https://github.com/raydium-io/raydium-sdk
@@ -104,4 +79,92 @@ export const FARM_LEDGER_LAYOUT_V5_2 = struct([
   u64("deposited"),
   seq(u128(), 2, "rewardDebts"),
   seq(u64(), 17),
+]);
+
+export const AMM_INFO_LAYOUT_V4 = struct([
+  u64("status"),
+  u64("nonce"),
+  u64("orderNum"),
+  u64("depth"),
+  u64("coinDecimals"),
+  u64("pcDecimals"),
+  u64("state"),
+  u64("resetFlag"),
+  u64("minSize"),
+  u64("volMaxCutRatio"),
+  u64("amountWaveRatio"),
+  u64("coinLotSize"),
+  u64("pcLotSize"),
+  u64("minPriceMultiplier"),
+  u64("maxPriceMultiplier"),
+  u64("systemDecimalsValue"),
+  // Fees
+  u64("minSeparateNumerator"),
+  u64("minSeparateDenominator"),
+  u64("tradeFeeNumerator"),
+  u64("tradeFeeDenominator"),
+  u64("pnlNumerator"),
+  u64("pnlDenominator"),
+  u64("swapFeeNumerator"),
+  u64("swapFeeDenominator"),
+  // OutPutData
+  u64("needTakePnlCoin"),
+  u64("needTakePnlPc"),
+  u64("totalPnlPc"),
+  u64("totalPnlCoin"),
+  u128("poolTotalDepositPc"),
+  u128("poolTotalDepositCoin"),
+  u128("swapCoinInAmount"),
+  u128("swapPcOutAmount"),
+  u64("swapCoin2PcFee"),
+  u128("swapPcInAmount"),
+  u128("swapCoinOutAmount"),
+  u64("swapPc2CoinFee"),
+
+  publicKey("poolCoinTokenAccount"),
+  publicKey("poolPcTokenAccount"),
+  publicKey("coinMintAddress"),
+  publicKey("pcMintAddress"),
+  publicKey("lpMintAddress"),
+  publicKey("ammOpenOrders"),
+  publicKey("serumMarket"),
+  publicKey("serumProgramId"),
+  publicKey("ammTargetOrders"),
+  publicKey("poolWithdrawQueue"),
+  publicKey("poolTempLpTokenAccount"),
+  publicKey("ammOwner"),
+  publicKey("pnlOwner"),
+]);
+
+export const STAKE_INFO_LAYOUT = struct([
+  u64("state"),
+  u64("nonce"),
+  publicKey("poolLpTokenAccountPubkey"),
+  publicKey("poolRewardTokenAccountPubkey"),
+  publicKey("owner"),
+  publicKey("feeOwner"),
+  u64("feeY"),
+  u64("feeX"),
+  u64("totalReward"),
+  u128("rewardPerShareNet"),
+  u64("lastBlock"),
+  u64("rewardPerBlock"),
+]);
+
+export const STAKE_INFO_LAYOUT_V4 = struct([
+  u64("state"),
+  u64("nonce"),
+  publicKey("poolLpTokenAccountPubkey"),
+  publicKey("poolRewardTokenAccountPubkey"),
+  u64("totalReward"),
+  u128("perShare"),
+  u64("perBlock"),
+  u8("option"),
+  publicKey("poolRewardTokenAccountPubkeyB"),
+  blob(7),
+  u64("totalRewardB"),
+  u128("perShareB"),
+  u64("perBlockB"),
+  u64("lastBlock"),
+  publicKey("owner"),
 ]);
