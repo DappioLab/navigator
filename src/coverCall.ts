@@ -10,7 +10,7 @@ import {
 import fs from "fs";
 import os from "os";
 import * as solend from "../Solend";
-import * as saber from "../Saber";
+import * as saber from "./saber";
 import * as larix from "../Larix";
 import * as katana from "../Katana";
 import { NATIVE_MINT } from "@solana/spl-token";

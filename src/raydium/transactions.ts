@@ -1,19 +1,13 @@
 import {
-  checkTokenAccount,
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
 } from "../util";
-import {
-  TOKEN_PROGRAM_ID,
-  NATIVE_MINT,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  createCloseAccountInstruction,
-} from "@solana/spl-token";
+import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token";
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import { Market } from "@project-serum/serum";
-import * as ins from "./instruction";
+import * as ins from "./instructions";
 import {
   AMM_AUTHORITY,
   LIQUIDITY_POOL_PROGRAM_ID_V3,

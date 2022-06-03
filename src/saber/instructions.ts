@@ -4,21 +4,9 @@ import {
   Transaction,
   TransactionInstruction,
   SystemProgram,
-  TransferParams,
-  Connection,
-  SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { SwapInfo } from "./swapInfoLayout";
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-} from "@project-serum/borsh";
+import { struct, u64, u8 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {
   SWAP_PROGRAM_ID,
@@ -32,10 +20,9 @@ import {
   CLAIM_FEE_TOKEN_ACCOUNT,
   SABER_TOKEN_MINT,
   MINTER_PROGRAM_ID,
-} from "./saberInfo";
-import { wrapInfo } from "./wrapInfo";
-import { FarmInfo, getMinerKey } from "./farmInfoLayout";
-import { findAssociatedTokenAddress } from "../src/util";
+} from "./ids";
+import { findAssociatedTokenAddress } from "../util";
+import { FarmInfo, getMinerKey, PoolInfo, WrapInfo } from "./infos";
 
 enum SaberInstruction {
   swap = 1,
@@ -45,7 +32,7 @@ enum SaberInstruction {
 }
 
 export function deposit(
-  swapInfo: SwapInfo,
+  poolInfo: PoolInfo,
   AtokenAmount: BN,
   BtokenAmount: BN,
   minimalRecieve: BN,
@@ -71,14 +58,14 @@ export function deposit(
     data
   );
   const keys = [
-    { pubkey: swapInfo.infoPublicKey, isSigner: false, isWritable: false },
-    { pubkey: swapInfo.authority, isSigner: false, isWritable: false },
+    { pubkey: poolInfo.infoPublicKey, isSigner: false, isWritable: false },
+    { pubkey: poolInfo.authority, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
     { pubkey: AtokenSourceAccount, isSigner: false, isWritable: true },
     { pubkey: BtokenSourceAccount, isSigner: false, isWritable: true },
-    { pubkey: swapInfo.tokenAccountA, isSigner: false, isWritable: true },
-    { pubkey: swapInfo.tokenAccountB, isSigner: false, isWritable: true },
-    { pubkey: swapInfo.poolMint, isSigner: false, isWritable: true },
+    { pubkey: poolInfo.tokenAccountA, isSigner: false, isWritable: true },
+    { pubkey: poolInfo.tokenAccountB, isSigner: false, isWritable: true },
+    { pubkey: poolInfo.poolMint, isSigner: false, isWritable: true },
     { pubkey: LPtokenAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
@@ -91,7 +78,7 @@ export function deposit(
 }
 
 export function withdrawOne(
-  swapInfo: SwapInfo,
+  poolInfo: PoolInfo,
   tokenType: String,
   LPtokenAmount: BN,
   minimalRecieve: BN,
@@ -117,22 +104,22 @@ export function withdrawOne(
   let quoteTokenAccount = PublicKey.default;
   let feeTokenAccount = PublicKey.default;
   if (tokenType == "A") {
-    baseTokenAccount = swapInfo.tokenAccountA;
-    quoteTokenAccount = swapInfo.tokenAccountB;
-    feeTokenAccount = swapInfo.adminFeeAccountA;
+    baseTokenAccount = poolInfo.tokenAccountA;
+    quoteTokenAccount = poolInfo.tokenAccountB;
+    feeTokenAccount = poolInfo.adminFeeAccountA;
   } else if (tokenType == "B") {
-    baseTokenAccount = swapInfo.tokenAccountB;
-    quoteTokenAccount = swapInfo.tokenAccountA;
-    feeTokenAccount = swapInfo.adminFeeAccountB;
+    baseTokenAccount = poolInfo.tokenAccountB;
+    quoteTokenAccount = poolInfo.tokenAccountA;
+    feeTokenAccount = poolInfo.adminFeeAccountB;
   } else {
     console.log("panic!!, no withdraw type provided");
   }
 
   const keys = [
-    { pubkey: swapInfo.infoPublicKey, isSigner: false, isWritable: false },
-    { pubkey: swapInfo.authority, isSigner: false, isWritable: false },
+    { pubkey: poolInfo.infoPublicKey, isSigner: false, isWritable: false },
+    { pubkey: poolInfo.authority, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
-    { pubkey: swapInfo.poolMint, isSigner: false, isWritable: true },
+    { pubkey: poolInfo.poolMint, isSigner: false, isWritable: true },
     { pubkey: LPtokenSourceAccount, isSigner: false, isWritable: true },
     { pubkey: baseTokenAccount, isSigner: false, isWritable: true },
     { pubkey: quoteTokenAccount, isSigner: false, isWritable: true },
@@ -149,7 +136,7 @@ export function withdrawOne(
 }
 
 export function wrapToken(
-  wrapInfo: wrapInfo,
+  wrapInfo: WrapInfo,
   wallet: PublicKey,
   amount: BN,
   wrapInTokenAccount: PublicKey,
@@ -190,7 +177,7 @@ export function wrapToken(
   });
 }
 export function unwrapToken(
-  wrapInfo: wrapInfo,
+  wrapInfo: WrapInfo,
   wallet: PublicKey,
   unwrapTokenAccount: PublicKey,
   originalTokenAccount: PublicKey
