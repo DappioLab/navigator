@@ -1,162 +1,150 @@
 import {
-  checkTokenAccount,
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
 } from "../util";
-import {
-  TOKEN_PROGRAM_ID,
-  NATIVE_MINT,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  createCloseAccountInstruction,
-} from "@solana/spl-token";
+import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token";
 import BN from "bn.js";
-import {
-  AccountMeta,
-  Connection,
-  Keypair,
-  PublicKey,
-  sendAndConfirmTransaction,
-  Transaction,
-  TransactionInstruction,
-  GetProgramAccountsConfig,
-  MemcmpFilter,
-  DataSizeFilter,
-} from "@solana/web3.js";
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import * as ins from "./instructions";
-import { SwapInfo } from "./swapInfoLayout";
-import { wrapInfo } from "./wrapInfo";
-import { FarmInfo, getMinerKey, minerCreated } from "./farmInfoLayout";
-import { IOU_TOKEN_MINT, SABER_TOKEN_MINT } from "./saberInfo";
+import { IOU_TOKEN_MINT, SABER_TOKEN_MINT } from "./ids";
+import {
+  FarmInfo,
+  getMinerKey,
+  minerCreated,
+  PoolInfo,
+  WrapInfo,
+} from "./infos";
+
 export async function createDepositTx(
-  swapInfo: SwapInfo,
+  poolInfo: PoolInfo,
+  farmInfo: FarmInfo,
   AtokenAmount: BN,
   BtokenAmount: BN,
   minimalRecieve: BN,
   wallet: PublicKey,
-  connection: Connection,
+  connection: Connection
 ) {
   let tx: Transaction = new Transaction();
   let cleanupTx = new Transaction();
   // check if Token A source account is created
   let AtokenSourceAccount = await findAssociatedTokenAddress(
     wallet,
-    swapInfo.mintA,
+    poolInfo.mintA
   );
 
-  tx.add(await createATAWithoutCheckIx(wallet, swapInfo.mintA));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.mintA));
   // check if Token B source account is created
   let BtokenSourceAccount = await findAssociatedTokenAddress(
     wallet,
-    swapInfo.mintB,
+    poolInfo.mintB
   );
 
-  tx.add(await createATAWithoutCheckIx(wallet, swapInfo.mintB));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.mintB));
   // check if LP Token account is created
   let LPtokenAccount = await findAssociatedTokenAddress(
     wallet,
-    swapInfo.poolMint,
+    poolInfo.poolMint
   );
 
-  tx.add(await createATAWithoutCheckIx(wallet, swapInfo.poolMint));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.poolMint));
   // check Token A is wSol
-  if (swapInfo.mintA.toString() == NATIVE_MINT.toString()) {
+  if (poolInfo.mintA.toString() == NATIVE_MINT.toString()) {
     // if true add a wrapNative IX
     let wrapNativeIns = await wrapNative(
       AtokenAmount,
       wallet,
       connection,
-      false,
+      false
     );
     cleanupTx.add(
-      createCloseAccountInstruction(AtokenSourceAccount, wallet, wallet, []),
+      createCloseAccountInstruction(AtokenSourceAccount, wallet, wallet, [])
     );
     tx.add(wrapNativeIns);
   }
   // if Token A source account is created in this tx
 
   // check Token A is wSol
-  if (swapInfo.mintB.toString() == NATIVE_MINT.toString()) {
+  if (poolInfo.mintB.toString() == NATIVE_MINT.toString()) {
     // if true add a wrapNative IX
     let wrapNativeIns = await wrapNative(
       BtokenAmount,
       wallet,
       connection,
-      false,
+      false
     );
     cleanupTx.add(
-      createCloseAccountInstruction(BtokenSourceAccount, wallet, wallet, []),
+      createCloseAccountInstruction(BtokenSourceAccount, wallet, wallet, [])
     );
     tx.add(wrapNativeIns);
   }
 
   // if Token A is wrapped
-  if (swapInfo.mintAWrapped) {
+  if (poolInfo.mintAWrapped) {
     // check underlying tokan account is created
     let wrapMintAtokenAddress = await findAssociatedTokenAddress(
       wallet,
-      swapInfo.mintAWrapInfo?.underlyingWrappedTokenMint as PublicKey,
+      poolInfo.mintAWrapInfo?.underlyingWrappedTokenMint as PublicKey
     );
     tx.add(
       await createATAWithoutCheckIx(
         wallet,
-        swapInfo.mintAWrapInfo?.underlyingWrappedTokenMint as PublicKey,
-      ),
+        poolInfo.mintAWrapInfo?.underlyingWrappedTokenMint as PublicKey
+      )
     );
 
-    let multiplyer = new BN(swapInfo.mintAWrapInfo?.multiplyer as BN);
+    let multiplyer = new BN(poolInfo.mintAWrapInfo?.multiplyer as BN);
     let wrapAIns = ins.wrapToken(
-      swapInfo.mintAWrapInfo as wrapInfo,
+      poolInfo.mintAWrapInfo as WrapInfo,
       wallet,
       AtokenAmount.div(multiplyer),
       wrapMintAtokenAddress,
-      AtokenSourceAccount,
+      AtokenSourceAccount
     );
 
     tx.add(wrapAIns);
   }
   // if Token B is wrapped
-  if (swapInfo.mintBWrapped == true) {
+  if (poolInfo.mintBWrapped == true) {
     let wrapMintBtokenAddress = await findAssociatedTokenAddress(
       wallet,
-      swapInfo.mintBWrapInfo?.underlyingWrappedTokenMint as PublicKey,
+      poolInfo.mintBWrapInfo?.underlyingWrappedTokenMint as PublicKey
     );
     tx.add(
       await createATAWithoutCheckIx(
         wallet,
-        swapInfo.mintBWrapInfo?.underlyingWrappedTokenMint as PublicKey,
-      ),
+        poolInfo.mintBWrapInfo?.underlyingWrappedTokenMint as PublicKey
+      )
     );
-    let multiplyer = new BN(swapInfo.mintBWrapInfo?.multiplyer as BN);
+    let multiplyer = new BN(poolInfo.mintBWrapInfo?.multiplyer as BN);
     let wrapBIns = ins.wrapToken(
-      swapInfo.mintBWrapInfo as wrapInfo,
+      poolInfo.mintBWrapInfo as WrapInfo,
       wallet,
       BtokenAmount.div(multiplyer),
       wrapMintBtokenAddress,
-      BtokenSourceAccount,
+      BtokenSourceAccount
     );
 
     tx.add(wrapBIns);
   }
   //console.log(BtokenAmount);
   let depositIns = ins.deposit(
-    swapInfo,
+    poolInfo,
     AtokenAmount,
     BtokenAmount,
     minimalRecieve,
     wallet,
     AtokenSourceAccount,
     BtokenSourceAccount,
-    LPtokenAccount,
+    LPtokenAccount
   );
   tx.add(depositIns);
-  if (swapInfo.isFarming) {
-    let farm = swapInfo.farmingInfo as FarmInfo;
+  if (poolInfo.isFarming) {
     let depositToFarmIns = await depositToFarm(
-      farm,
+      farmInfo,
       wallet,
       minimalRecieve,
-      connection,
+      connection
     );
     tx.add(depositToFarmIns);
   }
@@ -169,7 +157,7 @@ export async function depositToFarm(
   farm: FarmInfo,
   wallet: PublicKey,
   amount: BN,
-  connection: Connection,
+  connection: Connection
 ) {
   let tx = new Transaction();
   let createMinerIx = await createMiner(farm, wallet, connection);
@@ -178,10 +166,11 @@ export async function depositToFarm(
   tx.add(depositToFarm);
   return tx;
 }
+
 export async function createMiner(
   farm: FarmInfo,
   wallet: PublicKey,
-  connection: Connection,
+  connection: Connection
 ) {
   let tx = new Transaction();
   let miner = await getMinerKey(wallet, farm.infoPubkey);
@@ -189,48 +178,49 @@ export async function createMiner(
     tx.add(await createATAWithoutCheckIx(miner[0], farm.tokenMintKey, wallet));
     let createMinerIx = await ins.createMinerAccountIx(
       farm as FarmInfo,
-      wallet,
+      wallet
     );
     tx.add(createMinerIx);
   }
   return tx;
 }
+
 export async function createWithdrawTx(
-  swapInfo: SwapInfo,
+  poolInfo: PoolInfo,
+  farmInfo: FarmInfo,
   tokenType: String,
   farmTokenAmount: BN,
   LPtokenAmount: BN,
   minimalRecieve: BN,
   wallet: PublicKey,
-  connection: Connection,
+  connection: Connection
 ) {
   let tx: Transaction = new Transaction();
   let cleanupTx = new Transaction();
   let LPtokenSourceAccount = await findAssociatedTokenAddress(
     wallet,
-    swapInfo.poolMint,
+    poolInfo.poolMint
   );
   let recieveTokenAccountMint = new PublicKey(0);
   if (tokenType == "A") {
-    recieveTokenAccountMint = swapInfo.mintA;
+    recieveTokenAccountMint = poolInfo.mintA;
   } else if (tokenType == "B") {
-    recieveTokenAccountMint = swapInfo.mintB;
+    recieveTokenAccountMint = poolInfo.mintB;
   }
-  tx.add(await createATAWithoutCheckIx(wallet, swapInfo.poolMint));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.poolMint));
   let recieveTokenAccount = await findAssociatedTokenAddress(
     wallet,
-    recieveTokenAccountMint,
+    recieveTokenAccountMint
   );
 
   tx.add(await createATAWithoutCheckIx(wallet, recieveTokenAccountMint));
-  if (swapInfo.isFarming) {
-    let farm = swapInfo.farmingInfo as FarmInfo;
+  if (poolInfo.isFarming) {
     let withdrawFromfram = await withdrawFromMiner(
-      farm,
+      farmInfo,
       wallet,
       farmTokenAmount,
       connection,
-      false,
+      false
     );
     tx.add(withdrawFromfram);
     LPtokenAmount = farmTokenAmount.add(LPtokenAmount);
@@ -238,55 +228,55 @@ export async function createWithdrawTx(
   if (!LPtokenAmount.eq(new BN(0))) {
     tx.add(
       ins.withdrawOne(
-        swapInfo,
+        poolInfo,
         tokenType,
         LPtokenAmount,
         minimalRecieve,
         wallet,
         LPtokenSourceAccount,
-        recieveTokenAccount,
-      ),
+        recieveTokenAccount
+      )
     );
   }
 
-  if (tokenType == "A" && swapInfo.mintAWrapped) {
-    let wrappedmint = swapInfo.mintAWrapInfo
+  if (tokenType == "A" && poolInfo.mintAWrapped) {
+    let wrappedmint = poolInfo.mintAWrapInfo
       ?.underlyingWrappedTokenMint as PublicKey;
     let mintAUnderlyingTokenAccount = await findAssociatedTokenAddress(
       wallet,
-      wrappedmint,
+      wrappedmint
     );
 
     tx.add(await createATAWithoutCheckIx(wallet, wrappedmint));
     tx.add(
       ins.unwrapToken(
-        swapInfo.mintAWrapInfo as wrapInfo,
+        poolInfo.mintAWrapInfo as WrapInfo,
         wallet,
         recieveTokenAccount,
-        mintAUnderlyingTokenAccount,
-      ),
+        mintAUnderlyingTokenAccount
+      )
     );
-  } else if (tokenType == "B" && swapInfo.mintBWrapped) {
-    let wrappedmint = swapInfo.mintBWrapInfo
+  } else if (tokenType == "B" && poolInfo.mintBWrapped) {
+    let wrappedmint = poolInfo.mintBWrapInfo
       ?.underlyingWrappedTokenMint as PublicKey;
     let mintBUnderlyingTokenAccount = await findAssociatedTokenAddress(
       wallet,
-      wrappedmint,
+      wrappedmint
     );
 
     tx.add(await createATAWithoutCheckIx(wallet, wrappedmint));
     tx.add(
       ins.unwrapToken(
-        swapInfo.mintBWrapInfo as wrapInfo,
+        poolInfo.mintBWrapInfo as WrapInfo,
         wallet,
         recieveTokenAccount,
-        mintBUnderlyingTokenAccount,
-      ),
+        mintBUnderlyingTokenAccount
+      )
     );
   }
   if (recieveTokenAccountMint.toString() == NATIVE_MINT.toString()) {
     cleanupTx.add(
-      createCloseAccountInstruction(recieveTokenAccount, wallet, wallet, []),
+      createCloseAccountInstruction(recieveTokenAccount, wallet, wallet, [])
     );
   }
   tx.add(cleanupTx);
@@ -298,12 +288,12 @@ export async function withdrawFromMiner(
   wallet: PublicKey,
   amount: BN,
   connection: Connection,
-  createLPaccount: boolean = true,
+  createLPaccount: boolean = true
 ) {
   let tx = new Transaction();
   let withdrawTokenAccount = await findAssociatedTokenAddress(
     wallet,
-    farm.tokenMintKey,
+    farm.tokenMintKey
   );
 
   if (!amount.eq(new BN(0))) {
@@ -311,24 +301,25 @@ export async function withdrawFromMiner(
     let withdrawFromFarmIns = await ins.withdrawFromFarmIx(
       farm,
       wallet,
-      amount,
+      amount
     );
     tx.add(withdrawFromFarmIns);
   }
 
   return tx;
 }
+
 export async function claimRewardTx(
   farm: FarmInfo,
   wallet: PublicKey,
-  connection: Connection,
+  connection: Connection
 ) {
   let tx = new Transaction();
   let createMinerIx = await createMiner(farm, wallet, connection);
   tx.add(createMinerIx);
   let iouTokenAccount = await findAssociatedTokenAddress(
     wallet,
-    IOU_TOKEN_MINT,
+    IOU_TOKEN_MINT
   );
   tx.add(await createATAWithoutCheckIx(wallet, IOU_TOKEN_MINT));
   tx.add(await createATAWithoutCheckIx(wallet, SABER_TOKEN_MINT));
