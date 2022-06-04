@@ -3,7 +3,7 @@ import {
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
-} from "../../src/util";
+} from "../../utils";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,

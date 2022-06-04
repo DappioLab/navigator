@@ -20,7 +20,7 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import BN from "bn.js";
 import { findUserInfoAccount, UserInfo } from "./UserInfo";
 import { StrategyState } from "./StrategyState";
-import { getAnchorInsByIdl } from "../../src/util";
+import { getAnchorInsByIdl } from "../../utils";
 import {
   RAYDIUM_FARM_CONFIG,
   LENDING_AUTHORITY,
@@ -30,12 +30,12 @@ import {
 } from "./info";
 import { LendInfo } from "../lending/lendingInfo";
 import { Market } from "@project-serum/serum";
-import { PoolInfo } from "../../Raydium/poolInfo";
 import {
+  PoolInfo,
+  FarmInfo,
   AMM_AUTHORITY,
   LIQUIDITY_POOL_PROGRAM_ID_V4,
-} from "../../Raydium/info";
-import { FarmInfo } from "../../Raydium";
+} from "../../raydium";
 
 export async function initializeUser(
   wallet: PublicKey,

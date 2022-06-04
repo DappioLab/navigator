@@ -13,11 +13,11 @@ import {
   createWithdrawTx,
   getAllLendingInfo,
   getMiner,
-} from "../Larix";
+} from "../src/larix";
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
-import { lendingInfo } from "../Larix/larix";
-import { MinerInfo } from "../Larix/mineInfo";
+import { lendingInfo } from "../src/larix/larix";
+import { MinerInfo } from "../src/larix/mineInfo";
 
 const keyPairPath = os.homedir() + "/.config/solana/dappio-1.json";
 describe("Lend Unit Test", async () => {

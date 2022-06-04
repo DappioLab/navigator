@@ -2,7 +2,7 @@ import {
   checkTokenAccount,
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
-} from "../src/util";
+} from "../utils";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
@@ -16,7 +16,7 @@ import { lendingInfo } from "./larix";
 import * as info from "./larixInfo";
 import * as state from "./state";
 import * as miner from "./mineInfo";
-import { wrapNative } from "../src/util";
+import { wrapNative } from "../utils";
 export async function createDepositTx(
   lendingInfo: lendingInfo,
   wallet: PublicKey,

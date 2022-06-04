@@ -2,7 +2,7 @@ import {
   checkTokenAccount,
   findAssociatedTokenAddress,
   createATAWithoutCheckIx,
-} from "../src/util";
+} from "../utils";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
@@ -27,7 +27,7 @@ import { lendingInfo } from "./solend";
 import * as info from "./solendInfo";
 import * as obligation from "./obligation";
 import * as state from "./state";
-import { wrapNative } from "../src/util";
+import { wrapNative } from "../utils";
 export async function createDepositTx(
   lendingInfo: lendingInfo,
   wallet: PublicKey,

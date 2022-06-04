@@ -2,7 +2,7 @@ import {
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
-} from "../util";
+} from "../utils";
 import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token";
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
