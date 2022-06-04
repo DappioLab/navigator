@@ -6,7 +6,7 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { getTokenAccountAmount, getTokenSupply } from "../util";
+import { getTokenAccountAmount, getTokenSupply } from "../utils";
 import {
   ADMIN_KEY,
   QURARRY_MINE_PROGRAM_ID,

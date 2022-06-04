@@ -20,7 +20,7 @@ enum LendingInstruction {
 import * as info from "./solendInfo";
 const SOLENDPROGRAMID = info.SOLENDPROGRAMID;
 import * as solendUtil from "./util";
-import * as util from "../src/util";
+import * as util from "../utils";
 
 // deposit
 import {

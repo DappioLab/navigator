@@ -6,7 +6,7 @@ import {
   MemcmpFilter,
   PublicKey,
 } from "@solana/web3.js";
-import { getTokenAccount, TokenAccount } from "../util";
+import { getTokenAccount, TokenAccount } from "../utils";
 import {
   LIQUIDITY_POOL_PROGRAM_ID_V4,
   STAKE_PROGRAM_ID,
@@ -20,7 +20,7 @@ import {
 } from "./layouts";
 import { OpenOrders } from "@project-serum/serum";
 import BN from "bn.js";
-import { parseTokenAccount } from "../util";
+import { parseTokenAccount } from "../utils";
 import { AMM_INFO_LAYOUT_V4 } from "./layouts";
 
 type LedgerInfo = {

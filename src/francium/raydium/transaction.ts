@@ -3,7 +3,7 @@ import {
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
-} from "../../src/util";
+} from "../../utils";
 import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
@@ -34,11 +34,13 @@ import {
   closeAccount,
 } from "./instructions";
 import { parseLendingInfo } from "../lending/lendingInfo";
-import { parseV4PoolInfo } from "../../Raydium/poolInfo";
+import {
+  parseV4PoolInfo,
+  parseFarmV45,
+  STAKE_PROGRAM_ID_V5,
+} from "../../raydium";
 import { Market } from "@project-serum/serum";
-import { UserInfo } from "./UserInfo";
-import { parseFarmV45 } from "../../Raydium/farmInfo";
-import { STAKE_PROGRAM_ID_V5 } from "../../Raydium/info";
+
 export async function getDepositTx(
   strategy: StrategyState,
   wallet: PublicKey,
@@ -58,7 +60,7 @@ export async function getDepositTx(
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
   let lending0 = parseLendingInfo(accountsInfo[0]?.data, pubkeys[0]);
   let lending1 = parseLendingInfo(accountsInfo[1]?.data, pubkeys[1]);
-  let ammInfo = parseV4PoolInfo(accountsInfo[2]?.data, pubkeys[2]);
+  let ammInfo = parseV4PoolInfo(accountsInfo[2]?.data, pubkeys[2]).poolInfo;
   let serumMarket = await Market.load(
     connection,
     ammInfo.serumMarket,
@@ -141,7 +143,7 @@ export async function getWithdrawTx(
   let cleanUpTx = new Transaction();
   let pubkeys = [strategy.ammId, strategy.stakePoolId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let ammInfo = parseV4PoolInfo(accountsInfo[0]?.data, pubkeys[0]);
+  let ammInfo = parseV4PoolInfo(accountsInfo[0]?.data, pubkeys[0]).poolInfo;
   let stakeInfo = parseFarmV45(accountsInfo[1]?.data, pubkeys[1], 4);
   let serumMarket = await Market.load(
     connection,

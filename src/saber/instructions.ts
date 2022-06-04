@@ -21,7 +21,7 @@ import {
   SABER_TOKEN_MINT,
   MINTER_PROGRAM_ID,
 } from "./ids";
-import { findAssociatedTokenAddress } from "../util";
+import { findAssociatedTokenAddress } from "../utils";
 import { FarmInfo, getMinerKey, PoolInfo, WrapInfo } from "./infos";
 
 enum SaberInstruction {

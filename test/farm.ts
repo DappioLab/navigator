@@ -7,9 +7,7 @@ import {
 } from "@solana/web3.js";
 import fs from "fs";
 import os from "os";
-import * as util from "../src/util";
-import * as saber from "../src/saber";
-import * as raydium from "../src/raydium";
+import { raydium, saber, utils } from "../src";
 import { NATIVE_MINT } from "@solana/spl-token";
 import BN from "bn.js";
 
@@ -137,17 +135,17 @@ describe("Farm Test", async () => {
     console.log("Staked amount before deposted: ", ledger?.deposited);
 
     if (ledger) {
-      let stakedWalletATA = await util.findAssociatedTokenAddress(
+      let stakedWalletATA = await utils.findAssociatedTokenAddress(
         wallet.publicKey,
         new PublicKey(ledger.mints.stakedTokenMint)
       );
-      let rewardWalletATA = await util.findAssociatedTokenAddress(
+      let rewardWalletATA = await utils.findAssociatedTokenAddress(
         wallet.publicKey,
         new PublicKey(ledger.mints.rewardAMint)
       );
       let rewardBWalletATA =
         ledger.mints.rewardBMint &&
-        (await util.findAssociatedTokenAddress(
+        (await utils.findAssociatedTokenAddress(
           wallet.publicKey,
           new PublicKey(ledger.mints.rewardBMint)
         ));
@@ -251,17 +249,17 @@ describe("Farm Test", async () => {
 
     console.log("Deposited amount before withdraw", ledger?.deposited);
     if (ledger) {
-      let stakedWalletATA = await util.findAssociatedTokenAddress(
+      let stakedWalletATA = await utils.findAssociatedTokenAddress(
         wallet.publicKey,
         new PublicKey(ledger.mints.stakedTokenMint)
       );
-      let rewardWalletATA = await util.findAssociatedTokenAddress(
+      let rewardWalletATA = await utils.findAssociatedTokenAddress(
         wallet.publicKey,
         new PublicKey(ledger.mints.rewardAMint)
       );
       let rewardBWalletATA =
         ledger.mints.rewardBMint &&
-        (await util.findAssociatedTokenAddress(
+        (await utils.findAssociatedTokenAddress(
           wallet.publicKey,
           new PublicKey(ledger.mints.rewardBMint)
         ));
@@ -359,15 +357,15 @@ describe("Farm Test", async () => {
         let result = await sendAndConfirmTransaction(connection, tx, [wallet]);
         // console.log(result);
         let amount = new BN(0);
-        let LPAccount = await util.findAssociatedTokenAddress(
+        let LPAccount = await utils.findAssociatedTokenAddress(
           wallet.publicKey,
           pool.poolMint
         );
-        if (!(await util.checkTokenAccount(LPAccount, connection))) {
+        if (!(await utils.checkTokenAccount(LPAccount, connection))) {
           continue;
         }
         amount = new BN(
-          await util.getTokenAccountAmount(connection, LPAccount)
+          await utils.getTokenAccountAmount(connection, LPAccount)
         );
         if (amount.eq(new BN(0))) {
           continue;
@@ -410,13 +408,13 @@ describe("Farm Test", async () => {
           let tx = new Transaction();
           let amount = new BN(0);
 
-          let withdrawAccount = await util.findAssociatedTokenAddress(
+          let withdrawAccount = await utils.findAssociatedTokenAddress(
             wallet.publicKey,
             pool.poolMint
           );
-          if (await util.checkTokenAccount(withdrawAccount, connection)) {
+          if (await utils.checkTokenAccount(withdrawAccount, connection)) {
             amount = new BN(
-              await util.getTokenAccountAmount(connection, withdrawAccount)
+              await utils.getTokenAccountAmount(connection, withdrawAccount)
             );
           }
           if (amount.add(miner.balance).eq(new BN(0))) {
