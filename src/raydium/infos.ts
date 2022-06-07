@@ -704,6 +704,25 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   return allPool;
 }
 
+export async function getPool(
+  connection: Connection,
+  poolInfoKey: PublicKey
+): Promise<PoolInfo> {
+  let pool = null as unknown as PoolInfo;
+  const poolInfoAccount = await connection.getAccountInfo(poolInfoKey);
+  let poolInfoWrapper = parseV4PoolInfo(poolInfoAccount?.data, poolInfoKey);
+  if (
+    !(
+      poolInfoWrapper.poolInfo.totalPnlCoin.isZero() ||
+      poolInfoWrapper.poolInfo.totalPnlPc.isZero()
+    ) &&
+    poolInfoWrapper.poolInfo.status.toNumber() != 4
+  ) {
+    pool = poolInfoWrapper.poolInfo;
+  }
+  return pool;
+}
+
 export async function getAllFarms(connection: Connection) {
   let allFarm: FarmInfo[] = [];
   const v1SizeFilter: DataSizeFilter = {
