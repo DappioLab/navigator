@@ -50,7 +50,8 @@ describe("Farm Test", async () => {
       // RAY vs RAY --> RAY
       depositAmt,
       3,
-      "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
+      // "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
+      "5DFbcYNLLy5SJiBpCCDzNSs7cWCsUbYnCkLXzcPQiKnR"
     );
     // let [before, after] = await depositRaydiumFarmWithVersion(
     //   // RAY vs SOL (LP) --> RAY
@@ -71,7 +72,8 @@ describe("Farm Test", async () => {
       // RAY vs RAY --> RAY
       withdrawAmt,
       3,
-      "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
+      // "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
+      "5DFbcYNLLy5SJiBpCCDzNSs7cWCsUbYnCkLXzcPQiKnR"
     );
     // let [before, after] = await withdrawRaydiumFarmWithVersion(
     //   // RAY vs SOL (LP) --> RAY
@@ -116,18 +118,29 @@ describe("Farm Test", async () => {
       "confirmed"
     );
 
+    // let ledger =
+    //   ledgerAccInfo &&
+    //   (
+    //     await raydium.getLegerInfos(
+    //       connection,
+    //       [{ pubkey: ledgerPubkey, account: ledgerAccInfo }],
+    //       version === 3
+    //         ? raydium.FARM_LEDGER_LAYOUT_V3_1
+    //         : raydium.FARM_LEDGER_LAYOUT_V5_1,
+    //       version
+    //     )
+    //   )[0];
+
     let ledger =
       ledgerAccInfo &&
-      (
-        await raydium.getLegerInfos(
-          connection,
-          [{ pubkey: ledgerPubkey, account: ledgerAccInfo }],
-          version === 3
-            ? raydium.FARM_LEDGER_LAYOUT_V3_1
-            : raydium.FARM_LEDGER_LAYOUT_V5_1,
-          version
-        )
-      )[0];
+      (await raydium.getLedger(
+        connection,
+        { pubkey: ledgerPubkey, account: ledgerAccInfo },
+        version === 3
+          ? raydium.FARM_LEDGER_LAYOUT_V3_1
+          : raydium.FARM_LEDGER_LAYOUT_V5_1,
+        version
+      ));
     console.log("Staked amount before deposted: ", ledger?.deposited);
 
     if (ledger) {
@@ -201,7 +214,7 @@ describe("Farm Test", async () => {
     ledger =
       ledgerAccInfo &&
       (
-        await raydium.getLegerInfos(
+        await raydium.getLedgerInfos(
           connection,
           [{ pubkey: ledgerPubkey, account: ledgerAccInfo }],
           version === 3
@@ -233,7 +246,7 @@ describe("Farm Test", async () => {
     let ledger =
       ledgerAccInfo &&
       (
-        await raydium.getLegerInfos(
+        await raydium.getLedgerInfos(
           connection,
           [{ pubkey: ledgerPubkey, account: ledgerAccInfo }],
           version === 3
@@ -308,7 +321,7 @@ describe("Farm Test", async () => {
     ledger =
       ledgerAccInfo &&
       (
-        await raydium.getLegerInfos(
+        await raydium.getLedgerInfos(
           connection,
           [{ pubkey: ledgerPubkey, account: ledgerAccInfo }],
           version === 3

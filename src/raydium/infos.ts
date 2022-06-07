@@ -86,7 +86,7 @@ export async function getAllLedgers(
   //   FARM_LEDGER_LAYOUT_V3_1,
   //   3
   // );
-  let ledgerInfoV3_2 = await getLegerInfos(
+  let ledgerInfoV3_2 = await getLedgerInfos(
     connection,
     allLedgersInV3_2,
     FARM_LEDGER_LAYOUT_V3_2,
@@ -98,7 +98,7 @@ export async function getAllLedgers(
   //   FARM_LEDGER_LAYOUT_V5_1,
   //   5
   // );
-  let ledgerInfoV5_2 = await getLegerInfos(
+  let ledgerInfoV5_2 = await getLedgerInfos(
     connection,
     allLedgersInV5_2,
     FARM_LEDGER_LAYOUT_V5_2,
@@ -119,7 +119,7 @@ export async function getAllLedgers(
   ];
 }
 
-export async function getLegerInfos(
+export async function getLedgerInfos(
   connection: Connection,
   ledgers: {
     pubkey: PublicKey;
@@ -150,6 +150,35 @@ export async function getLegerInfos(
       } as LedgerInfo;
     })
   );
+}
+
+export async function getLedger(
+  connection: Connection,
+  ledger: {
+    pubkey: PublicKey;
+    account: AccountInfo<Buffer>;
+  },
+  layout: any,
+  farmVersion: 3 | 5
+): Promise<LedgerInfo> {
+  let decoded = layout.decode(ledger.account.data);
+  let relatedMints = await getFarmRelatedMints(
+    connection,
+    decoded,
+    farmVersion
+  );
+
+  return {
+    pubkey: ledger.pubkey,
+    farmVersion: farmVersion,
+    mints: relatedMints,
+    farmId: decoded.id.toBase58(),
+    owner: decoded.owner.toBase58(),
+    deposited: decoded.deposited.toNumber(),
+    rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
+      rewardDebt.toNumber()
+    ),
+  };
 }
 
 // Inner fucntions used by getLedgerInfos
