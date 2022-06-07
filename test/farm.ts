@@ -158,7 +158,7 @@ describe("Farm Test", async () => {
         new PublicKey(ledger.farmId),
         "confirmed"
       );
-      let farmInfo =
+      let farmInfoWrapper =
         version === 3
           ? raydium.parseFarmV1(farm?.data, new PublicKey(ledger.farmId))
           : raydium.parseFarmV45(farm?.data, new PublicKey(ledger.farmId), 5);
@@ -176,9 +176,9 @@ describe("Farm Test", async () => {
           version === 3
             ? raydium.STAKE_PROGRAM_ID
             : raydium.STAKE_PROGRAM_ID_V5,
-        authority: (await farmInfo.authority())[0],
-        lpVault: farmInfo.poolLpTokenAccountPubkey,
-        rewardVaults: [farmInfo.poolRewardTokenAccountPubkey],
+        authority: (await farmInfoWrapper.authority())[0],
+        lpVault: farmInfoWrapper.farmInfo.poolLpTokenAccountPubkey,
+        rewardVaults: [farmInfoWrapper.farmInfo.poolRewardTokenAccountPubkey],
       };
       let ix =
         version === 3
@@ -272,7 +272,7 @@ describe("Farm Test", async () => {
         new PublicKey(ledger.farmId),
         "confirmed"
       );
-      let farmInfo =
+      let farmInfoWrapper =
         version === 3
           ? raydium.parseFarmV1(farm?.data, new PublicKey(ledger.farmId))
           : raydium.parseFarmV45(farm?.data, new PublicKey(ledger.farmId), 5);
@@ -290,9 +290,9 @@ describe("Farm Test", async () => {
           version === 3
             ? raydium.STAKE_PROGRAM_ID
             : raydium.STAKE_PROGRAM_ID_V5,
-        authority: (await farmInfo.authority())[0],
-        lpVault: farmInfo.poolLpTokenAccountPubkey,
-        rewardVaults: [farmInfo.poolRewardTokenAccountPubkey],
+        authority: (await farmInfoWrapper.authority())[0],
+        lpVault: farmInfoWrapper.farmInfo.poolLpTokenAccountPubkey,
+        rewardVaults: [farmInfoWrapper.farmInfo.poolRewardTokenAccountPubkey],
       };
       let ix = await raydium.makeWithdrawInstruction({
         poolKeys,
@@ -330,10 +330,10 @@ describe("Farm Test", async () => {
     let pools = await saber.getAllPools(connection);
     // console.log(swap);
     for (let pool of pools) {
-      if (pool.mintB.toString() == NATIVE_MINT.toString()) {
+      if (pool.tokenBMint.toString() == NATIVE_MINT.toString()) {
         const poolInfoWrapper = new saber.PoolInfoWrapper(pool);
         await poolInfoWrapper.updateAmount(connection);
-        const farm = saber.getFarm(saberFarms, pool.poolMint) as saber.FarmInfo;
+        const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
 
         let tx = new Transaction();
         let deposit = await saber.createDepositTx(
@@ -355,7 +355,7 @@ describe("Farm Test", async () => {
         let amount = new BN(0);
         let LPAccount = await utils.findAssociatedTokenAddress(
           wallet.publicKey,
-          pool.poolMint
+          pool.lpMint
         );
         if (!(await utils.checkTokenAccount(LPAccount, connection))) {
           continue;
@@ -367,10 +367,7 @@ describe("Farm Test", async () => {
           continue;
         }
         if (pool.isFarming) {
-          const farm = saber.getFarm(
-            saberFarms,
-            pool.poolMint
-          ) as saber.FarmInfo;
+          const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
 
           let newTx = new Transaction();
           let depositLeftToFarm = await saber.depositToFarm(
@@ -399,14 +396,14 @@ describe("Farm Test", async () => {
 
     for (let miner of allMiner) {
       for (let pool of pools) {
-        const farm = saber.getFarm(saberFarms, pool.poolMint) as saber.FarmInfo;
-        if (farm?.infoPubkey.toString() == miner.farmKey.toString()) {
+        const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
+        if (farm?.farmId.toString() == miner.farmKey.toString()) {
           let tx = new Transaction();
           let amount = new BN(0);
 
           let withdrawAccount = await utils.findAssociatedTokenAddress(
             wallet.publicKey,
-            pool.poolMint
+            pool.lpMint
           );
           if (await utils.checkTokenAccount(withdrawAccount, connection)) {
             amount = new BN(
@@ -452,8 +449,8 @@ describe("Farm Test", async () => {
 
     for (let miner of allMiner) {
       for (let pool of pools) {
-        const farm = saber.getFarm(saberFarms, pool.poolMint) as saber.FarmInfo;
-        if (farm?.infoPubkey.toString() == miner.farmKey.toString()) {
+        const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
+        if (farm?.farmId.toString() == miner.farmKey.toString()) {
           let tx = new Transaction();
           let claimIns = await saber.claimRewardTx(
             farm,

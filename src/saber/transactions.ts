@@ -30,26 +30,26 @@ export async function createDepositTx(
   // check if Token A source account is created
   let AtokenSourceAccount = await findAssociatedTokenAddress(
     wallet,
-    poolInfo.mintA
+    poolInfo.tokenAMint
   );
 
-  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.mintA));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.tokenAMint));
   // check if Token B source account is created
   let BtokenSourceAccount = await findAssociatedTokenAddress(
     wallet,
-    poolInfo.mintB
+    poolInfo.tokenBMint
   );
 
-  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.mintB));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.tokenBMint));
   // check if LP Token account is created
   let LPtokenAccount = await findAssociatedTokenAddress(
     wallet,
-    poolInfo.poolMint
+    poolInfo.lpMint
   );
 
-  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.poolMint));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.lpMint));
   // check Token A is wSol
-  if (poolInfo.mintA.toString() == NATIVE_MINT.toString()) {
+  if (poolInfo.tokenAMint.toString() == NATIVE_MINT.toString()) {
     // if true add a wrapNative IX
     let wrapNativeIns = await wrapNative(
       AtokenAmount,
@@ -65,7 +65,7 @@ export async function createDepositTx(
   // if Token A source account is created in this tx
 
   // check Token A is wSol
-  if (poolInfo.mintB.toString() == NATIVE_MINT.toString()) {
+  if (poolInfo.tokenBMint.toString() == NATIVE_MINT.toString()) {
     // if true add a wrapNative IX
     let wrapNativeIns = await wrapNative(
       BtokenAmount,
@@ -173,7 +173,7 @@ export async function createMiner(
   connection: Connection
 ) {
   let tx = new Transaction();
-  let miner = await getMinerKey(wallet, farm.infoPubkey);
+  let miner = await getMinerKey(wallet, farm.farmId);
   if (!(await minerCreated(wallet, farm, connection))) {
     tx.add(await createATAWithoutCheckIx(miner[0], farm.tokenMintKey, wallet));
     let createMinerIx = await ins.createMinerAccountIx(
@@ -199,15 +199,15 @@ export async function createWithdrawTx(
   let cleanupTx = new Transaction();
   let LPtokenSourceAccount = await findAssociatedTokenAddress(
     wallet,
-    poolInfo.poolMint
+    poolInfo.lpMint
   );
   let recieveTokenAccountMint = new PublicKey(0);
   if (tokenType == "A") {
-    recieveTokenAccountMint = poolInfo.mintA;
+    recieveTokenAccountMint = poolInfo.tokenAMint;
   } else if (tokenType == "B") {
-    recieveTokenAccountMint = poolInfo.mintB;
+    recieveTokenAccountMint = poolInfo.tokenBMint;
   }
-  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.poolMint));
+  tx.add(await createATAWithoutCheckIx(wallet, poolInfo.lpMint));
   let recieveTokenAccount = await findAssociatedTokenAddress(
     wallet,
     recieveTokenAccountMint

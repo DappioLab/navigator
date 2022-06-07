@@ -35,6 +35,7 @@ import {
   FarmInfo,
   AMM_AUTHORITY,
   LIQUIDITY_POOL_PROGRAM_ID_V4,
+  FarmInfoWrapper,
 } from "../../raydium";
 
 export async function initializeUser(
@@ -185,7 +186,7 @@ export async function borrow(
     { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
-    { pubkey: ammInfo.lpMintAddress, isSigner: false, isWritable: true },
+    { pubkey: ammInfo.lpMint, isSigner: false, isWritable: true },
   ];
   let ix = new TransactionInstruction({
     keys,
@@ -234,7 +235,7 @@ export async function swap(
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
-    { pubkey: ammInfo.lpMintAddress, isSigner: false, isWritable: true },
+    { pubkey: ammInfo.lpMint, isSigner: false, isWritable: true },
     { pubkey: ammInfo.serumProgramId, isSigner: false, isWritable: false },
     { pubkey: ammInfo.serumMarket, isSigner: false, isWritable: true },
     { pubkey: serum.bidsAddress, isSigner: false, isWritable: true },
@@ -297,7 +298,7 @@ export async function addLiquidity(
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
-    { pubkey: ammInfo.lpMintAddress, isSigner: false, isWritable: true },
+    { pubkey: ammInfo.lpMint, isSigner: false, isWritable: true },
     { pubkey: ammInfo.serumMarket, isSigner: false, isWritable: true },
     { pubkey: strategy.tknAccount0, isSigner: false, isWritable: true },
     { pubkey: strategy.tknAccount0, isSigner: false, isWritable: true },
@@ -315,7 +316,7 @@ export async function addLiquidity(
 
 export async function stakeLp(
   strategy: StrategyState,
-  stakeInfo: FarmInfo,
+  stakeInfo: FarmInfoWrapper,
   strategyFarmInfo: PublicKey
 ) {
   let hash = "01c472f20e00000000";
@@ -338,17 +339,17 @@ export async function stakeLp(
       isWritable: true,
     },
     {
-      pubkey: stakeInfo.poolLpTokenAccountPubkey,
+      pubkey: stakeInfo.farmInfo.poolLpTokenAccountPubkey,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: stakeInfo.poolRewardTokenAccountPubkey,
+      pubkey: stakeInfo.farmInfo.poolRewardTokenAccountPubkey,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: stakeInfo.poolRewardTokenAccountPubkeyB as PublicKey,
+      pubkey: stakeInfo.farmInfo.poolRewardTokenAccountPubkeyB as PublicKey,
       isSigner: false,
       isWritable: true,
     },
@@ -366,7 +367,7 @@ export async function stakeLp(
 
 export async function unstakeLp(
   strategy: StrategyState,
-  stakeInfo: FarmInfo,
+  stakeInfo: FarmInfoWrapper,
   wallet: PublicKey,
   strategyFarmInfo: PublicKey,
   userAccount: PublicKey,
@@ -418,17 +419,17 @@ export async function unstakeLp(
     },
 
     {
-      pubkey: stakeInfo.poolLpTokenAccountPubkey,
+      pubkey: stakeInfo.farmInfo.poolLpTokenAccountPubkey,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: stakeInfo.poolRewardTokenAccountPubkey,
+      pubkey: stakeInfo.farmInfo.poolRewardTokenAccountPubkey,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: stakeInfo.poolRewardTokenAccountPubkeyB as PublicKey,
+      pubkey: stakeInfo.farmInfo.poolRewardTokenAccountPubkeyB as PublicKey,
       isSigner: false,
       isWritable: true,
     },
@@ -537,7 +538,7 @@ export async function removeLiquidity(
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
-    { pubkey: ammInfo.lpMintAddress, isSigner: false, isWritable: true },
+    { pubkey: ammInfo.lpMint, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolWithdrawQueue, isSigner: false, isWritable: true },
     {
       pubkey: ammInfo.poolTempLpTokenAccount,

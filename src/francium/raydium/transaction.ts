@@ -69,20 +69,17 @@ export async function getDepositTx(
   );
 
   preTx.add(init.instruction);
-  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.pcMintAddress));
-  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.coinMintAddress));
+  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
+  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenAMint));
 
-  let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.pcMintAddress);
-  let usrATA1 = await findAssociatedTokenAddress(
-    wallet,
-    ammInfo.coinMintAddress
-  );
+  let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.tokenBMint);
+  let usrATA1 = await findAssociatedTokenAddress(wallet, ammInfo.tokenAMint);
 
-  if (ammInfo.pcMintAddress.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenBMint.toString() == NATIVE_MINT.toString()) {
     preTx.add(await wrapNative(amount0, wallet, connection, false));
     cleanUpTx.add(createCloseAccountInstruction(usrATA0, wallet, wallet, []));
   }
-  if (ammInfo.coinMintAddress.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenAMint.toString() == NATIVE_MINT.toString()) {
     preTx.add(await wrapNative(amount1, wallet, connection, false));
     cleanUpTx.add(createCloseAccountInstruction(usrATA1, wallet, wallet, []));
   }
@@ -152,19 +149,16 @@ export async function getWithdrawTx(
     ammInfo.serumProgramId
   );
 
-  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.pcMintAddress));
-  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.coinMintAddress));
+  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
+  preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenAMint));
 
-  let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.pcMintAddress);
-  let usrATA1 = await findAssociatedTokenAddress(
-    wallet,
-    ammInfo.coinMintAddress
-  );
+  let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.tokenBMint);
+  let usrATA1 = await findAssociatedTokenAddress(wallet, ammInfo.tokenAMint);
 
-  if (ammInfo.pcMintAddress.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenBMint.toString() == NATIVE_MINT.toString()) {
     cleanUpTx.add(createCloseAccountInstruction(usrATA0, wallet, wallet, []));
   }
-  if (ammInfo.coinMintAddress.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenAMint.toString() == NATIVE_MINT.toString()) {
     cleanUpTx.add(createCloseAccountInstruction(usrATA1, wallet, wallet, []));
   }
   const adminIdMemcmp: MemcmpFilter = {

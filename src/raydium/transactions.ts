@@ -66,7 +66,7 @@ export async function swap(
   );
   let swapIns = ins.swapInstruction(
     programId,
-    pool.infoPubkey,
+    pool.poolId,
     AMM_AUTHORITY,
     pool.ammOpenOrders,
     pool.ammTargetOrders,
@@ -109,7 +109,7 @@ export async function addLiquidity(
   } else {
     userCoinTokenAccount = await findAssociatedTokenAddress(
       wallet,
-      pool.coinMintAddress
+      pool.tokenAMint
     );
   }
   if (userPcTokenAccount) {
@@ -117,34 +117,31 @@ export async function addLiquidity(
   } else {
     userPcTokenAccount = await findAssociatedTokenAddress(
       wallet,
-      pool.pcMintAddress
+      pool.tokenBMint
     );
   }
   if (userLpTokenAccount) {
     userLpTokenAccount = userLpTokenAccount as PublicKey;
   } else {
-    userLpTokenAccount = await findAssociatedTokenAddress(
-      wallet,
-      pool.lpMintAddress
-    );
+    userLpTokenAccount = await findAssociatedTokenAddress(wallet, pool.lpMint);
   }
-  tx.add(await createATAWithoutCheckIx(wallet, pool.lpMintAddress));
-  if (pool.coinMintAddress.toString() == NATIVE_MINT.toString()) {
+  tx.add(await createATAWithoutCheckIx(wallet, pool.lpMint));
+  if (pool.tokenAMint.toString() == NATIVE_MINT.toString()) {
     tx.add(await wrapNative(maxCoinAmount, wallet, connection, true));
     cleanUpTx.add(
       createCloseAccountInstruction(
-        await findAssociatedTokenAddress(wallet, pool.coinMintAddress),
+        await findAssociatedTokenAddress(wallet, pool.tokenAMint),
         wallet,
         wallet,
         []
       )
     );
   }
-  if (pool.pcMintAddress.toString() == NATIVE_MINT.toString()) {
+  if (pool.tokenBMint.toString() == NATIVE_MINT.toString()) {
     tx.add(await wrapNative(maxPcAmount, wallet, connection, true));
     cleanUpTx.add(
       createCloseAccountInstruction(
-        await findAssociatedTokenAddress(wallet, pool.pcMintAddress),
+        await findAssociatedTokenAddress(wallet, pool.tokenBMint),
         wallet,
         wallet,
         []
@@ -154,11 +151,11 @@ export async function addLiquidity(
   if (pool.version == 4) {
     let addIns = ins.addLiquidityInstructionV4(
       LIQUIDITY_POOL_PROGRAM_ID_V4,
-      pool.infoPubkey,
+      pool.poolId,
       AMM_AUTHORITY,
       pool.ammOpenOrders,
       pool.ammTargetOrders,
-      pool.lpMintAddress,
+      pool.lpMint,
       pool.poolCoinTokenAccount,
       pool.poolPcTokenAccount,
       pool.serumMarket,
