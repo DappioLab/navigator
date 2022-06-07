@@ -729,8 +729,8 @@ export async function getFarm(
   const farmInfoAccount = await connection.getAccountInfo(farmInfoKey);
   // TODO: Handle V1 Farms
   let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, 5);
-  if (parsedFarm.state.toNumber() == 1) {
-    farm = parsedFarm;
+  if (parsedFarm.farmInfo.state.toNumber() == 1) {
+    farm = parsedFarm.farmInfo;
   }
   return farm;
 }
