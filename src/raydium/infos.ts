@@ -767,3 +767,17 @@ export async function getAllFarms(connection: Connection) {
   }
   return allFarm;
 }
+
+export async function getFarm(
+  connection: Connection,
+  farmInfoKey: PublicKey
+): Promise<FarmInfo> {
+  let farm = null as unknown as FarmInfo;
+  const farmInfoAccount = await connection.getAccountInfo(farmInfoKey);
+  // TODO: Handle V1 Farms
+  let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, 5);
+  if (parsedFarm.state.toNumber() == 1) {
+    farm = parsedFarm;
+  }
+  return farm;
+}
