@@ -58,14 +58,14 @@ export function deposit(
     data
   );
   const keys = [
-    { pubkey: poolInfo.infoPublicKey, isSigner: false, isWritable: false },
+    { pubkey: poolInfo.poolId, isSigner: false, isWritable: false },
     { pubkey: poolInfo.authority, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
     { pubkey: AtokenSourceAccount, isSigner: false, isWritable: true },
     { pubkey: BtokenSourceAccount, isSigner: false, isWritable: true },
     { pubkey: poolInfo.tokenAccountA, isSigner: false, isWritable: true },
     { pubkey: poolInfo.tokenAccountB, isSigner: false, isWritable: true },
-    { pubkey: poolInfo.poolMint, isSigner: false, isWritable: true },
+    { pubkey: poolInfo.lpMint, isSigner: false, isWritable: true },
     { pubkey: LPtokenAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
@@ -116,10 +116,10 @@ export function withdrawOne(
   }
 
   const keys = [
-    { pubkey: poolInfo.infoPublicKey, isSigner: false, isWritable: false },
+    { pubkey: poolInfo.poolId, isSigner: false, isWritable: false },
     { pubkey: poolInfo.authority, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
-    { pubkey: poolInfo.poolMint, isSigner: false, isWritable: true },
+    { pubkey: poolInfo.lpMint, isSigner: false, isWritable: true },
     { pubkey: LPtokenSourceAccount, isSigner: false, isWritable: true },
     { pubkey: baseTokenAccount, isSigner: false, isWritable: true },
     { pubkey: quoteTokenAccount, isSigner: false, isWritable: true },
@@ -211,7 +211,7 @@ export async function depositToFarmIx(
   wallet: PublicKey,
   amount: BN
 ) {
-  let miner = await getMinerKey(wallet, farmInfo.infoPubkey);
+  let miner = await getMinerKey(wallet, farmInfo.farmId);
   let minerVault = await findAssociatedTokenAddress(
     miner[0],
     farmInfo.tokenMintKey
@@ -233,7 +233,7 @@ export async function depositToFarmIx(
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: miner[0], isSigner: false, isWritable: true },
-    { pubkey: farmInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: farmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
@@ -249,7 +249,7 @@ export async function createMinerAccountIx(
   FarmInfo: FarmInfo,
   wallet: PublicKey
 ) {
-  let miner = await getMinerKey(wallet, FarmInfo.infoPubkey);
+  let miner = await getMinerKey(wallet, FarmInfo.farmId);
   const dataLayout = struct([u64("amount")]);
   let bumpData = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
@@ -269,7 +269,7 @@ export async function createMinerAccountIx(
   const keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: miner[0], isSigner: false, isWritable: true },
-    { pubkey: FarmInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: FarmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: true },
@@ -289,7 +289,7 @@ export async function withdrawFromFarmIx(
   wallet: PublicKey,
   amount: BN
 ) {
-  let miner = await getMinerKey(wallet, farmInfo.infoPubkey);
+  let miner = await getMinerKey(wallet, farmInfo.farmId);
   let minerVault = await findAssociatedTokenAddress(
     miner[0],
     farmInfo.tokenMintKey
@@ -311,7 +311,7 @@ export async function withdrawFromFarmIx(
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: miner[0], isSigner: false, isWritable: true },
-    { pubkey: farmInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: farmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
@@ -325,7 +325,7 @@ export async function withdrawFromFarmIx(
 }
 export async function claimReward(farmInfo: FarmInfo, wallet: PublicKey) {
   let tx = new Transaction();
-  let miner = await getMinerKey(wallet, farmInfo.infoPubkey);
+  let miner = await getMinerKey(wallet, farmInfo.farmId);
   let minerVault = await findAssociatedTokenAddress(
     miner[0],
     farmInfo.tokenMintKey
@@ -349,7 +349,7 @@ export async function claimReward(farmInfo: FarmInfo, wallet: PublicKey) {
     { pubkey: CLAIM_FEE_TOKEN_ACCOUNT, isSigner: false, isWritable: true },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: miner[0], isSigner: false, isWritable: true },
-    { pubkey: farmInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: farmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },

@@ -5,3 +5,4 @@ export * as larix from "./larix/index";
 export * as katana from "./katana/index";
 export * as francium from "./francium/index";
 export * as utils from "./utils";
+export * from "./types";

@@ -22,6 +22,7 @@ import { OpenOrders } from "@project-serum/serum";
 import BN from "bn.js";
 import { parseTokenAccount } from "../utils";
 import { AMM_INFO_LAYOUT_V4 } from "./layouts";
+import { IFarmInfo, IPoolInfo } from "../types";
 
 type LedgerInfo = {
   pubkey: PublicKey;
@@ -161,8 +162,8 @@ async function getFarmRelatedMints(
   let farmAccInfo = await connection.getAccountInfo(farmIdPubkey);
   let farmInfo: FarmInfo =
     farmVersion === 3
-      ? parseFarmV1(farmAccInfo?.data, farmIdPubkey)
-      : parseFarmV45(farmAccInfo?.data, farmIdPubkey, farmVersion);
+      ? parseFarmV1(farmAccInfo?.data, farmIdPubkey).farmInfo
+      : parseFarmV45(farmAccInfo?.data, farmIdPubkey, farmVersion).farmInfo;
   let stakedTokenMint = (
     await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)
   ).mint.toBase58();
@@ -202,8 +203,8 @@ export async function getAssociatedLedgerAccount({
   return publicKey;
 }
 
-export interface PoolInfo {
-  infoPubkey: PublicKey;
+export interface PoolInfo extends IPoolInfo {
+  // infoPubkey: PublicKey;
   version: number;
   status: BN;
   nonce: BN;
@@ -229,9 +230,9 @@ export interface PoolInfo {
   systemDecimalsValue: BN;
   poolCoinTokenAccount: PublicKey;
   poolPcTokenAccount: PublicKey;
-  coinMintAddress: PublicKey;
-  pcMintAddress: PublicKey;
-  lpMintAddress: PublicKey;
+  // coinMintAddress: PublicKey;
+  // pcMintAddress: PublicKey;
+  // lpMintAddress: PublicKey;
   ammOpenOrders: PublicKey;
   serumMarket: PublicKey;
   serumProgramId: PublicKey;
@@ -371,7 +372,7 @@ export function parseV4PoolInfo(data: any, infoPubkey: PublicKey) {
   } = rawPoolData;
 
   return new PoolInfoWrapper({
-    infoPubkey,
+    poolId: infoPubkey,
     version: 4,
     status,
     nonce,
@@ -397,9 +398,9 @@ export function parseV4PoolInfo(data: any, infoPubkey: PublicKey) {
     systemDecimalsValue,
     poolCoinTokenAccount,
     poolPcTokenAccount,
-    coinMintAddress,
-    pcMintAddress,
-    lpMintAddress,
+    tokenAMint: coinMintAddress,
+    tokenBMint: pcMintAddress,
+    lpMint: lpMintAddress,
     ammOpenOrders,
     serumMarket,
     serumProgramId,
@@ -455,8 +456,8 @@ export async function updateAllTokenAmount(
   return pools;
 }
 
-export interface FarmInfoInterface {
-  infoPubkey: PublicKey;
+export interface FarmInfo extends IFarmInfo {
+  // infoPubkey: PublicKey;
   version: number;
   state: BN;
   nonce: BN;
@@ -476,93 +477,44 @@ export interface FarmInfoInterface {
   poolRewardTokenAccountB?: TokenAccount;
 }
 
-export class FarmInfo implements FarmInfoInterface {
-  infoPubkey: PublicKey;
-  version: number;
-  state: BN;
-  nonce: BN;
-  poolLpTokenAccountPubkey: PublicKey;
-  poolRewardTokenAccountPubkey: PublicKey;
-  owner: PublicKey;
-  totalReward: BN;
-  perShare: BN;
-  perBlock: BN;
-  lastBlock: BN;
-  totalRewardB?: BN;
-  perShareB?: BN;
-  perBlockB?: BN;
-  poolRewardTokenAccountPubkeyB?: PublicKey;
-  poolLpTokenAccount?: TokenAccount;
-  poolRewardTokenAccount?: TokenAccount;
-  poolRewardTokenAccountB?: TokenAccount;
-  constructor(
-    infoPubkey: PublicKey,
-    version: number,
-    state: BN,
-    nonce: BN,
-    poolLpTokenAccountPubkey: PublicKey,
-    poolRewardTokenAccountPubkey: PublicKey,
-    owner: PublicKey,
-    totalReward: BN,
-    perShare: BN,
-    perBlock: BN,
-    lastBlock: BN,
-    totalRewardB?: BN,
-    perShareB?: BN,
-    perBlockB?: BN,
-    poolRewardTokenAccountPubkeyB?: PublicKey
-  ) {
-    this.infoPubkey = infoPubkey;
-    this.version = version;
-    this.state = state;
-    this.nonce = nonce;
-    this.poolLpTokenAccountPubkey = poolLpTokenAccountPubkey;
-    this.poolRewardTokenAccountPubkey = poolRewardTokenAccountPubkey;
-    this.owner = owner;
-    this.totalReward = totalReward;
-    this.perShare = perShare;
-    this.perBlock = perBlock;
-    this.lastBlock = lastBlock;
-    this.totalRewardB = totalRewardB;
-    this.perShareB = perShareB;
-    this.perBlockB = perBlockB;
-    this.poolRewardTokenAccountPubkeyB = poolRewardTokenAccountPubkeyB;
-  }
+export class FarmInfoWrapper {
+  constructor(public farmInfo: FarmInfo) {}
+
   async updateAllTokenAccount(connection: Connection) {
     let pubkeys: PublicKey[] = [
-      this.poolLpTokenAccountPubkey,
-      this.poolRewardTokenAccountPubkey,
+      this.farmInfo.poolLpTokenAccountPubkey,
+      this.farmInfo.poolRewardTokenAccountPubkey,
     ];
-    if (this.poolRewardTokenAccountPubkeyB) {
-      pubkeys.push(this.poolRewardTokenAccountPubkeyB);
+    if (this.farmInfo.poolRewardTokenAccountPubkeyB) {
+      pubkeys.push(this.farmInfo.poolRewardTokenAccountPubkeyB);
     }
     let allToken = await connection.getMultipleAccountsInfo(pubkeys);
-    this.poolLpTokenAccount = parseTokenAccount(
+    this.farmInfo.poolLpTokenAccount = parseTokenAccount(
       allToken[0]?.data,
-      this.poolLpTokenAccountPubkey
+      this.farmInfo.poolLpTokenAccountPubkey
     );
-    this.poolRewardTokenAccount = parseTokenAccount(
+    this.farmInfo.poolRewardTokenAccount = parseTokenAccount(
       allToken[1]?.data,
-      this.poolRewardTokenAccountPubkey
+      this.farmInfo.poolRewardTokenAccountPubkey
     );
-    if (this.poolRewardTokenAccountPubkeyB) {
-      this.poolRewardTokenAccountB = parseTokenAccount(
+    if (this.farmInfo.poolRewardTokenAccountPubkeyB) {
+      this.farmInfo.poolRewardTokenAccountB = parseTokenAccount(
         allToken[2]?.data,
-        this.poolRewardTokenAccountPubkeyB
+        this.farmInfo.poolRewardTokenAccountPubkeyB
       );
     }
     return this;
   }
   async authority() {
-    let seed = [this.infoPubkey.toBuffer()];
-    if (this.version > 3) {
+    let seed = [this.farmInfo.farmId.toBuffer()];
+    if (this.farmInfo.version > 3) {
       return await PublicKey.findProgramAddress(seed, STAKE_PROGRAM_ID_V5);
     }
     return await PublicKey.findProgramAddress(seed, STAKE_PROGRAM_ID);
   }
 }
 
-export function parseFarmV1(data: any, infoPubkey: PublicKey) {
+export function parseFarmV1(data: any, infoPubkey: PublicKey): FarmInfoWrapper {
   let farmData = Buffer.from(data);
   let rawFarmData = STAKE_INFO_LAYOUT.decode(farmData);
   let {
@@ -579,26 +531,27 @@ export function parseFarmV1(data: any, infoPubkey: PublicKey) {
     lastBlock,
     rewardPerBlock,
   } = rawFarmData;
-  return new FarmInfo(
-    infoPubkey,
-    1,
+
+  return new FarmInfoWrapper({
+    farmId: infoPubkey,
+    version: 1,
     state,
     nonce,
     poolLpTokenAccountPubkey,
     poolRewardTokenAccountPubkey,
     owner,
     totalReward,
-    rewardPerShareNet,
-    rewardPerBlock,
-    lastBlock
-  );
+    perShare: rewardPerShareNet,
+    perBlock: rewardPerBlock,
+    lastBlock,
+  });
 }
 
 export function parseFarmV45(
   data: any,
   infoPubkey: PublicKey,
   version: number
-) {
+): FarmInfoWrapper {
   let farmData = Buffer.from(data);
   let rawFarmData = STAKE_INFO_LAYOUT_V4.decode(farmData);
   let {
@@ -617,8 +570,8 @@ export function parseFarmV45(
     lastBlock,
     owner,
   } = rawFarmData;
-  return new FarmInfo(
-    infoPubkey,
+  return new FarmInfoWrapper({
+    farmId: infoPubkey,
     version,
     state,
     nonce,
@@ -632,8 +585,8 @@ export function parseFarmV45(
     totalRewardB,
     perShareB,
     perBlockB,
-    poolRewardTokenAccountPubkeyB
-  );
+    poolRewardTokenAccountPubkeyB,
+  });
 }
 
 export async function updateAllFarmToken(
@@ -736,9 +689,9 @@ export async function getAllFarms(connection: Connection) {
   );
   for (let v1Account of allV1FarmAccount) {
     let farm = parseFarmV1(v1Account.account.data, v1Account.pubkey);
-    if (farm.state.toNumber() == 1) {
+    if (farm.farmInfo.state.toNumber() == 1) {
       //await farm.updateAllTokenAccount(connection);
-      allFarm.push(farm);
+      allFarm.push(farm.farmInfo);
     }
   }
   const v5SizeFilter: DataSizeFilter = {
@@ -752,9 +705,9 @@ export async function getAllFarms(connection: Connection) {
   );
   for (let v5Account of allV5FarmAccount) {
     let farm = parseFarmV45(v5Account.account.data, v5Account.pubkey, 5);
-    if (farm.state.toNumber() == 1) {
+    if (farm.farmInfo.state.toNumber() == 1) {
       //await farm.updateAllTokenAccount(connection);
-      allFarm.push(farm);
+      allFarm.push(farm.farmInfo);
     }
   }
   allFarm = await updateAllFarmToken(allFarm, connection);

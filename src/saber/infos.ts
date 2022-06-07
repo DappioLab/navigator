@@ -6,6 +6,7 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
+import { IFarmInfo, IPoolInfo } from "../types";
 import { getTokenAccountAmount, getTokenSupply } from "../utils";
 import {
   ADMIN_KEY,
@@ -65,7 +66,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
       continue;
     }
     let mintAwrapped = await checkWrapped(
-      saberAccountInfo.poolInfo.mintA,
+      saberAccountInfo.poolInfo.tokenAMint,
       wrapInfoArray
     );
     saberAccountInfo.poolInfo.mintAWrapped = mintAwrapped[0];
@@ -73,14 +74,14 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
       saberAccountInfo.poolInfo.mintAWrapInfo = mintAwrapped[1];
     }
     let mintBwrapped = await checkWrapped(
-      saberAccountInfo.poolInfo.mintB,
+      saberAccountInfo.poolInfo.tokenBMint,
       wrapInfoArray
     );
     saberAccountInfo.poolInfo.mintBWrapped = mintBwrapped[0];
     if (mintBwrapped[0]) {
       saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
     }
-    let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.poolMint);
+    let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.lpMint);
     if (farmStarted) {
       saberAccountInfo.poolInfo.isFarming = true;
       // saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
@@ -114,7 +115,7 @@ export async function getPool(
     poolInfoKey
   );
   const mintAwrapped = await checkWrapped(
-    saberAccountInfo.poolInfo.mintA,
+    saberAccountInfo.poolInfo.tokenAMint,
     wrapInfoArray
   );
 
@@ -123,19 +124,19 @@ export async function getPool(
     saberAccountInfo.poolInfo.mintAWrapInfo = mintAwrapped[1];
   }
   let mintBwrapped = await checkWrapped(
-    saberAccountInfo.poolInfo.mintB,
+    saberAccountInfo.poolInfo.tokenBMint,
     wrapInfoArray
   );
   saberAccountInfo.poolInfo.mintBWrapped = mintBwrapped[0];
   if (mintBwrapped[0]) {
     saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
   }
-  let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.poolMint);
+  let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.lpMint);
   if (farmStarted) {
     saberAccountInfo.poolInfo.isFarming = true;
     // saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
   }
-  saberAccountInfo.poolInfo.infoPublicKey = poolInfoKey;
+  saberAccountInfo.poolInfo.poolId = poolInfoKey;
 
   return saberAccountInfo.poolInfo;
 }
@@ -213,8 +214,8 @@ export async function getAllWraps(connection: Connection) {
   return infoArray;
 }
 
-export interface FarmInfo {
-  infoPubkey: PublicKey;
+export interface FarmInfo extends IFarmInfo {
+  // infoPubkey: PublicKey;
   rewarderKey: PublicKey;
   tokenMintKey: PublicKey;
   bump: BN;
@@ -249,7 +250,7 @@ export function parseFarmInfo(data: any, farmPubkey: PublicKey): FarmInfo {
   } = newFarmInfo;
 
   return {
-    infoPubkey: farmPubkey,
+    farmId: farmPubkey,
     rewarderKey,
     tokenMintKey,
     bump: new BN(bump),
@@ -304,7 +305,7 @@ export function getFarm(
 
 export function defaultFarm(): FarmInfo {
   return {
-    infoPubkey: PublicKey.default,
+    farmId: PublicKey.default,
     rewarderKey: PublicKey.default,
     tokenMintKey: PublicKey.default,
     bump: new BN(0),
@@ -334,7 +335,7 @@ export async function minerCreated(
   info: FarmInfo,
   connection: Connection
 ) {
-  let miner = await getMinerKey(wallet, info.infoPubkey);
+  let miner = await getMinerKey(wallet, info.farmId);
   let minerAccountInfo = await connection.getAccountInfo(miner[0]);
   //console.log(miner[0].toString())
   if (
@@ -345,8 +346,8 @@ export async function minerCreated(
   return false;
 }
 
-export interface PoolInfo {
-  infoPublicKey: PublicKey;
+export interface PoolInfo extends IPoolInfo {
+  // infoPublicKey: PublicKey;
   authority: PublicKey;
   isInitialized: boolean;
   isPaused: boolean;
@@ -362,9 +363,9 @@ export interface PoolInfo {
   tokenAccountB: PublicKey;
   AtokenAccountAmount?: BN;
   BtokenAccountAmount?: BN;
-  poolMint: PublicKey;
-  mintA: PublicKey;
-  mintB: PublicKey;
+  // poolMint: PublicKey;
+  // mintA: PublicKey;
+  // mintB: PublicKey;
   mintAWrapped?: Boolean;
   mintAWrapInfo?: WrapInfo;
   mintBWrapped?: Boolean;
@@ -449,7 +450,7 @@ export async function parseSwapInfoData(
   const tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
 
   let poolInfo = new PoolInfoWrapper({
-    infoPublicKey: pubkey,
+    poolId: pubkey,
     authority,
     isInitialized,
     isPaused,
@@ -463,9 +464,9 @@ export async function parseSwapInfoData(
     adminKey,
     tokenAccountA,
     tokenAccountB,
-    poolMint,
-    mintA,
-    mintB,
+    lpMint: poolMint,
+    tokenAMint: mintA,
+    tokenBMint: mintB,
     adminFeeAccountA,
     adminFeeAccountB,
     withdrawFee,
