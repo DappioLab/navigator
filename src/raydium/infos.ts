@@ -756,8 +756,10 @@ export async function getFarm(
 ): Promise<FarmInfo> {
   let farm = null as unknown as FarmInfo;
   const farmInfoAccount = await connection.getAccountInfo(farmInfoKey);
-  // TODO: Handle V1 Farms
-  let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, 5);
+  // v3 size = 200
+  // v5 sizr = 224
+  const version = farmInfoAccount?.data.length == 200 ? 3 : 5;
+  let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
   if (parsedFarm.farmInfo.state.toNumber() == 1) {
     farm = parsedFarm.farmInfo;
   }
