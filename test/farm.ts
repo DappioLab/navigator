@@ -14,23 +14,18 @@ import BN from "bn.js";
 const keyPairPath = os.homedir() + "/.config/solana/dappio-1.json";
 
 describe("Farm Test", async () => {
-  let connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
-    wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws",
-    commitment: "processed",
-  });
-  // let connection = new Connection("https://solana-api.projectserum.com", {
-  //   wsEndpoint: "wss://solana-api.projectserum.com/",
+  // let connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
+  //   wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws",
   //   commitment: "processed",
   // });
+  const connection = new Connection("https://ssc-dao.genesysgo.net", {
+    commitment: "processed",
+  });
   let wallet = (() => {
     const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
     let u8Key = new Uint8Array(PrivateKey);
     return Keypair.fromSecretKey(u8Key);
   })();
-
-  console.log("Debug 1");
-  // const saberFarms = await saber.getAllFarms(connection, SABER_QUARRY_REWARDER);
-  console.log("Debug 2");
 
   it("get Ledgers", async () => {
     let res = await raydium.getAllLedgers(
@@ -39,6 +34,7 @@ describe("Farm Test", async () => {
       // new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4") // MC
     );
     console.log(res.map((i) => i.farmId));
+
     // for (let i of res) {
     //   console.log(i.farmId);
     // }
@@ -446,10 +442,6 @@ describe("Farm Test", async () => {
   }
 
   async function claimWithSaber() {
-    const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
-      wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws",
-      commitment: "processed",
-    });
     //const connection = new Connection("https://raydium.genesysgo.net", { commitment: "processed" });
     const saberFarms = await saber.getAllFarms(
       connection,
