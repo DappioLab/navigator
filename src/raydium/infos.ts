@@ -13,18 +13,23 @@ import {
   STAKE_PROGRAM_ID_V5,
 } from "./ids";
 import {
+  FARM_LEDGER_LAYOUT_V3_1,
   FARM_LEDGER_LAYOUT_V3_2,
+  FARM_LEDGER_LAYOUT_V5_1,
   FARM_LEDGER_LAYOUT_V5_2,
   STAKE_INFO_LAYOUT,
   STAKE_INFO_LAYOUT_V4,
 } from "./layouts";
 import { OpenOrders } from "@project-serum/serum";
+import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
 import { parseTokenAccount } from "../utils";
 import { AMM_INFO_LAYOUT_V4 } from "./layouts";
 import { IFarmInfo, IPoolInfo } from "../types";
+import { getBigNumber, TokenAmount } from "./utils";
+import { AccountLayout, MintLayout } from "@solana/spl-token";
 
-type LedgerInfo = {
+export type LedgerInfo = {
   pubkey: PublicKey;
   farmVersion: number;
   farmId: string;
@@ -152,7 +157,50 @@ export async function getLedgerInfos(
   );
 }
 
-export async function getLedger(
+export async function getLedgerKey({
+  farm,
+  userKey,
+}: {
+  farm: FarmInfo;
+  userKey: PublicKey;
+}): Promise<PublicKey> {
+  const programId = farm.version === 3 ? STAKE_PROGRAM_ID : STAKE_PROGRAM_ID_V5;
+
+  const [key, _] = await PublicKey.findProgramAddress(
+    [
+      farm.farmId.toBuffer(),
+      userKey.toBuffer(),
+      Buffer.from("staker_info_v2_associated_seed", "utf-8"),
+    ],
+    programId
+  );
+  return key;
+}
+
+export async function getLedger({
+  connection,
+  farm,
+  ledgerKey,
+}: {
+  connection: Connection;
+  farm: FarmInfo;
+  ledgerKey: PublicKey;
+}): Promise<LedgerInfo> {
+  const ledgerAcccountInfo = (await connection.getAccountInfo(
+    ledgerKey
+  )) as AccountInfo<Buffer>;
+  const info =
+    ledgerAcccountInfo &&
+    (await _getLedger(
+      connection,
+      { pubkey: ledgerKey, account: ledgerAcccountInfo },
+      farm.version === 3 ? FARM_LEDGER_LAYOUT_V3_1 : FARM_LEDGER_LAYOUT_V5_1,
+      farm.version as 3 | 5
+    ));
+  return info;
+}
+
+async function _getLedger(
   connection: Connection,
   ledger: {
     pubkey: PublicKey;
@@ -279,10 +327,7 @@ export interface PoolInfo extends IPoolInfo {
 }
 
 export class PoolInfoWrapper {
-  poolInfo: PoolInfo;
-  constructor(poolInfo: PoolInfo) {
-    this.poolInfo = poolInfo;
-  }
+  constructor(public poolInfo: PoolInfo) {}
 
   async calculateSwapOutAmount(
     fromSide: string,
@@ -342,6 +387,83 @@ export class PoolInfoWrapper {
     this.poolInfo.ammOrderquoteTokenTotal = ammOrder.quoteTokenTotal;
     this.poolInfo.ammOrderbaseTokenTotal = ammOrder.baseTokenTotal;
     return this;
+  }
+
+  async getPoolBalances(conn: Connection) {
+    const parsedAmmId = await conn
+      .getAccountInfo(this.poolInfo.poolId)
+      .then((accountInfo) => AMM_INFO_LAYOUT_V4.decode(accountInfo?.data));
+    const parsedAmmOpenOrders = await conn
+      .getAccountInfo(this.poolInfo.ammOpenOrders)
+      .then((accountInfo) => _OPEN_ORDERS_LAYOUT_V2.decode(accountInfo?.data));
+    const [parsedPoolCoinTokenAccount, parsedPoolPcTokenAccount] = await conn
+      .getMultipleAccountsInfo([
+        this.poolInfo.poolCoinTokenAccount,
+        this.poolInfo.poolPcTokenAccount,
+      ])
+      .then((accountInfos) =>
+        accountInfos.map((accountInfo) =>
+          AccountLayout.decode(accountInfo?.data as Buffer)
+        )
+      );
+
+    const swapFeeNumerator = getBigNumber(parsedAmmId.swapFeeNumerator);
+    const swapFeeDenominator = getBigNumber(parsedAmmId.swapFeeDenominator);
+
+    const coinDecimals = 6;
+    const pcDecimals = 6;
+
+    // Calculate coinBalance and pcBalance
+    let coinBalance = new TokenAmount(
+      Number(parsedPoolCoinTokenAccount.amount) +
+        parsedAmmOpenOrders.baseTokenTotal.toNumber() -
+        parsedAmmId.needTakePnlCoin.toNumber(),
+      coinDecimals
+    );
+    let pcBalance = new TokenAmount(
+      Number(parsedPoolPcTokenAccount.amount) +
+        parsedAmmOpenOrders.quoteTokenTotal.toNumber() -
+        parsedAmmId.needTakePnlPc.toNumber(),
+      pcDecimals
+    );
+
+    return {
+      coin: {
+        balance: coinBalance,
+        decimals: coinDecimals,
+      },
+      pc: {
+        balance: pcBalance,
+        decimals: pcDecimals,
+      },
+      fees: {
+        numerator: swapFeeNumerator,
+        denominator: swapFeeDenominator,
+      },
+    };
+  }
+
+  async getCoinAndPcAmount(conn: Connection, amount: string) {
+    const poolBalances = await this.getPoolBalances(conn);
+    const coinBalance = poolBalances.coin.balance;
+    const coinDecimals = poolBalances.coin.decimals;
+    const pcBalance = poolBalances.pc.balance;
+    const pcDecimals = poolBalances.pc.decimals;
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) =>
+        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      );
+
+    const coinAmount =
+      coinBalance.toWei().toNumber() * (parseFloat(amount) / lpSupply);
+    const pcAmount =
+      pcBalance.toWei().toNumber() * (parseFloat(amount) / lpSupply);
+
+    return {
+      coinAmount,
+      pcAmount,
+    };
   }
 }
 
@@ -757,7 +879,7 @@ export async function getFarm(
   let farm = null as unknown as FarmInfo;
   const farmInfoAccount = await connection.getAccountInfo(farmInfoKey);
   // v3 size = 200
-  // v5 sizr = 224
+  // v5 size = 224
   const version = farmInfoAccount?.data.length == 200 ? 3 : 5;
   let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
   if (parsedFarm.farmInfo.state.toNumber() == 1) {
