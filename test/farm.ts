@@ -113,34 +113,14 @@ describe("Farm Test", async () => {
       poolId: new PublicKey(farmId),
       owner: wallet.publicKey,
     });
-    let ledgerAccInfo = await connection.getAccountInfo(
-      ledgerPubkey,
-      "confirmed"
-    );
 
-    // let ledger =
-    //   ledgerAccInfo &&
-    //   (
-    //     await raydium.getLegerInfos(
-    //       connection,
-    //       [{ pubkey: ledgerPubkey, account: ledgerAccInfo }],
-    //       version === 3
-    //         ? raydium.FARM_LEDGER_LAYOUT_V3_1
-    //         : raydium.FARM_LEDGER_LAYOUT_V5_1,
-    //       version
-    //     )
-    //   )[0];
+    const farm = await raydium.getFarm(connection, new PublicKey(farmId));
+    const ledger = await raydium.getLedger({
+      farm,
+      ledgerKey: ledgerPubkey,
+      connection,
+    });
 
-    let ledger =
-      ledgerAccInfo &&
-      (await raydium.getLedger(
-        connection,
-        { pubkey: ledgerPubkey, account: ledgerAccInfo },
-        version === 3
-          ? raydium.FARM_LEDGER_LAYOUT_V3_1
-          : raydium.FARM_LEDGER_LAYOUT_V5_1,
-        version
-      ));
     console.log("Staked amount before deposted: ", ledger?.deposited);
 
     if (ledger) {
@@ -209,9 +189,12 @@ describe("Farm Test", async () => {
     }
     let result = await sendAndConfirmTransaction(connection, tx, [wallet]);
     console.log("Transaction hash", result);
-    ledgerAccInfo = await connection.getAccountInfo(ledgerPubkey, "confirmed");
+    const ledgerAccInfo = await connection.getAccountInfo(
+      ledgerPubkey,
+      "confirmed"
+    );
     let ledgerBeforeDeposit = ledger;
-    ledger =
+    const ledger2 =
       ledgerAccInfo &&
       (
         await raydium.getLedgerInfos(
@@ -223,8 +206,8 @@ describe("Farm Test", async () => {
           version
         )
       )[0];
-    console.log("Staked amount After deposited: ", ledger?.deposited);
-    return [ledgerBeforeDeposit?.deposited, ledger?.deposited];
+    console.log("Staked amount After deposited: ", ledger2?.deposited);
+    return [ledgerBeforeDeposit?.deposited, ledger2?.deposited];
   }
   async function withdrawRaydiumFarmWithVersion(
     amount: BN | string | number,
