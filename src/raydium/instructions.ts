@@ -6,7 +6,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 
 import BN from "bn.js";
 export function swapInstruction(

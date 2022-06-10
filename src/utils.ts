@@ -2,7 +2,7 @@ import {
   TOKEN_PROGRAM_ID,
   NATIVE_MINT,
   ASSOCIATED_TOKEN_PROGRAM_ID,
-} from "@solana/spl-token";
+} from "@solana/spl-token-v2";
 import * as sha256 from "js-sha256";
 import {
   PublicKey,
@@ -14,7 +14,7 @@ import {
   Connection,
   SYSVAR_RENT_PUBKEY,
   Keypair,
-  sendAndConfirmTransaction
+  sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import BN from "bn.js";
 import {
@@ -31,12 +31,12 @@ export async function wrapNative(
   amount: BN,
   walletPublicKey: PublicKey,
   connection?: Connection,
-  createAta?: boolean,
+  createAta?: boolean
 ) {
   let tx = new Transaction();
   let destinationAta = await findAssociatedTokenAddress(
     walletPublicKey,
-    NATIVE_MINT,
+    NATIVE_MINT
   );
   let createATA = await createATAWithoutCheckIx(walletPublicKey, NATIVE_MINT);
   tx.add(createATA);
@@ -60,7 +60,7 @@ export async function wrapNative(
 }
 export async function findAssociatedTokenAddress(
   walletAddress: PublicKey,
-  tokenMintAddress: PublicKey,
+  tokenMintAddress: PublicKey
 ): Promise<PublicKey> {
   return (
     await PublicKey.findProgramAddress(
@@ -69,13 +69,13 @@ export async function findAssociatedTokenAddress(
         TOKEN_PROGRAM_ID.toBuffer(),
         tokenMintAddress.toBuffer(),
       ],
-      ASSOCIATED_TOKEN_PROGRAM_ID,
+      ASSOCIATED_TOKEN_PROGRAM_ID
     )
   )[0];
 }
 export async function checkTokenAccount(
   publickey: PublicKey,
-  connection: Connection,
+  connection: Connection
 ) {
   let accountInfo = await connection.getAccountInfo(publickey);
   if (accountInfo?.owner.toString() == TOKEN_PROGRAM_ID.toString()) {
@@ -85,7 +85,7 @@ export async function checkTokenAccount(
 
 export async function getTokenAccountAmount(
   connection: Connection,
-  tokenAccountPubkey: PublicKey,
+  tokenAccountPubkey: PublicKey
 ) {
   let tokenLayout = struct([
     publicKey("mint"),
@@ -99,7 +99,7 @@ export async function getTokenAccountAmount(
 
 export async function getAllTokenAccount(
   wallet: PublicKey,
-  connection: Connection,
+  connection: Connection
 ): Promise<TokenAccount[]> {
   const tokenAccountInfos = await (
     await connection.getTokenAccountsByOwner(wallet, {
@@ -116,7 +116,7 @@ export async function getAllTokenAccount(
 
 export async function getTokenSupply(
   connection: Connection,
-  tokenMintPubkey: PublicKey,
+  tokenMintPubkey: PublicKey
 ) {
   let mintLayout = struct([
     u32("option"),
@@ -131,7 +131,7 @@ export async function getTokenSupply(
 export async function createATAWithoutCheckIx(
   wallet: PublicKey,
   mint: PublicKey,
-  payer?: PublicKey,
+  payer?: PublicKey
 ) {
   if (payer == undefined) {
     payer = wallet as PublicKey;
@@ -139,7 +139,7 @@ export async function createATAWithoutCheckIx(
   payer = payer as PublicKey;
   let ATA = await findAssociatedTokenAddress(wallet, mint);
   const programId = new PublicKey(
-    "9tiP8yZcekzfGzSBmp7n9LaDHRjxP2w7wJj8tpPJtfG",
+    "9tiP8yZcekzfGzSBmp7n9LaDHRjxP2w7wJj8tpPJtfG"
   );
   let keys = [
     { pubkey: payer, isSigner: true, isWritable: true },
@@ -159,7 +159,7 @@ export async function createATAWithoutCheckIx(
 
 export async function getTokenAccount(
   connection: Connection,
-  tokenAccountPubkey: PublicKey,
+  tokenAccountPubkey: PublicKey
 ) {
   let accountInfo = await connection.getAccountInfo(tokenAccountPubkey);
   return parseTokenAccount(accountInfo?.data, tokenAccountPubkey);
@@ -184,7 +184,7 @@ export class TokenAccount {
     infoPubkey: PublicKey,
     mint: PublicKey,
     owner: PublicKey,
-    amount: BN,
+    amount: BN
   ) {
     this.infoPubkey = infoPubkey;
     this.mint = mint;
@@ -205,7 +205,7 @@ export async function signAndSendAll(
   allTx: Transaction,
   connection: Connection,
   wallet: Keypair[],
-  printRaw?:boolean
+  printRaw?: boolean
 ): Promise<string> {
   const walletPublicKey = wallet[0].publicKey;
   const tx = new Transaction();
@@ -213,8 +213,8 @@ export async function signAndSendAll(
   const recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
   tx.recentBlockhash = recentBlockhash;
   tx.feePayer = walletPublicKey;
-  if (printRaw){
-    console.log(tx.serializeMessage().toString("base64"))
+  if (printRaw) {
+    console.log(tx.serializeMessage().toString("base64"));
   }
   const result = sendAndConfirmTransaction(connection, tx, wallet);
   return result;

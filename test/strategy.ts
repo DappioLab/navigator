@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import * as katana from "../src/katana";
 import BN from "bn.js";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { NATIVE_MINT } from "@solana/spl-token-v2";
 
 const keyPairPath = os.homedir() + "/.config/solana/id.json";
 const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));

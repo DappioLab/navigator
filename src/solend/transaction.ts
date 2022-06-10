@@ -8,7 +8,7 @@ import {
   NATIVE_MINT,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   createCloseAccountInstruction,
-} from "@solana/spl-token";
+} from "@solana/spl-token-v2";
 import BN from "bn.js";
 import {
   AccountMeta,

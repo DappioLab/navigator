@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 // @ts-ignore
 import { struct } from 'buffer-layout'
 import { publicKey, u64 } from '@project-serum/borsh'
-import { NATIVE_MINT } from "@solana/spl-token"
+import { NATIVE_MINT } from "@solana/spl-token-v2"
 import { TOKENS } from "../constants"
 
 export const lyfRaydiumProgramId = new PublicKey("2nAAsYdXF3eTQzaeUQS3fr4o782dDg8L28mX39Wr5j8N");

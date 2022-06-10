@@ -8,7 +8,7 @@ import {
 import fs from "fs";
 import os from "os";
 import { raydium, saber, utils } from "../src";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { NATIVE_MINT } from "@solana/spl-token-v2";
 import BN from "bn.js";
 
 const keyPairPath = os.homedir() + "/.config/solana/dappio-1.json";

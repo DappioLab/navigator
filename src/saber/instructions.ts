@@ -7,7 +7,7 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import {
   SWAP_PROGRAM_ID,
   SABER_WRAP_PROGRAM_ID,

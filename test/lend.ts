@@ -14,7 +14,7 @@ import {
   getAllLendingInfo,
   getMiner,
 } from "../src/larix";
-import { NATIVE_MINT } from "@solana/spl-token";
+import { NATIVE_MINT } from "@solana/spl-token-v2";
 import BN from "bn.js";
 import { lendingInfo } from "../src/larix/larix";
 import { MinerInfo } from "../src/larix/mineInfo";

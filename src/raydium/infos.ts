@@ -27,7 +27,7 @@ import { parseTokenAccount } from "../utils";
 import { AMM_INFO_LAYOUT_V4 } from "./layouts";
 import { IFarmInfo, IPoolInfo } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
-import { AccountLayout, MintLayout } from "@solana/spl-token";
+import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
 export type LedgerInfo = {
   pubkey: PublicKey;

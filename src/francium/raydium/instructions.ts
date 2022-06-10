@@ -16,7 +16,7 @@ import {
   i64,
   u32,
 } from "@project-serum/borsh";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import BN from "bn.js";
 import { findUserInfoAccount, UserInfo } from "./UserInfo";
 import { StrategyState } from "./StrategyState";

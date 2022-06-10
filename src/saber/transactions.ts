@@ -3,7 +3,10 @@ import {
   findAssociatedTokenAddress,
   wrapNative,
 } from "../utils";
-import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token";
+import {
+  NATIVE_MINT,
+  createCloseAccountInstruction,
+} from "@solana/spl-token-v2";
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import * as ins from "./instructions";
