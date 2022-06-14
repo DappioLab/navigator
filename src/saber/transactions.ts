@@ -142,15 +142,13 @@ export async function createDepositTx(
     LPtokenAccount
   );
   tx.add(depositIns);
-  if (poolInfo.isFarming) {
-    let depositToFarmIns = await depositToFarm(
-      farmInfo,
-      wallet,
-      minimalRecieve,
-      connection
-    );
-    tx.add(depositToFarmIns);
-  }
+  let depositToFarmIns = await depositToFarm(
+    farmInfo,
+    wallet,
+    minimalRecieve,
+    connection
+  );
+  tx.add(depositToFarmIns);
 
   tx.add(cleanupTx);
   return tx;
@@ -176,9 +174,9 @@ export async function createMiner(
   connection: Connection
 ) {
   let tx = new Transaction();
-  let miner = await getMinerKey(wallet, farm.farmId);
+  let minerKey = await getMinerKey(wallet, farm.farmId);
   if (!(await minerCreated(wallet, farm, connection))) {
-    tx.add(await createATAWithoutCheckIx(miner[0], farm.tokenMintKey, wallet));
+    tx.add(await createATAWithoutCheckIx(minerKey, farm.tokenMintKey, wallet));
     let createMinerIx = await ins.createMinerAccountIx(
       farm as FarmInfo,
       wallet
@@ -217,17 +215,16 @@ export async function createWithdrawTx(
   );
 
   tx.add(await createATAWithoutCheckIx(wallet, recieveTokenAccountMint));
-  if (poolInfo.isFarming) {
-    let withdrawFromfram = await withdrawFromMiner(
-      farmInfo,
-      wallet,
-      farmTokenAmount,
-      connection,
-      false
-    );
-    tx.add(withdrawFromfram);
-    LPtokenAmount = farmTokenAmount.add(LPtokenAmount);
-  }
+  let withdrawFromfram = await withdrawFromMiner(
+    farmInfo,
+    wallet,
+    farmTokenAmount,
+    connection,
+    false
+  );
+  tx.add(withdrawFromfram);
+  LPtokenAmount = farmTokenAmount.add(LPtokenAmount);
+
   if (!LPtokenAmount.eq(new BN(0))) {
     tx.add(
       ins.withdrawOne(

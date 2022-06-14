@@ -11,3 +11,10 @@ export interface IPoolInfo {
 export interface IFarmInfo {
   farmId: PublicKey;
 }
+
+export interface IFarmerInfo {
+  farmerId: PublicKey;
+  farmId: PublicKey;
+  userKey: PublicKey;
+  amount: number;
+}

@@ -22,7 +22,13 @@ import {
   MINTER_PROGRAM_ID,
 } from "./ids";
 import { findAssociatedTokenAddress } from "../utils";
-import { FarmInfo, getMinerKey, PoolInfo, WrapInfo } from "./infos";
+import {
+  FarmInfo,
+  getMinerKey,
+  getMinerKeyWithBump,
+  PoolInfo,
+  WrapInfo,
+} from "./infos";
 
 enum SaberInstruction {
   swap = 1,
@@ -211,9 +217,9 @@ export async function depositToFarmIx(
   wallet: PublicKey,
   amount: BN
 ) {
-  let miner = await getMinerKey(wallet, farmInfo.farmId);
+  let minerKey = await getMinerKey(wallet, farmInfo.farmId);
   let minerVault = await findAssociatedTokenAddress(
-    miner[0],
+    minerKey,
     farmInfo.tokenMintKey
   );
   let minerLPAccount = await findAssociatedTokenAddress(
@@ -232,7 +238,7 @@ export async function depositToFarmIx(
   let data = Buffer.from(dataString, "hex");
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
-    { pubkey: miner[0], isSigner: false, isWritable: true },
+    { pubkey: minerKey, isSigner: false, isWritable: true },
     { pubkey: farmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
@@ -249,7 +255,7 @@ export async function createMinerAccountIx(
   FarmInfo: FarmInfo,
   wallet: PublicKey
 ) {
-  let miner = await getMinerKey(wallet, FarmInfo.farmId);
+  let miner = await getMinerKeyWithBump(wallet, FarmInfo.farmId);
   const dataLayout = struct([u64("amount")]);
   let bumpData = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
@@ -260,7 +266,6 @@ export async function createMinerAccountIx(
   );
   let dataString = "7e179d01935ef545".concat(bumpData.toString("hex"));
   let data = Buffer.from(dataString, "hex");
-  let minerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
 
   let minerVault = await findAssociatedTokenAddress(
     miner[0],
@@ -289,9 +294,9 @@ export async function withdrawFromFarmIx(
   wallet: PublicKey,
   amount: BN
 ) {
-  let miner = await getMinerKey(wallet, farmInfo.farmId);
+  let minerKey = await getMinerKey(wallet, farmInfo.farmId);
   let minerVault = await findAssociatedTokenAddress(
-    miner[0],
+    minerKey,
     farmInfo.tokenMintKey
   );
   let minerLPAccount = await findAssociatedTokenAddress(
@@ -310,7 +315,7 @@ export async function withdrawFromFarmIx(
   let data = Buffer.from(dataString, "hex");
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
-    { pubkey: miner[0], isSigner: false, isWritable: true },
+    { pubkey: minerKey, isSigner: false, isWritable: true },
     { pubkey: farmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
@@ -325,9 +330,9 @@ export async function withdrawFromFarmIx(
 }
 export async function claimReward(farmInfo: FarmInfo, wallet: PublicKey) {
   let tx = new Transaction();
-  let miner = await getMinerKey(wallet, farmInfo.farmId);
+  let minerKey = await getMinerKey(wallet, farmInfo.farmId);
   let minerVault = await findAssociatedTokenAddress(
-    miner[0],
+    minerKey,
     farmInfo.tokenMintKey
   );
   let minerLPAccount = await findAssociatedTokenAddress(
@@ -348,7 +353,7 @@ export async function claimReward(farmInfo: FarmInfo, wallet: PublicKey) {
     { pubkey: iouTokenAccount, isSigner: false, isWritable: true },
     { pubkey: CLAIM_FEE_TOKEN_ACCOUNT, isSigner: false, isWritable: true },
     { pubkey: wallet, isSigner: true, isWritable: true },
-    { pubkey: miner[0], isSigner: false, isWritable: true },
+    { pubkey: minerKey, isSigner: false, isWritable: true },
     { pubkey: farmInfo.farmId, isSigner: false, isWritable: true },
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
