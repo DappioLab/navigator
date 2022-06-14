@@ -443,7 +443,7 @@ export class PoolInfoWrapper {
     };
   }
 
-  async getCoinAndPcAmount(conn: Connection, amount: string) {
+  async getCoinAndPcAmount(conn: Connection, lpAmount: number) {
     const poolBalances = await this.getPoolBalances(conn);
     const coinBalance = poolBalances.coin.balance;
     const coinDecimals = poolBalances.coin.decimals;
@@ -455,15 +455,43 @@ export class PoolInfoWrapper {
         Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
       );
 
-    const coinAmount =
-      coinBalance.toWei().toNumber() * (parseFloat(amount) / lpSupply);
-    const pcAmount =
-      pcBalance.toWei().toNumber() * (parseFloat(amount) / lpSupply);
+    const coinAmount = coinBalance.toWei().toNumber() * (lpAmount / lpSupply);
+    const pcAmount = pcBalance.toWei().toNumber() * (lpAmount / lpSupply);
 
     return {
       coinAmount,
       pcAmount,
     };
+  }
+
+  async getLpAmount(
+    conn: Connection,
+    tokenAmount: number,
+    tokenMint: PublicKey // the mint of tokenAmount
+  ) {
+    if (
+      !tokenMint.equals(this.poolInfo.tokenAMint) &&
+      !tokenMint.equals(this.poolInfo.tokenBMint)
+    ) {
+      throw new Error("Wrong token mint");
+    }
+
+    const poolBalances = await this.getPoolBalances(conn);
+    const coinBalance = poolBalances.coin.balance;
+    const pcBalance = poolBalances.pc.balance;
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) =>
+        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      );
+
+    const balance = tokenMint.equals(this.poolInfo.tokenAMint)
+      ? coinBalance
+      : pcBalance;
+    const sharePercent =
+      tokenAmount / (balance.toWei().toNumber() + tokenAmount);
+
+    return sharePercent * lpSupply;
   }
 }
 
