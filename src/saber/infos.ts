@@ -339,6 +339,16 @@ export async function getMinerKey(wallet: PublicKey, farmPubkey: PublicKey) {
   return miner;
 }
 
+export async function getMiner(
+  conn: Connection,
+  minerKey: PublicKey
+): Promise<MinerInfo> {
+  const miner = await conn
+    .getAccountInfo(minerKey)
+    .then((accountInfo) => parseMinerInfo(accountInfo?.data, minerKey));
+  return miner;
+}
+
 export async function getMinerKeyWithBump(
   wallet: PublicKey,
   farmPubkey: PublicKey
