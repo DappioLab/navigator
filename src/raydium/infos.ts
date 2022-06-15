@@ -25,19 +25,19 @@ import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
 import { parseTokenAccount } from "../utils";
 import { AMM_INFO_LAYOUT_V4 } from "./layouts";
-import { IFarmInfo, IPoolInfo } from "../types";
+import { IFarmInfo, IPoolInfo, IFarmerInfo } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
-export type LedgerInfo = {
-  pubkey: PublicKey;
+export interface LedgerInfo extends IFarmerInfo {
+  // pubkey: PublicKey;
+  // farmId: string;
+  // owner: string;
+  // deposited: number;
   farmVersion: number;
-  farmId: string;
-  owner: string;
-  deposited: number;
   rewardDebts: number[];
   mints: { stakedTokenMint: string; rewardAMint: string; rewardBMint?: string };
-};
+}
 
 // Get all ledgers for certain user wallet.
 export async function getAllLedgers(
@@ -143,12 +143,12 @@ export async function getLedgerInfos(
       );
 
       return {
-        pubkey: ledger.pubkey,
+        farmerId: ledger.pubkey,
+        farmId: new PublicKey(decoded.id),
+        userKey: new PublicKey(decoded.owner),
+        amount: decoded.deposited.toNumber(),
         farmVersion: farmVersion,
         mints: relatedMints,
-        farmId: decoded.id.toBase58(),
-        owner: decoded.owner.toBase58(),
-        deposited: decoded.deposited.toNumber(),
         rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
           rewardDebt.toNumber()
         ),
@@ -217,12 +217,12 @@ async function _getLedger(
   );
 
   return {
-    pubkey: ledger.pubkey,
+    farmerId: ledger.pubkey,
+    farmId: new PublicKey(decoded.id),
+    userKey: new PublicKey(decoded.owner),
+    amount: decoded.deposited.toNumber(),
     farmVersion: farmVersion,
     mints: relatedMints,
-    farmId: decoded.id.toBase58(),
-    owner: decoded.owner.toBase58(),
-    deposited: decoded.deposited.toNumber(),
     rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
       rewardDebt.toNumber()
     ),

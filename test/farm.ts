@@ -18,8 +18,12 @@ describe("Farm Test", async () => {
   //   wsEndpoint: "https://rpc-mainnet-fork.dappio.xyz/ws",
   //   commitment: "processed",
   // });
-  const connection = new Connection("https://ssc-dao.genesysgo.net", {
-    commitment: "processed",
+  // const connection = new Connection("https://ssc-dao.genesysgo.net", {
+  //   commitment: "processed",
+  // });
+  const connection = new Connection("https://solana-api.tt-prod.net", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
   });
   let wallet = (() => {
     const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
@@ -41,49 +45,49 @@ describe("Farm Test", async () => {
     // console.log(res);
   });
 
-  it("can deposit through Raydium protocol", async () => {
-    console.log("The public key of wallet: ", wallet.publicKey.toBase58());
-    let depositAmt = "100";
-    console.log("Deposit amount: ", depositAmt);
-    // get the value before and after depositing
-    let [before, after] = await depositRaydiumFarmWithVersion(
-      // RAY vs RAY --> RAY
-      depositAmt,
-      3,
-      // "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
-      "5DFbcYNLLy5SJiBpCCDzNSs7cWCsUbYnCkLXzcPQiKnR"
-    );
-    // let [before, after] = await depositRaydiumFarmWithVersion(
-    //   // RAY vs SOL (LP) --> RAY
-    //   depositAmt,
-    //   3,
-    //   "HUDr9BDaAGqi37xbQHzxCyXvfMCKPTPNF8g9c9bPu1Fu"
-    // );
-    // assert(before && after, "No data output");
-    // assert(after! - before! === Number(depositAmt));
-  });
+  // it("can deposit through Raydium protocol", async () => {
+  //   console.log("The public key of wallet: ", wallet.publicKey.toBase58());
+  //   let depositAmt = "100";
+  //   console.log("Deposit amount: ", depositAmt);
+  //   // get the value before and after depositing
+  //   let [before, after] = await depositRaydiumFarmWithVersion(
+  //     // RAY vs RAY --> RAY
+  //     depositAmt,
+  //     3,
+  //     // "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
+  //     "5DFbcYNLLy5SJiBpCCDzNSs7cWCsUbYnCkLXzcPQiKnR"
+  //   );
+  //   // let [before, after] = await depositRaydiumFarmWithVersion(
+  //   //   // RAY vs SOL (LP) --> RAY
+  //   //   depositAmt,
+  //   //   3,
+  //   //   "HUDr9BDaAGqi37xbQHzxCyXvfMCKPTPNF8g9c9bPu1Fu"
+  //   // );
+  //   // assert(before && after, "No data output");
+  //   // assert(after! - before! === Number(depositAmt));
+  // });
 
-  it("can withdraw through Raydium protocol", async () => {
-    console.log("The public key of wallet: ", wallet.publicKey.toBase58());
-    let withdrawAmt = "100";
-    console.log("Deposit amount: ", withdrawAmt);
-    // get the value before and after depositing
-    let [before, after] = await withdrawRaydiumFarmWithVersion(
-      // RAY vs RAY --> RAY
-      withdrawAmt,
-      3,
-      // "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
-      "5DFbcYNLLy5SJiBpCCDzNSs7cWCsUbYnCkLXzcPQiKnR"
-    );
-    // let [before, after] = await withdrawRaydiumFarmWithVersion(
-    //   // RAY vs SOL (LP) --> RAY
-    //   withdrawAmt,
-    //   3,
-    //   "HUDr9BDaAGqi37xbQHzxCyXvfMCKPTPNF8g9c9bPu1Fu"
-    // );
-    // assert(before && after, "No data output");
-    // assert(after! - before! === Number(withdrawAmt));
-  });
+  // it("can withdraw through Raydium protocol", async () => {
+  //   console.log("The public key of wallet: ", wallet.publicKey.toBase58());
+  //   let withdrawAmt = "100";
+  //   console.log("Deposit amount: ", withdrawAmt);
+  //   // get the value before and after depositing
+  //   let [before, after] = await withdrawRaydiumFarmWithVersion(
+  //     // RAY vs RAY --> RAY
+  //     withdrawAmt,
+  //     3,
+  //     // "4EwbZo8BZXP5313z5A2H11MRBP15M5n6YxfmkjXESKAW"
+  //     "5DFbcYNLLy5SJiBpCCDzNSs7cWCsUbYnCkLXzcPQiKnR"
+  //   );
+  //   // let [before, after] = await withdrawRaydiumFarmWithVersion(
+  //   //   // RAY vs SOL (LP) --> RAY
+  //   //   withdrawAmt,
+  //   //   3,
+  //   //   "HUDr9BDaAGqi37xbQHzxCyXvfMCKPTPNF8g9c9bPu1Fu"
+  //   // );
+  //   // assert(before && after, "No data output");
+  //   // assert(after! - before! === Number(withdrawAmt));
+  // });
 
   it("can deposit through Saber protocol", async () => {
     console.log("The public key of wallet: ", wallet.publicKey.toBase58());
@@ -121,7 +125,7 @@ describe("Farm Test", async () => {
       connection,
     });
 
-    console.log("Staked amount before deposted: ", ledger?.deposited);
+    console.log("Staked amount before deposted: ", ledger?.amount);
 
     if (ledger) {
       let stakedWalletATA = await utils.findAssociatedTokenAddress(
@@ -140,8 +144,8 @@ describe("Farm Test", async () => {
         ));
       console.log("Staked token ATA", stakedWalletATA.toBase58());
       let userKeys: raydium.FarmUserKeys = {
-        ledger: ledger.pubkey,
-        owner: new PublicKey(ledger.owner),
+        ledger: ledger.farmerId,
+        owner: new PublicKey(ledger.userKey),
         lpTokenAccount: new PublicKey(stakedWalletATA),
         rewardTokenAccounts: !rewardBWalletATA
           ? [rewardWalletATA]
@@ -206,8 +210,8 @@ describe("Farm Test", async () => {
           version
         )
       )[0];
-    console.log("Staked amount After deposited: ", ledger2?.deposited);
-    return [ledgerBeforeDeposit?.deposited, ledger2?.deposited];
+    console.log("Staked amount After deposited: ", ledger2?.amount);
+    return [ledgerBeforeDeposit?.amount, ledger2?.amount];
   }
   async function withdrawRaydiumFarmWithVersion(
     amount: BN | string | number,
@@ -239,7 +243,7 @@ describe("Farm Test", async () => {
         )
       )[0];
 
-    console.log("Deposited amount before withdraw", ledger?.deposited);
+    console.log("Deposited amount before withdraw", ledger?.amount);
     if (ledger) {
       let stakedWalletATA = await utils.findAssociatedTokenAddress(
         wallet.publicKey,
@@ -257,8 +261,8 @@ describe("Farm Test", async () => {
         ));
       console.log("Staked Token Wallet ATA: ", stakedWalletATA.toBase58());
       let userKeys: raydium.FarmUserKeys = {
-        ledger: ledger.pubkey,
-        owner: new PublicKey(ledger.owner),
+        ledger: ledger.farmerId,
+        owner: new PublicKey(ledger.userKey),
         lpTokenAccount: new PublicKey(stakedWalletATA),
         rewardTokenAccounts: !rewardBWalletATA
           ? [rewardWalletATA]
@@ -314,8 +318,8 @@ describe("Farm Test", async () => {
         )
       )[0];
 
-    console.log("Deposited amount after withdraw", ledger?.deposited);
-    return [ledgerBeforeWithdraw?.deposited, ledger?.deposited];
+    console.log("Deposited amount after withdraw", ledger?.amount);
+    return [ledgerBeforeWithdraw?.amount, ledger?.amount];
   }
 
   async function depositWithSaber() {
@@ -329,12 +333,15 @@ describe("Farm Test", async () => {
       if (pool.tokenBMint.toString() == NATIVE_MINT.toString()) {
         const poolInfoWrapper = new saber.PoolInfoWrapper(pool);
         await poolInfoWrapper.updateAmount(connection);
-        const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
+        const farm1 = saber.getFarmFromLpMint(
+          saberFarms,
+          pool.lpMint
+        ) as saber.FarmInfo;
 
         let tx = new Transaction();
         let deposit = await saber.createDepositTx(
           pool,
-          farm,
+          farm1,
           new BN(0),
           new BN(10),
           new BN(0),
@@ -362,12 +369,15 @@ describe("Farm Test", async () => {
         if (amount.eq(new BN(0))) {
           continue;
         }
-        if (pool.isFarming) {
-          const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
 
+        const farm2 = saber.getFarmFromLpMint(
+          saberFarms,
+          pool.lpMint
+        ) as saber.FarmInfo;
+        if (farm2) {
           let newTx = new Transaction();
           let depositLeftToFarm = await saber.depositToFarm(
-            farm,
+            farm2,
             wallet.publicKey,
             amount,
             connection
@@ -392,8 +402,11 @@ describe("Farm Test", async () => {
 
     for (let miner of allMiner) {
       for (let pool of pools) {
-        const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
-        if (farm?.farmId.toString() == miner.farmKey.toString()) {
+        const farm = saber.getFarmFromLpMint(
+          saberFarms,
+          pool.lpMint
+        ) as saber.FarmInfo;
+        if (farm?.farmId.toString() == miner.farmId.toString()) {
           let tx = new Transaction();
           let amount = new BN(0);
 
@@ -406,14 +419,14 @@ describe("Farm Test", async () => {
               await utils.getTokenAccountAmount(connection, withdrawAccount)
             );
           }
-          if (amount.add(miner.balance).eq(new BN(0))) {
+          if (amount.add(new BN(miner.amount)).eq(new BN(0))) {
             continue;
           }
           let withdrawIns = await saber.createWithdrawTx(
             pool,
             farm,
             "B",
-            miner.balance,
+            new BN(miner.amount),
             amount,
             new BN(0),
             wallet.publicKey,
@@ -435,7 +448,6 @@ describe("Farm Test", async () => {
   }
 
   async function claimWithSaber() {
-    //const connection = new Connection("https://raydium.genesysgo.net", { commitment: "processed" });
     const saberFarms = await saber.getAllFarms(
       connection,
       saber.SABER_QUARRY_REWARDER
@@ -445,8 +457,11 @@ describe("Farm Test", async () => {
 
     for (let miner of allMiner) {
       for (let pool of pools) {
-        const farm = saber.getFarm(saberFarms, pool.lpMint) as saber.FarmInfo;
-        if (farm?.farmId.toString() == miner.farmKey.toString()) {
+        const farm = saber.getFarmFromLpMint(
+          saberFarms,
+          pool.lpMint
+        ) as saber.FarmInfo;
+        if (farm?.farmId.toString() == miner.farmId.toString()) {
           let tx = new Transaction();
           let claimIns = await saber.claimRewardTx(
             farm,

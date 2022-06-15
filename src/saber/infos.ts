@@ -4,9 +4,10 @@ import {
   GetProgramAccountsConfig,
   DataSizeFilter,
   PublicKey,
+  AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmInfo, IPoolInfo } from "../types";
+import { IFarmerInfo, IFarmInfo, IPoolInfo } from "../types";
 import { getTokenAccountAmount, getTokenSupply } from "../utils";
 import {
   ADMIN_KEY,
@@ -81,11 +82,11 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
     if (mintBwrapped[0]) {
       saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
     }
-    let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.lpMint);
-    if (farmStarted) {
-      saberAccountInfo.poolInfo.isFarming = true;
-      // saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
-    }
+    // let farmStarted = getFarm(connection, saberAccountInfo.poolInfo.lpMint);
+    // if (farmStarted) {
+    //   saberAccountInfo.poolInfo.isFarming = true;
+    //   saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
+    // }
     infoArray.push(saberAccountInfo);
   }
 
@@ -131,11 +132,11 @@ export async function getPool(
   if (mintBwrapped[0]) {
     saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
   }
-  let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.lpMint);
-  if (farmStarted) {
-    saberAccountInfo.poolInfo.isFarming = true;
-    // saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
-  }
+  // let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.lpMint);
+  // if (farmStarted) {
+  //   saberAccountInfo.poolInfo.isFarming = true;
+  //   saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
+  // }
   saberAccountInfo.poolInfo.poolId = poolInfoKey;
 
   return saberAccountInfo.poolInfo;
@@ -293,7 +294,19 @@ export async function getAllFarms(
   return allFarmInfo;
 }
 
-export function getFarm(
+export async function getFarm(
+  connection: Connection,
+  farmId: PublicKey
+): Promise<FarmInfo> {
+  let farm = null as unknown as FarmInfo;
+  const farmInfoAccount = await connection.getAccountInfo(farmId);
+  if (farmInfoAccount) {
+    farm = parseFarmInfo(farmInfoAccount?.data, farmId);
+  }
+  return farm;
+}
+
+export function getFarmFromLpMint(
   allFarms: FarmInfo[],
   mintPubkey: PublicKey
 ): FarmInfo | null {
@@ -322,6 +335,24 @@ export function defaultFarm(): FarmInfo {
 }
 
 export async function getMinerKey(wallet: PublicKey, farmPubkey: PublicKey) {
+  let [miner, _] = await getMinerKeyWithBump(wallet, farmPubkey);
+  return miner;
+}
+
+export async function getMiner(
+  conn: Connection,
+  minerKey: PublicKey
+): Promise<MinerInfo> {
+  const miner = await conn
+    .getAccountInfo(minerKey)
+    .then((accountInfo) => parseMinerInfo(accountInfo?.data, minerKey));
+  return miner;
+}
+
+export async function getMinerKeyWithBump(
+  wallet: PublicKey,
+  farmPubkey: PublicKey
+) {
   let minerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
   let miner = await PublicKey.findProgramAddress(
     [minerBytes, farmPubkey.toBuffer(), wallet.toBuffer()],
@@ -335,8 +366,8 @@ export async function minerCreated(
   info: FarmInfo,
   connection: Connection
 ) {
-  let miner = await getMinerKey(wallet, info.farmId);
-  let minerAccountInfo = await connection.getAccountInfo(miner[0]);
+  let minerKey = await getMinerKey(wallet, info.farmId);
+  let minerAccountInfo = await connection.getAccountInfo(minerKey);
   //console.log(miner[0].toString())
   if (
     minerAccountInfo?.owner.toString() == QURARRY_MINE_PROGRAM_ID.toString()
@@ -374,7 +405,7 @@ export interface PoolInfo extends IPoolInfo {
   adminFeeAccountB: PublicKey;
   tradingFee: BN;
   withdrawFee: BN;
-  isFarming?: Boolean;
+  // isFarming?: Boolean;
 }
 
 const DIGIT = new BN(10000000000);
@@ -476,15 +507,15 @@ export async function parseSwapInfoData(
   return poolInfo;
 }
 
-export interface MinerInfo {
-  infoPubkey: PublicKey;
-  farmKey: PublicKey;
-  owner: PublicKey;
+export interface MinerInfo extends IFarmerInfo {
+  // infoPubkey: PublicKey;
+  // farmKey: PublicKey;
+  // owner: PublicKey;
+  // balance: BN;
   bump: BN;
   vault: PublicKey;
   rewardsEarned: BN;
   rewardsPerTokenPaid: BN;
-  balance: BN;
   index: BN;
 }
 
@@ -505,14 +536,14 @@ export function parseMinerInfo(data: any, miner: PublicKey): MinerInfo {
   } = newMinerInfo;
 
   return {
-    infoPubkey,
-    farmKey,
-    owner,
+    farmerId: infoPubkey,
+    farmId: farmKey,
+    userKey: owner,
+    amount: new BN(balance).toNumber(),
     bump: new BN(bump),
     vault,
     rewardsEarned: new BN(rewardsEarned),
     rewardsPerTokenPaid: new BN(rewardsPerTokenPaid),
-    balance: new BN(balance),
     index: new BN(index),
   };
 }
@@ -539,7 +570,7 @@ export async function getAllMiner(
   let allMinerInfo: MinerInfo[] = [];
   for (let account of allMinerAccount) {
     let currentFarmInfo = parseMinerInfo(account.account.data, account.pubkey);
-    if (currentFarmInfo.balance == new BN(0)) {
+    if (currentFarmInfo.amount == 0) {
       continue;
     }
     allMinerInfo.push(currentFarmInfo);
@@ -548,13 +579,13 @@ export async function getAllMiner(
 }
 
 export const defaultMiner: MinerInfo = {
-  infoPubkey: PublicKey.default,
-  farmKey: PublicKey.default,
-  owner: PublicKey.default,
+  farmerId: PublicKey.default,
+  farmId: PublicKey.default,
+  userKey: PublicKey.default,
+  amount: new BN(0).toNumber(),
   bump: new BN(0),
   vault: PublicKey.default,
   rewardsEarned: new BN(0),
   rewardsPerTokenPaid: new BN(0),
-  balance: new BN(0),
   index: new BN(0),
 };
