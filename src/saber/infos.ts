@@ -21,6 +21,7 @@ import {
   SWAPINFO_LAYOUT,
   WRAPINFO_LAYOUT,
 } from "./layouts";
+import { MintLayout } from "@solana/spl-token-v2";
 
 export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const adminIdMemcmp: MemcmpFilter = {
@@ -407,10 +408,7 @@ const DIGIT = new BN(10000000000);
  * tradingFee and withdrawFee are in units of 6 decimals
  */
 export class PoolInfoWrapper {
-  poolInfo: PoolInfo;
-  constructor(poolInfo: PoolInfo) {
-    this.poolInfo = poolInfo;
-  }
+  constructor(public poolInfo: PoolInfo) {}
   // this.withdrawFee = withdrawFeeNumerator
   //   .mul(DIGIT)
   //   .div(withdrawFeeDenominator);
@@ -433,6 +431,26 @@ export class PoolInfoWrapper {
     if (!this.poolInfo.AtokenAccountAmount) {
       await this.updateAmount(connection);
     }
+  }
+
+  async getCoinAndPcAmount(conn: Connection, lpAmount: number) {
+    await this.updateAmount(conn);
+
+    const coinBalance = this.poolInfo.AtokenAccountAmount;
+    const pcBalance = this.poolInfo.BtokenAccountAmount;
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) =>
+        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      );
+
+    const coinAmount = Number(coinBalance) * (lpAmount / lpSupply);
+    const pcAmount = Number(pcBalance) * (lpAmount / lpSupply);
+
+    return {
+      coinAmount,
+      pcAmount,
+    };
   }
 }
 
