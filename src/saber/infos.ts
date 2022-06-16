@@ -452,6 +452,36 @@ export class PoolInfoWrapper {
       pcAmount,
     };
   }
+
+  async getLpAmount(
+    conn: Connection,
+    tokenAmount: number,
+    tokenMint: PublicKey // the mint of tokenAmount
+  ) {
+    if (
+      !tokenMint.equals(this.poolInfo.tokenAMint) &&
+      !tokenMint.equals(this.poolInfo.tokenBMint)
+    ) {
+      throw new Error("Wrong token mint");
+    }
+
+    await this.updateAmount(conn);
+
+    const coinBalance = this.poolInfo.AtokenAccountAmount;
+    const pcBalance = this.poolInfo.BtokenAccountAmount;
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) =>
+        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      );
+
+    const balance = tokenMint.equals(this.poolInfo.tokenAMint)
+      ? coinBalance
+      : pcBalance;
+    const sharePercent = tokenAmount / (Number(balance) + tokenAmount);
+
+    return sharePercent * lpSupply;
+  }
 }
 
 export async function parseSwapInfoData(
