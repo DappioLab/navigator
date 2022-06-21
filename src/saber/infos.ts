@@ -7,7 +7,14 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IFarmerInfo, IFarmInfo, IPoolInfo } from "../types";
-import { getTokenAccountAmount, getTokenSupply } from "../utils";
+import {
+  computeD,
+  getTokenAccountAmount,
+  getTokenSupply,
+  normalizedTradeFee,
+  N_COINS,
+  ZERO,
+} from "../utils";
 import {
   ADMIN_KEY,
   QURARRY_MINE_PROGRAM_ID,
@@ -21,6 +28,7 @@ import {
   SWAPINFO_LAYOUT,
   WRAPINFO_LAYOUT,
 } from "./layouts";
+import { MintLayout } from "@solana/spl-token-v2";
 
 export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const adminIdMemcmp: MemcmpFilter = {
@@ -407,10 +415,7 @@ const DIGIT = new BN(10000000000);
  * tradingFee and withdrawFee are in units of 6 decimals
  */
 export class PoolInfoWrapper {
-  poolInfo: PoolInfo;
-  constructor(poolInfo: PoolInfo) {
-    this.poolInfo = poolInfo;
-  }
+  constructor(public poolInfo: PoolInfo) {}
   // this.withdrawFee = withdrawFeeNumerator
   //   .mul(DIGIT)
   //   .div(withdrawFeeDenominator);
@@ -433,6 +438,100 @@ export class PoolInfoWrapper {
     if (!this.poolInfo.AtokenAccountAmount) {
       await this.updateAmount(connection);
     }
+  }
+
+  async getCoinAndPcAmount(conn: Connection, lpAmount: number) {
+    await this.updateAmount(conn);
+
+    const coinBalance = this.poolInfo.AtokenAccountAmount!;
+    const pcBalance = this.poolInfo.BtokenAccountAmount!;
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then(
+        (accountInfo) =>
+          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
+      );
+
+    const coinAmountBeforeFee = coinBalance.mul(new BN(lpAmount)).div(lpSupply);
+    const coinFee = coinAmountBeforeFee.divRound(this.poolInfo.withdrawFee);
+    const pcAmountBeforeFee = pcBalance.mul(new BN(lpAmount)).div(lpSupply);
+    const pcFee = pcAmountBeforeFee.divRound(this.poolInfo.withdrawFee);
+    const coinAmount = Number(coinAmountBeforeFee.sub(coinFee));
+    const pcAmount = Number(pcAmountBeforeFee.sub(pcFee));
+
+    return {
+      coinAmount,
+      pcAmount,
+    };
+  }
+
+  async getLpAmount(
+    conn: Connection,
+    tokenAAmount: number,
+    tokenAMint: PublicKey, // the mint of tokenA Amount
+    tokenBAmount?: number,
+    tokenBMint?: PublicKey // the mint of tokenB Amount
+  ) {
+    if (tokenAAmount === 0) {
+      return 0;
+    }
+    await this.updateAmount(conn);
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then(
+        (accountInfo) =>
+          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
+      );
+
+    const amp = this.poolInfo.targetAmpFactor;
+    const coinBalance = this.poolInfo.AtokenAccountAmount!;
+    const pcBalance = this.poolInfo.BtokenAccountAmount!;
+
+    if (!tokenBAmount || !tokenBMint) {
+      tokenAAmount = 2 * tokenAAmount;
+      tokenBAmount = 0;
+    }
+
+    const depositCoinAmount = tokenAMint.equals(this.poolInfo.tokenAMint)
+      ? new BN(tokenAAmount)
+      : new BN(tokenBAmount);
+    const depositPcAmount = tokenAMint.equals(this.poolInfo.tokenBMint)
+      ? new BN(tokenAAmount)
+      : new BN(tokenBAmount);
+
+    const d0 = computeD(amp, coinBalance, pcBalance);
+    const d1 = computeD(
+      amp,
+      coinBalance.add(depositCoinAmount),
+      pcBalance.add(depositPcAmount)
+    );
+    if (d1.lt(d0)) {
+      throw new Error("New D cannot be less than previous D");
+    }
+
+    const oldBalances = [coinBalance, pcBalance];
+    const newBalances = [
+      coinBalance.add(depositCoinAmount),
+      pcBalance.add(depositPcAmount),
+    ];
+    const adjustedBalances = newBalances.map((newBalance, i) => {
+      const oldBalance = oldBalances[i] as BN;
+      const idealBalance = d1.div(d0).mul(oldBalance);
+      const difference = idealBalance.sub(newBalance);
+      const diffAbs = difference.gt(ZERO) ? difference : difference.neg();
+      const fee = normalizedTradeFee(
+        this.poolInfo.tradingFee,
+        N_COINS,
+        diffAbs
+      );
+
+      return newBalance.sub(fee);
+    }) as [BN, BN];
+
+    const d2 = computeD(amp, adjustedBalances[0], adjustedBalances[1]);
+
+    const lpAmount = Number(lpSupply.mul(d2.sub(d0)).div(d0));
+    return lpAmount;
   }
 }
 
