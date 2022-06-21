@@ -7,7 +7,14 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IFarmerInfo, IFarmInfo, IPoolInfo } from "../types";
-import { getTokenAccountAmount, getTokenSupply } from "../utils";
+import {
+  computeD,
+  getTokenAccountAmount,
+  getTokenSupply,
+  normalizedTradeFee,
+  N_COINS,
+  ZERO,
+} from "../utils";
 import {
   ADMIN_KEY,
   QURARRY_MINE_PROGRAM_ID,
@@ -455,32 +462,71 @@ export class PoolInfoWrapper {
 
   async getLpAmount(
     conn: Connection,
-    tokenAmount: number,
-    tokenMint: PublicKey // the mint of tokenAmount
+    tokenAAmount: number,
+    tokenAMint: PublicKey, // the mint of tokenA Amount
+    tokenBAmount?: number,
+    tokenBMint?: PublicKey // the mint of tokenB Amount
   ) {
-    if (
-      !tokenMint.equals(this.poolInfo.tokenAMint) &&
-      !tokenMint.equals(this.poolInfo.tokenBMint)
-    ) {
-      throw new Error("Wrong token mint");
+    if (tokenAAmount === 0) {
+      return 0;
     }
-
     await this.updateAmount(conn);
-
-    const coinBalance = this.poolInfo.AtokenAccountAmount;
-    const pcBalance = this.poolInfo.BtokenAccountAmount;
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) =>
-        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      .then(
+        (accountInfo) =>
+          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
       );
 
-    const balance = tokenMint.equals(this.poolInfo.tokenAMint)
-      ? coinBalance
-      : pcBalance;
-    const sharePercent = tokenAmount / (Number(balance) + tokenAmount);
+    const amp = this.poolInfo.targetAmpFactor;
+    const coinBalance = this.poolInfo.AtokenAccountAmount!;
+    const pcBalance = this.poolInfo.BtokenAccountAmount!;
 
-    return sharePercent * lpSupply;
+    if (!tokenBAmount || !tokenBMint) {
+      tokenAAmount = 2 * tokenAAmount;
+      tokenBAmount = 0;
+    }
+
+    const depositCoinAmount = tokenAMint.equals(this.poolInfo.tokenAMint)
+      ? new BN(tokenAAmount)
+      : new BN(tokenBAmount);
+    const depositPcAmount = tokenAMint.equals(this.poolInfo.tokenBMint)
+      ? new BN(tokenAAmount)
+      : new BN(tokenBAmount);
+
+    const d0 = computeD(amp, coinBalance, pcBalance);
+    const d1 = computeD(
+      amp,
+      coinBalance.add(depositCoinAmount),
+      pcBalance.add(depositPcAmount)
+    );
+    if (d1.lt(d0)) {
+      throw new Error("New D cannot be less than previous D");
+    }
+
+    const oldBalances = [coinBalance, pcBalance];
+    const newBalances = [
+      coinBalance.add(depositCoinAmount),
+      pcBalance.add(depositPcAmount),
+    ];
+    const adjustedBalances = newBalances.map((newBalance, i) => {
+      const oldBalance = oldBalances[i] as BN;
+      const idealBalance = d1.div(d0).mul(oldBalance);
+      const difference = idealBalance.sub(newBalance);
+      const diffAbs = difference.gt(ZERO) ? difference : difference.neg();
+      const fee = normalizedTradeFee(
+        this.poolInfo.tradingFee,
+        N_COINS,
+        diffAbs
+      );
+
+      return newBalance.sub(fee);
+    }) as [BN, BN];
+
+    const d2 = computeD(amp, adjustedBalances[0], adjustedBalances[1]);
+
+    const lpAmount = Number(lpSupply.mul(d2.sub(d0)).div(d0));
+    return lpAmount;
   }
 }
 
