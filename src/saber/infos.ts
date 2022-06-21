@@ -443,16 +443,21 @@ export class PoolInfoWrapper {
   async getCoinAndPcAmount(conn: Connection, lpAmount: number) {
     await this.updateAmount(conn);
 
-    const coinBalance = this.poolInfo.AtokenAccountAmount;
-    const pcBalance = this.poolInfo.BtokenAccountAmount;
+    const coinBalance = this.poolInfo.AtokenAccountAmount!;
+    const pcBalance = this.poolInfo.BtokenAccountAmount!;
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) =>
-        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      .then(
+        (accountInfo) =>
+          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
       );
 
-    const coinAmount = Number(coinBalance) * (lpAmount / lpSupply);
-    const pcAmount = Number(pcBalance) * (lpAmount / lpSupply);
+    const coinAmountBeforeFee = coinBalance.mul(new BN(lpAmount)).div(lpSupply);
+    const coinFee = coinAmountBeforeFee.divRound(this.poolInfo.withdrawFee);
+    const pcAmountBeforeFee = pcBalance.mul(new BN(lpAmount)).div(lpSupply);
+    const pcFee = pcAmountBeforeFee.divRound(this.poolInfo.withdrawFee);
+    const coinAmount = Number(coinAmountBeforeFee.sub(coinFee));
+    const pcAmount = Number(pcAmountBeforeFee.sub(pcFee));
 
     return {
       coinAmount,
