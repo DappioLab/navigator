@@ -9,12 +9,12 @@ import BN from "bn.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import {
-  SWAP_PROGRAM_ID,
-  SABER_WRAP_PROGRAM_ID,
+  POOL_PROGRAM_ID,
+  WRAP_PROGRAM_ID,
   QURARRY_MINE_PROGRAM_ID,
-  SABER_QUARRY_REWARDER,
-  SABER_FARM_MINTER,
-  SABER_MINT_WRAPPER,
+  QUARRY_REWARDER,
+  FARM_MINTER,
+  MINT_WRAPPER,
   QURARRY_MINT_WRAPPER,
   IOU_TOKEN_MINT,
   CLAIM_FEE_TOKEN_ACCOUNT,
@@ -78,7 +78,7 @@ export function deposit(
   ];
   return new TransactionInstruction({
     keys,
-    programId: SWAP_PROGRAM_ID,
+    programId: POOL_PROGRAM_ID,
     data,
   });
 }
@@ -136,7 +136,7 @@ export function withdrawOne(
   ];
   return new TransactionInstruction({
     keys,
-    programId: SWAP_PROGRAM_ID,
+    programId: POOL_PROGRAM_ID,
     data,
   });
 }
@@ -178,7 +178,7 @@ export function wrapToken(
   ];
   return new TransactionInstruction({
     keys,
-    programId: SABER_WRAP_PROGRAM_ID,
+    programId: WRAP_PROGRAM_ID,
     data,
   });
 }
@@ -208,7 +208,7 @@ export function unwrapToken(
   ];
   return new TransactionInstruction({
     keys,
-    programId: SABER_WRAP_PROGRAM_ID,
+    programId: WRAP_PROGRAM_ID,
     data,
   });
 }
@@ -243,7 +243,7 @@ export async function depositToFarmIx(
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    { pubkey: QUARRY_REWARDER, isSigner: false, isWritable: false },
   ];
   return new TransactionInstruction({
     keys,
@@ -275,7 +275,7 @@ export async function createMinerAccountIx(
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: miner[0], isSigner: false, isWritable: true },
     { pubkey: FarmInfo.farmId, isSigner: false, isWritable: true },
-    { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    { pubkey: QUARRY_REWARDER, isSigner: false, isWritable: false },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: FarmInfo.tokenMintKey, isSigner: false, isWritable: false },
@@ -320,7 +320,7 @@ export async function withdrawFromFarmIx(
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    { pubkey: QUARRY_REWARDER, isSigner: false, isWritable: false },
   ];
   return new TransactionInstruction({
     keys,
@@ -346,9 +346,9 @@ export async function claimReward(farmInfo: FarmInfo, wallet: PublicKey) {
   let dataString = "0490844774179750";
   let data = Buffer.from(dataString, "hex");
   let keys = [
-    { pubkey: SABER_MINT_WRAPPER, isSigner: false, isWritable: true },
+    { pubkey: MINT_WRAPPER, isSigner: false, isWritable: true },
     { pubkey: QURARRY_MINT_WRAPPER, isSigner: false, isWritable: false },
-    { pubkey: SABER_FARM_MINTER, isSigner: false, isWritable: true },
+    { pubkey: FARM_MINTER, isSigner: false, isWritable: true },
     { pubkey: IOU_TOKEN_MINT, isSigner: false, isWritable: true },
     { pubkey: iouTokenAccount, isSigner: false, isWritable: true },
     { pubkey: CLAIM_FEE_TOKEN_ACCOUNT, isSigner: false, isWritable: true },
@@ -358,7 +358,7 @@ export async function claimReward(farmInfo: FarmInfo, wallet: PublicKey) {
     { pubkey: minerVault, isSigner: false, isWritable: true },
     { pubkey: minerLPAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: SABER_QUARRY_REWARDER, isSigner: false, isWritable: false },
+    { pubkey: QUARRY_REWARDER, isSigner: false, isWritable: false },
   ];
   tx.add(
     new TransactionInstruction({

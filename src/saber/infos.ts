@@ -4,7 +4,6 @@ import {
   GetProgramAccountsConfig,
   DataSizeFilter,
   PublicKey,
-  AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IFarmerInfo, IFarmInfo, IPoolInfo } from "../types";
@@ -12,9 +11,9 @@ import { getTokenAccountAmount, getTokenSupply } from "../utils";
 import {
   ADMIN_KEY,
   QURARRY_MINE_PROGRAM_ID,
-  SABER_QUARRY_REWARDER,
-  SABER_WRAP_PROGRAM_ID,
-  SWAP_PROGRAM_ID,
+  QUARRY_REWARDER,
+  WRAP_PROGRAM_ID,
+  POOL_PROGRAM_ID,
 } from "./ids";
 import {
   FARM_LAYOUT,
@@ -36,12 +35,11 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const filters = [sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
   const allSaberAccount = await connection.getProgramAccounts(
-    SWAP_PROGRAM_ID,
+    POOL_PROGRAM_ID,
     config
   );
   let infoArray: PoolInfoWrapper[] = [];
   let wrapInfoArray = await getAllWraps(connection);
-  let allFarmInfo = await getAllFarms(connection, SABER_QUARRY_REWARDER);
 
   // Dead Pools
   for (let account of allSaberAccount) {
@@ -109,7 +107,7 @@ export async function getPool(
   const filters = [adminIdMemcmp, sizeFilter];
 
   const wrapInfoArray = await getAllWraps(connection);
-  const allFarmInfo = await getAllFarms(connection, SABER_QUARRY_REWARDER);
+  const allFarmInfo = await getAllFarms(connection, QUARRY_REWARDER);
   const saberAccount: any = await connection.getAccountInfo(poolInfoKey);
   const saberAccountInfo = await parseSwapInfoData(
     saberAccount.data,
@@ -132,11 +130,6 @@ export async function getPool(
   if (mintBwrapped[0]) {
     saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
   }
-  // let farmStarted = getFarm(allFarmInfo, saberAccountInfo.poolInfo.lpMint);
-  // if (farmStarted) {
-  //   saberAccountInfo.poolInfo.isFarming = true;
-  //   saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
-  // }
   saberAccountInfo.poolInfo.poolId = poolInfoKey;
 
   return saberAccountInfo.poolInfo;
@@ -203,7 +196,7 @@ export async function getAllWraps(connection: Connection) {
   const filters = [sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
   const allWrapAccount = await connection.getProgramAccounts(
-    SABER_WRAP_PROGRAM_ID,
+    WRAP_PROGRAM_ID,
     config
   );
   let infoArray: WrapInfo[] = [];
@@ -449,7 +442,7 @@ export async function parseSwapInfoData(
 ): Promise<PoolInfoWrapper> {
   const decodedData = SWAPINFO_LAYOUT.decode(data);
   let authority = (
-    await PublicKey.findProgramAddress([pubkey.toBuffer()], SWAP_PROGRAM_ID)
+    await PublicKey.findProgramAddress([pubkey.toBuffer()], POOL_PROGRAM_ID)
   )[0];
   let {
     isInitialized,

@@ -11,11 +11,7 @@ import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import { Market } from "@project-serum/serum";
 import * as ins from "./instructions";
-import {
-  AMM_AUTHORITY,
-  LIQUIDITY_POOL_PROGRAM_ID_V3,
-  LIQUIDITY_POOL_PROGRAM_ID_V4,
-} from "./ids";
+import { AMM_AUTHORITY, POOL_PROGRAM_ID_V3, POOL_PROGRAM_ID_V4 } from "./ids";
 import { PoolInfo } from "./infos";
 
 export async function swap(
@@ -56,9 +52,9 @@ export async function swap(
   );
   let programId = PublicKey.default;
   if (pool.version == 3) {
-    programId = LIQUIDITY_POOL_PROGRAM_ID_V3;
+    programId = POOL_PROGRAM_ID_V3;
   } else if (pool.version == 4) {
-    programId = LIQUIDITY_POOL_PROGRAM_ID_V4;
+    programId = POOL_PROGRAM_ID_V4;
   }
   let serumVaultSigner = await PublicKey.createProgramAddress(
     [
@@ -153,7 +149,7 @@ export async function addLiquidity(
   }
   if (pool.version == 4) {
     let addIns = ins.addLiquidityInstructionV4(
-      LIQUIDITY_POOL_PROGRAM_ID_V4,
+      POOL_PROGRAM_ID_V4,
       pool.poolId,
       AMM_AUTHORITY,
       pool.ammOpenOrders,

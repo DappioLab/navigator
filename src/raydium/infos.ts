@@ -8,9 +8,9 @@ import {
 } from "@solana/web3.js";
 import { getTokenAccount, TokenAccount } from "../utils";
 import {
-  LIQUIDITY_POOL_PROGRAM_ID_V4,
-  STAKE_PROGRAM_ID,
-  STAKE_PROGRAM_ID_V5,
+  POOL_PROGRAM_ID_V4,
+  FARM_PROGRAM_ID_V3,
+  FARM_PROGRAM_ID_V5,
 } from "./ids";
 import {
   FARM_LEDGER_LAYOUT_V3_1,
@@ -70,18 +70,21 @@ export async function getAllLedgers(
     dataSizeFilter(FARM_LEDGER_LAYOUT_V5_2.span),
   ];
 
-  // let allLedgersInV3_1 = await connection.getProgramAccounts(STAKE_PROGRAM_ID, {
+  // let allLedgersInV3_1 = await connection.getProgramAccounts(FARM_PROGRAM_ID_V3, {
   //   filters: filters_v3_1,
   // });
-  let allLedgersInV3_2 = await connection.getProgramAccounts(STAKE_PROGRAM_ID, {
-    filters: filters_v3_2,
-  });
+  let allLedgersInV3_2 = await connection.getProgramAccounts(
+    FARM_PROGRAM_ID_V3,
+    {
+      filters: filters_v3_2,
+    }
+  );
   // let allLedgersInV5_1 = await connection.getProgramAccounts(
-  //   STAKE_PROGRAM_ID_V5,
+  //   FARM_PROGRAM_ID_V5,
   //   { filters: filters_v5_1 }
   // );
   let allLedgersInV5_2 = await connection.getProgramAccounts(
-    STAKE_PROGRAM_ID_V5,
+    FARM_PROGRAM_ID_V5,
     { filters: filters_v5_2 }
   );
 
@@ -164,7 +167,8 @@ export async function getLedgerKey({
   farm: FarmInfo;
   userKey: PublicKey;
 }): Promise<PublicKey> {
-  const programId = farm.version === 3 ? STAKE_PROGRAM_ID : STAKE_PROGRAM_ID_V5;
+  const programId =
+    farm.version === 3 ? FARM_PROGRAM_ID_V3 : FARM_PROGRAM_ID_V5;
 
   const [key, _] = await PublicKey.findProgramAddress(
     [
@@ -687,9 +691,9 @@ export class FarmInfoWrapper {
   async authority() {
     let seed = [this.farmInfo.farmId.toBuffer()];
     if (this.farmInfo.version > 3) {
-      return await PublicKey.findProgramAddress(seed, STAKE_PROGRAM_ID_V5);
+      return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V5);
     }
-    return await PublicKey.findProgramAddress(seed, STAKE_PROGRAM_ID);
+    return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V3);
   }
 }
 
@@ -814,7 +818,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const v4Filters = [v4SizeFilter];
   const v4config: GetProgramAccountsConfig = { filters: v4Filters };
   const allV4AMMAccount = await connection.getProgramAccounts(
-    LIQUIDITY_POOL_PROGRAM_ID_V4,
+    POOL_PROGRAM_ID_V4,
     v4config
   );
   for (let v4Account of allV4AMMAccount) {
@@ -863,7 +867,7 @@ export async function getAllFarms(connection: Connection) {
   const v1Filters = [v1SizeFilter];
   const v1Config: GetProgramAccountsConfig = { filters: v1Filters };
   const allV1FarmAccount = await connection.getProgramAccounts(
-    STAKE_PROGRAM_ID,
+    FARM_PROGRAM_ID_V3,
     v1Config
   );
   for (let v1Account of allV1FarmAccount) {
@@ -879,7 +883,7 @@ export async function getAllFarms(connection: Connection) {
   const v5Filters = [v5SizeFilter];
   const v5Config: GetProgramAccountsConfig = { filters: v5Filters };
   const allV5FarmAccount = await connection.getProgramAccounts(
-    STAKE_PROGRAM_ID_V5,
+    FARM_PROGRAM_ID_V5,
     v5Config
   );
   for (let v5Account of allV5FarmAccount) {
