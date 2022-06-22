@@ -420,14 +420,14 @@ export class PoolInfoWrapper {
     // Calculate coinBalance and pcBalance
     let coinBalance = new TokenAmount(
       Number(parsedPoolCoinTokenAccount.amount) +
-        parsedAmmOpenOrders.baseTokenTotal.toNumber() -
-        parsedAmmId.needTakePnlCoin.toNumber(),
+        Number(parsedAmmOpenOrders.baseTokenTotal) -
+        Number(parsedAmmId.needTakePnlCoin),
       coinDecimals
     );
     let pcBalance = new TokenAmount(
       Number(parsedPoolPcTokenAccount.amount) +
-        parsedAmmOpenOrders.quoteTokenTotal.toNumber() -
-        parsedAmmId.needTakePnlPc.toNumber(),
+        Number(parsedAmmOpenOrders.quoteTokenTotal) -
+        Number(parsedAmmId.needTakePnlPc),
       pcDecimals
     );
 
