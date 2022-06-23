@@ -453,9 +453,13 @@ export class PoolInfoWrapper {
       );
 
     const coinAmountBeforeFee = coinBalance.mul(new BN(lpAmount)).div(lpSupply);
-    const coinFee = coinAmountBeforeFee.divRound(this.poolInfo.withdrawFee);
+    const coinFee = this.poolInfo.withdrawFee.eq(ZERO)
+      ? ZERO
+      : coinAmountBeforeFee.mul(this.poolInfo.withdrawFee).divRound(DIGIT);
     const pcAmountBeforeFee = pcBalance.mul(new BN(lpAmount)).div(lpSupply);
-    const pcFee = pcAmountBeforeFee.divRound(this.poolInfo.withdrawFee);
+    const pcFee = this.poolInfo.withdrawFee.eq(ZERO)
+      ? ZERO
+      : pcAmountBeforeFee.mul(this.poolInfo.withdrawFee).divRound(DIGIT);
     const coinAmount = Number(coinAmountBeforeFee.sub(coinFee));
     const pcAmount = Number(pcAmountBeforeFee.sub(pcFee));
 
