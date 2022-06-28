@@ -1,10 +1,10 @@
 import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
+import { blob } from "@solana/buffer-layout";
 
 export const RESERVE_LAYOUT = struct([
   u8("version"),
   struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate"),
   publicKey("lendingMarket"),
-
   struct(
     [
       publicKey("mintPubkey"),
@@ -57,6 +57,10 @@ export const OBLIGATION_LAYOUT = struct([
   u128("borrowedValue"),
   u128("allowedBorrowValue"),
   u128("unhealthyBorrowValue"),
+  blob(64, "_padding"),
+  u8("depositsLen"),
+  u8("borrowsLen"),
+  blob(1096, "dataFlat"),
 ]);
 
 export const COLLATERAL_LAYOUT = struct([
@@ -71,5 +75,3 @@ export const LOAN_LAYOUT = struct([
   u128("borrowedAmount"),
   u128("marketValue"),
 ]);
-
-export const U8 = struct([u8("amount")]);

@@ -1,3 +1,4 @@
+import { seq } from "@solana/buffer-layout";
 import {
   Connection,
   PublicKey,
@@ -12,7 +13,6 @@ import {
   LOAN_LAYOUT,
   OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
-  U8,
 } from "./layouts";
 import { getSlndPrice, isMining } from "./utils";
 
@@ -316,18 +316,6 @@ export class ObligationInfoWrapper {
     public obligationLoans: ObligationLoan[]
   ) {}
 
-  // obligationCollaterals() {
-  //   let depositCollateral: ObligationCollateral[] = [];
-  //   if (supplyedLen > 0) {
-  //     for (let index = 0; index < supplyedLen; index++) {
-  //       let offset = (COLLATERAL_LAYOUT.span + 32) * index;
-  //       let data = allPosposition.slice(offset);
-  //       let collateralInfo = parseCollateralData(data);
-  //       depositCollateral.push(collateralInfo);
-  //     }
-  //   }
-  // }
-
   update(reserveInfos: ReserveInfoWrapper[]) {
     let unhealthyBorrowValue = new BN(0);
     let borrowedValue = new BN(0);
@@ -385,11 +373,6 @@ export class ObligationInfoWrapper {
 
 export function parseObligationData(data: any) {
   let dataBuffer = data as Buffer;
-  let amountData = dataBuffer.slice(
-    OBLIGATION_LAYOUT.span + 64,
-    OBLIGATION_LAYOUT.span + 64 + 2
-  );
-
   let decodedInfo = OBLIGATION_LAYOUT.decode(dataBuffer);
   let {
     version,
@@ -400,43 +383,26 @@ export function parseObligationData(data: any) {
     borrowedValue,
     allowedBorrowValue,
     unhealthyBorrowValue,
+    depositsLen,
+    borrowsLen,
+    dataFlat,
   } = decodedInfo;
 
-  let supplyedLen = U8.decode(amountData.slice(0, 1)).amount as number;
-  let borroeedLen = U8.decode(amountData.slice(1, 2)).amount as number;
-  let allPosposition = dataBuffer.slice(OBLIGATION_LAYOUT.span + 66);
-  let depositCollateral: ObligationCollateral[] = [];
-  let borrowedLoan: ObligationLoan[] = [];
-  if (supplyedLen > 0) {
-    for (let index = 0; index < supplyedLen; index++) {
-      let offset = (COLLATERAL_LAYOUT.span + 32) * index;
-      let data = allPosposition.slice(offset);
-      let collateralInfo = parseCollateralData(data);
-      depositCollateral.push(collateralInfo);
-    }
-  }
+  const depositsBuffer = dataFlat.slice(
+    0,
+    depositsLen * COLLATERAL_LAYOUT.span
+  );
+  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
+    depositsBuffer
+  ) as ObligationCollateral[];
 
-  if (borroeedLen > 0) {
-    for (let index = 0; index < borroeedLen; index++) {
-      let offset =
-        (COLLATERAL_LAYOUT.span + 32) * supplyedLen +
-        (LOAN_LAYOUT.span + 32) * index;
-      let data = allPosposition.slice(offset);
-      let supplyInfo = LOAN_LAYOUT.decode(data);
-      let {
-        reserveAddress,
-        cumulativeBorrowRate,
-        borrowedAmount,
-        marketValue,
-      } = supplyInfo;
-      borrowedLoan.push({
-        reserveId: reserveAddress,
-        cumulativeBorrowRate: cumulativeBorrowRate,
-        borrowedAmount: borrowedAmount.div(new BN(`1${"".padEnd(18, "0")}`)),
-        marketValue: marketValue,
-      });
-    }
-  }
+  const borrowsBuffer = dataFlat.slice(
+    depositsBuffer.length,
+    depositsLen * COLLATERAL_LAYOUT.span + borrowsLen * LOAN_LAYOUT.span
+  );
+  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(
+    borrowsBuffer
+  ) as ObligationLoan[];
 
   const obligationInfo = {
     version,
@@ -451,12 +417,13 @@ export function parseObligationData(data: any) {
 
   const obligationInfoWrapper = new ObligationInfoWrapper(
     obligationInfo,
-    depositCollateral,
-    borrowedLoan
+    depositCollaterals,
+    borrowLoans
   );
 
   return obligationInfoWrapper;
 }
+
 export function parseCollateralData(data: any) {
   let collateralInfo = COLLATERAL_LAYOUT.decode(data);
   let { reserveAddress, depositedAmount, marketValue } = collateralInfo;
