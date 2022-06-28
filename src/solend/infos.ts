@@ -210,21 +210,21 @@ export class ReserveInfoWrapper {
   }
 }
 
-export async function getAllLendingInfo(connection: Connection) {
-  const allReserve = await getAllReserve(connection);
+export async function getAllReserveWrappers(connection: Connection) {
+  const allReserves = await getAllReserves(connection);
 
-  let lendingInfos = [] as ReserveInfoWrapper[];
+  let reserveInfoWrappers = [] as ReserveInfoWrapper[];
 
-  for (let reservesMeta of allReserve) {
+  for (let reservesMeta of allReserves) {
     const newinfo = new ReserveInfoWrapper(reservesMeta[0], reservesMeta[1]);
 
-    lendingInfos.push(newinfo);
+    reserveInfoWrappers.push(newinfo);
   }
 
-  return lendingInfos;
+  return reserveInfoWrappers;
 }
 
-async function getAllReserve(connection: Connection) {
+async function getAllReserves(connection: Connection) {
   const programIdMemcmp: MemcmpFilter = {
     memcmp: {
       //offset 10 byte
