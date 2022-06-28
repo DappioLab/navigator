@@ -34,7 +34,7 @@ import {
   PoolInfo,
   FarmInfo,
   AMM_AUTHORITY,
-  LIQUIDITY_POOL_PROGRAM_ID_V4,
+  POOL_PROGRAM_ID_V4,
   FarmInfoWrapper,
 } from "../../raydium";
 
@@ -222,7 +222,7 @@ export async function swap(
     { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     {
-      pubkey: LIQUIDITY_POOL_PROGRAM_ID_V4,
+      pubkey: POOL_PROGRAM_ID_V4,
       isSigner: false,
       isWritable: false,
     },
@@ -285,7 +285,7 @@ export async function addLiquidity(
     { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     {
-      pubkey: LIQUIDITY_POOL_PROGRAM_ID_V4,
+      pubkey: POOL_PROGRAM_ID_V4,
       isSigner: false,
       isWritable: false,
     },
@@ -604,7 +604,7 @@ export async function swapAndWithdraw(
     { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     {
-      pubkey: LIQUIDITY_POOL_PROGRAM_ID_V4,
+      pubkey: POOL_PROGRAM_ID_V4,
       isSigner: false,
       isWritable: false,
     },
