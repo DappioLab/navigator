@@ -38,3 +38,8 @@ export interface IFarmInfoWrapper {
 export interface IReserveInfoWrapper {
   reserveInfo: IReserveInfo;
 }
+
+export interface MintAndPrice {
+  mint: PublicKey;
+  price: number;
+}

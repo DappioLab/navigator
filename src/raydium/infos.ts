@@ -31,6 +31,7 @@ import {
   IFarmerInfo,
   IPoolInfoWrapper,
   IFarmInfoWrapper,
+  MintAndPrice,
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
@@ -494,6 +495,45 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       tokenAmount / (balance.toWei().toNumber() + tokenAmount);
 
     return sharePercent * lpSupply;
+  }
+
+  async getLpPrice(
+    conn: Connection,
+    mintAndPriceA: MintAndPrice,
+    mintAndPriceB: MintAndPrice
+  ) {
+    if (
+      (mintAndPriceA.mint.equals(this.poolInfo.tokenAMint) &&
+        mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)) ||
+      (mintAndPriceA.mint.equals(this.poolInfo.tokenBMint) &&
+        mintAndPriceB.mint.equals(this.poolInfo.tokenAMint))
+    ) {
+    } else {
+      throw new Error("Wrong token mint");
+    }
+
+    const poolBalances = await this.getPoolBalances(conn);
+    const coinBalance = poolBalances.coin.balance;
+    const pcBalance = poolBalances.pc.balance;
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) =>
+        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      );
+
+    const coinPrice = mintAndPriceA.mint.equals(this.poolInfo.tokenAMint)
+      ? mintAndPriceA.price
+      : mintAndPriceB.price;
+    const pcPrice = mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)
+      ? mintAndPriceB.price
+      : mintAndPriceA.price;
+
+    const lpPrice =
+      (coinBalance.toWei().toNumber() * coinPrice +
+        pcBalance.toWei().toNumber() * pcPrice) /
+      lpSupply;
+
+    return lpPrice;
   }
 }
 

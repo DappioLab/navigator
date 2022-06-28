@@ -6,7 +6,13 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
+import {
+  IFarmerInfo,
+  IFarmInfo,
+  IPoolInfo,
+  IPoolInfoWrapper,
+  MintAndPrice,
+} from "../types";
 import {
   computeD,
   getTokenAccountAmount,
@@ -530,6 +536,43 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const lpAmount = Number(lpSupply.mul(d2.sub(d0)).div(d0));
     return lpAmount;
+  }
+
+  async getLpPrice(
+    conn: Connection,
+    mintAndPriceA: MintAndPrice,
+    mintAndPriceB: MintAndPrice
+  ) {
+    if (
+      (mintAndPriceA.mint.equals(this.poolInfo.tokenAMint) &&
+        mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)) ||
+      (mintAndPriceA.mint.equals(this.poolInfo.tokenBMint) &&
+        mintAndPriceB.mint.equals(this.poolInfo.tokenAMint))
+    ) {
+    } else {
+      throw new Error("Wrong token mint");
+    }
+
+    await this.updateAmount(conn);
+
+    const coinBalance = Number(this.poolInfo.AtokenAccountAmount!);
+    const pcBalance = Number(this.poolInfo.BtokenAccountAmount!);
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) =>
+        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      );
+    const coinPrice = mintAndPriceA.mint.equals(this.poolInfo.tokenAMint)
+      ? mintAndPriceA.price
+      : mintAndPriceB.price;
+    const pcPrice = mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)
+      ? mintAndPriceB.price
+      : mintAndPriceA.price;
+
+    // Assume decimals is equal
+    const lpPrice = (coinBalance * coinPrice + pcBalance * pcPrice) / lpSupply;
+
+    return lpPrice;
   }
 }
 
