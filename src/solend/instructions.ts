@@ -1,3 +1,17 @@
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import {
+  PublicKey,
+  SYSVAR_CLOCK_PUBKEY,
+  Transaction,
+  TransactionInstruction,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
+} from "@solana/web3.js";
+import BN from "bn.js";
+import { struct, u64, u8 } from "@project-serum/borsh";
+import { SOLEND_LENDING_MARKET_ID, SOLEND_PROGRAM_ID } from "./ids";
+import { getObligationPublicKey } from "./infos";
+
 enum LendingInstruction {
   InitLendingMarket = 0,
   SetLendingMarketOwner = 1,
@@ -17,39 +31,7 @@ enum LendingInstruction {
   WithdrawObligationCollateralAndRedeemReserveLiquidity = 15,
   SyncNative = 17,
 }
-import * as info from "./solendInfo";
-const SOLENDPROGRAMID = info.SOLENDPROGRAMID;
-import * as solendUtil from "./util";
-import * as util from "../utils";
 
-// deposit
-import {
-  TOKEN_PROGRAM_ID,
-  NATIVE_MINT,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-} from "@solana/spl-token-v2";
-
-import {
-  PublicKey,
-  SYSVAR_CLOCK_PUBKEY,
-  Transaction,
-  TransactionInstruction,
-  SystemProgram,
-  TransferParams,
-  Connection,
-  SYSVAR_RENT_PUBKEY,
-} from "@solana/web3.js";
-import BN from "bn.js";
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-} from "@project-serum/borsh";
-import { getObligationPublicKey, obligationCreated } from "./obligation";
 /// Deposit liquidity into a reserve in exchange for collateral, and deposit the collateral as well.
 export const depositReserveLiquidityAndObligationCollateralInstruction = (
   liquidityAmount: number | BN,
@@ -98,7 +80,7 @@ export const depositReserveLiquidityAndObligationCollateralInstruction = (
   ];
   return new TransactionInstruction({
     keys,
-    programId: SOLENDPROGRAMID,
+    programId: SOLEND_PROGRAM_ID,
     data,
   });
 };
@@ -150,7 +132,7 @@ export const withdrawObligationCollateralAndRedeemReserveLiquidity = (
   ];
   return new TransactionInstruction({
     keys,
-    programId: SOLENDPROGRAMID,
+    programId: SOLEND_PROGRAM_ID,
     data,
   });
 };
@@ -197,7 +179,7 @@ export const refreshReserveInstruction = (
 
   return new TransactionInstruction({
     keys,
-    programId: SOLENDPROGRAMID,
+    programId: SOLEND_PROGRAM_ID,
     data,
   });
 };
@@ -248,7 +230,7 @@ export const refreshObligationInstruction = (
   );
   return new TransactionInstruction({
     keys,
-    programId: SOLENDPROGRAMID,
+    programId: SOLEND_PROGRAM_ID,
     data,
   });
 };
@@ -258,7 +240,7 @@ export async function createObligationAccountIx(
   payer?: PublicKey
 ) {
   let tx = new Transaction();
-  const seed = info.SOLENDLENDINGMARKETID.toString().slice(0, 32);
+  const seed = SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
   if (payer) {
   } else {
     payer = wallet;
@@ -270,7 +252,7 @@ export async function createObligationAccountIx(
     newAccountPubkey: await getObligationPublicKey(wallet),
     basePubkey: wallet,
     lamports: 9938880,
-    programId: info.SOLENDPROGRAMID,
+    programId: SOLEND_PROGRAM_ID,
   });
   //console.log(createAccountFromSeedIx);
   tx.add(createAccountFromSeedIx);
@@ -283,7 +265,7 @@ export async function createObligationAccountIx(
       isSigner: false,
       isWritable: true,
     },
-    { pubkey: info.SOLENDLENDINGMARKETID, isSigner: false, isWritable: false },
+    { pubkey: SOLEND_LENDING_MARKET_ID, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: true },
   ];
   keys.push({
@@ -304,7 +286,7 @@ export async function createObligationAccountIx(
 
   let createObligationIx = new TransactionInstruction({
     keys,
-    programId: info.SOLENDPROGRAMID,
+    programId: SOLEND_PROGRAM_ID,
     data: data,
   });
   tx.add(createObligationIx);
