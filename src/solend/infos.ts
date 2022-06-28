@@ -18,7 +18,8 @@ import { getSlndPrice, isMining } from "./utils";
 
 export const RESERVE_LAYOUT_SPAN = 619;
 
-export const MINING_REVERSES: any = [];
+// Deprecated
+export const MINING_RESERVES = [] as PublicKey[];
 
 export const SLND_PER_YEAR = new BN(10e6);
 
