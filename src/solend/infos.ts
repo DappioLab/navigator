@@ -71,29 +71,26 @@ interface ReserveFees {
 }
 
 export interface ReserveInfo {
+  reserveId: PublicKey;
   version: BN;
   lastUpdate: LastUpdate;
-  lendingMarket: PublicKey; // reserveId?
+  lendingMarket: PublicKey;
   liquidity: ReserveLiquidity;
   collateral: ReserveCollateral;
   config: ReserveConfig;
 }
 
-export class LastUpdate {
+export interface LastUpdate {
   lastUpdatedSlot: BN;
   stale: boolean;
-
-  constructor(lastUpdatedSlot: BN, stale: boolean) {
-    this.lastUpdatedSlot = lastUpdatedSlot;
-    this.stale = stale;
-  }
 }
 
-export function parseReserveData(data: any): ReserveInfo {
+export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
   let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
     decodedData;
   return {
+    reserveId: pubkey,
     version,
     lastUpdate,
     lendingMarket,
@@ -104,7 +101,7 @@ export function parseReserveData(data: any): ReserveInfo {
 }
 
 export class ReserveInfoWrapper {
-  constructor(public reserveId: PublicKey, public reserveInfo: ReserveInfo) {}
+  constructor(public reserveInfo: ReserveInfo) {}
 
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -131,7 +128,7 @@ export class ReserveInfoWrapper {
   }
 
   async isMining() {
-    await isMining(this.reserveId);
+    await isMining(this.reserveInfo.reserveId);
   }
 
   supplyAmount() {
@@ -145,11 +142,11 @@ export class ReserveInfoWrapper {
   async miningApy(connection: Connection): Promise<number> {
     let miningApy = 0;
     let decimal = new BN(this.reserveInfo.liquidity.mintDecimals).toNumber();
-    if (MINING_MULTIPLIER(this.reserveId).eq(new BN(0))) {
+    if (MINING_MULTIPLIER(this.reserveInfo.reserveId).eq(new BN(0))) {
       miningApy = 0;
     } else {
       let slndPrice = await getSlndPrice(connection);
-      let slndPerYear = MINING_MULTIPLIER(this.reserveId).div(
+      let slndPerYear = MINING_MULTIPLIER(this.reserveInfo.reserveId).div(
         new BN(`1${"".padEnd(3, "0")}`)
       );
 
@@ -215,7 +212,7 @@ export async function getAllReserveWrappers(connection: Connection) {
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
 
   for (let reservesMeta of allReserves) {
-    const newinfo = new ReserveInfoWrapper(reservesMeta[0], reservesMeta[1]);
+    const newinfo = new ReserveInfoWrapper(reservesMeta);
     reserveInfoWrappers.push(newinfo);
   }
 
@@ -241,10 +238,10 @@ async function getAllReserves(connection: Connection) {
     SOLEND_PROGRAM_ID,
     config
   );
-  let reserves = <Array<[PublicKey, ReserveInfo]>>[];
+  let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
-    let info = parseReserveData(account.account.data);
-    reserves.push([account.pubkey, info]);
+    let info = parseReserveData(account.account.data, account.pubkey);
+    reserves.push(info);
   }
 
   return reserves;
@@ -323,7 +320,7 @@ export class ObligationInfoWrapper {
       for (let reserveInfoWrapper of reserveInfos) {
         if (
           depositedReserve.reserveId.toString() ==
-          reserveInfoWrapper.reserveId.toString()
+          reserveInfoWrapper.reserveInfo.reserveId.toString()
         ) {
           let decimal = new BN(
             reserveInfoWrapper.reserveTokenDecimal()
@@ -351,7 +348,7 @@ export class ObligationInfoWrapper {
       for (let reserveInfoWrapper of reserveInfos) {
         if (
           borrowedReserve.reserveId.toString() ==
-          reserveInfoWrapper.reserveId.toString()
+          reserveInfoWrapper.reserveInfo.reserveId.toString()
         ) {
           let decimal = new BN(
             reserveInfoWrapper.reserveTokenDecimal()
@@ -438,7 +435,7 @@ export function parseCollateralData(data: any) {
 export function defaultObligation() {
   const obligationInfo = {
     version: new BN(1),
-    lastUpdate: new LastUpdate(new BN(0), false),
+    lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
     lendingMarket: PublicKey.default,
     owner: PublicKey.default,
     depositedValue: new BN(0),
