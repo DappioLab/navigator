@@ -237,6 +237,18 @@ export interface FarmInfo extends IFarmInfo {
   numMiners: BN;
 }
 
+export class FarmInfoWrapper {
+  constructor(public farmInfo: FarmInfo) {}
+
+  getDepositedAmount(): number {
+    return Number(
+      this.farmInfo.totalTokensDeposited.div(
+        new BN(10).pow(this.farmInfo.tokenMintDecimals)
+      )
+    );
+  }
+}
+
 export function parseFarmInfo(data: any, farmPubkey: PublicKey): FarmInfo {
   let dataBuffer = data as Buffer;
   let infoData = dataBuffer.slice(8);
@@ -570,7 +582,10 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       : mintAndPriceA.price;
 
     // Assume decimals is equal
-    const lpPrice = (coinBalance * coinPrice + pcBalance * pcPrice) / lpSupply;
+    const lpPrice =
+      lpSupply > 0
+        ? (coinBalance * coinPrice + pcBalance * pcPrice) / lpSupply
+        : 0;
 
     return lpPrice;
   }

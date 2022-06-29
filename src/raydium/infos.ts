@@ -35,6 +35,7 @@ import {
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
+import { getAllOptionPrams } from "../katana/coverCall/optionInfo";
 
 export interface LedgerInfo extends IFarmerInfo {
   farmVersion: number;
@@ -529,9 +530,11 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       : mintAndPriceA.price;
 
     const lpPrice =
-      (coinBalance.toWei().toNumber() * coinPrice +
-        pcBalance.toWei().toNumber() * pcPrice) /
-      lpSupply;
+      lpSupply > 0
+        ? (coinBalance.toWei().toNumber() * coinPrice +
+            pcBalance.toWei().toNumber() * pcPrice) /
+          lpSupply
+        : 0;
 
     return lpPrice;
   }
@@ -732,6 +735,12 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V5);
     }
     return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V3);
+  }
+
+  async getDepositedAmount(conn: Connection) {
+    await this.updateAllTokenAccount(conn);
+
+    return Number(this.farmInfo.poolLpTokenAccount?.amount ?? 0);
   }
 }
 
