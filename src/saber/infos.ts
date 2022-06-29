@@ -6,7 +6,7 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmerInfo, IFarmInfo, IPoolInfo } from "../types";
+import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
 import {
   computeD,
   getTokenAccountAmount,
@@ -217,7 +217,6 @@ export async function getAllWraps(connection: Connection) {
 }
 
 export interface FarmInfo extends IFarmInfo {
-  // infoPubkey: PublicKey;
   rewarderKey: PublicKey;
   tokenMintKey: PublicKey;
   bump: BN;
@@ -379,7 +378,6 @@ export async function minerCreated(
 }
 
 export interface PoolInfo extends IPoolInfo {
-  // infoPublicKey: PublicKey;
   authority: PublicKey;
   isInitialized: boolean;
   isPaused: boolean;
@@ -395,9 +393,6 @@ export interface PoolInfo extends IPoolInfo {
   tokenAccountB: PublicKey;
   AtokenAccountAmount?: BN;
   BtokenAccountAmount?: BN;
-  // poolMint: PublicKey;
-  // mintA: PublicKey;
-  // mintB: PublicKey;
   mintAWrapped?: Boolean;
   mintAWrapInfo?: WrapInfo;
   mintBWrapped?: Boolean;
@@ -406,7 +401,6 @@ export interface PoolInfo extends IPoolInfo {
   adminFeeAccountB: PublicKey;
   tradingFee: BN;
   withdrawFee: BN;
-  // isFarming?: Boolean;
 }
 
 const DIGIT = new BN(10000000000);
@@ -414,7 +408,7 @@ const DIGIT = new BN(10000000000);
 /**
  * tradingFee and withdrawFee are in units of 6 decimals
  */
-export class PoolInfoWrapper {
+export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
   // this.withdrawFee = withdrawFeeNumerator
   //   .mul(DIGIT)

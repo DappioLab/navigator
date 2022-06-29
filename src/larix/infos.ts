@@ -6,6 +6,7 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
+import { IReserveInfo, IReserveInfoWrapper } from "../types";
 import { LARIX_MARKET_ID, LARIX_PROGRAM_ID } from "./ids";
 import {
   FARM_LAYOUT,
@@ -16,8 +17,7 @@ import {
 
 export const RESERVE_LAYOUT_SPAN = 873;
 
-export interface ReserveInfo {
-  reserveId: PublicKey;
+export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: LastUpdate;
   lendingMarket: PublicKey;
@@ -100,7 +100,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   };
 }
 
-export class ReserveInfoWrapper {
+export class ReserveInfoWrapper implements IReserveInfoWrapper {
   constructor(public reserveInfo: ReserveInfo) {}
 
   supplyTokenMint() {

@@ -7,6 +7,7 @@ import {
   DataSizeFilter,
 } from "@solana/web3.js";
 import BN from "bn.js";
+import { IReserveInfo, IReserveInfoWrapper } from "../types";
 import { SOLEND_LENDING_MARKET_ID, SOLEND_PROGRAM_ID } from "./ids";
 import {
   COLLATERAL_LAYOUT,
@@ -70,8 +71,7 @@ interface ReserveFees {
   hostFeePercentage: BN;
 }
 
-export interface ReserveInfo {
-  reserveId: PublicKey;
+export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: LastUpdate;
   lendingMarket: PublicKey;
@@ -100,7 +100,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   };
 }
 
-export class ReserveInfoWrapper {
+export class ReserveInfoWrapper implements IReserveInfoWrapper {
   constructor(public reserveInfo: ReserveInfo) {}
 
   supplyTokenMint() {
