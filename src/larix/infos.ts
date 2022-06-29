@@ -17,14 +17,14 @@ import {
 export const RESERVE_LAYOUT_SPAN = 873;
 
 export interface ReserveInfo {
-  reserveId: PublicKey; //*
+  reserveId: PublicKey;
   version: BN;
   lastUpdate: LastUpdate;
   lendingMarket: PublicKey;
   liquidity: ReserveLiquidity;
   collateral: ReserveCollateral;
   config: ReserveConfig;
-  farm: FarmInfo; //*
+  farm: FarmInfo;
 }
 
 interface ReserveConfig {
@@ -77,15 +77,16 @@ export interface FarmInfo {
 }
 
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
-  let dataBuffer = data as Buffer;
-  let lengh = dataBuffer.length;
-  let farmData = dataBuffer.slice(lengh - 249 - FARM_LAYOUT.span);
   const decodedData = RESERVE_LAYOUT.decode(data);
-  const farmDecodedData = FARM_LAYOUT.decode(farmData);
-  let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
-    decodedData;
-  let { unCollSupply, lTokenMiningIndex, totalMiningSpeed, kinkUtilRate } =
-    farmDecodedData;
+  let {
+    version,
+    lastUpdate,
+    lendingMarket,
+    liquidity,
+    collateral,
+    config,
+    bonus,
+  } = decodedData;
 
   return {
     reserveId: pubkey,
@@ -95,12 +96,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     liquidity,
     collateral,
     config,
-    farm: {
-      unCollSupply,
-      lTokenMiningIndex,
-      totalMiningSpeed,
-      kinkUtilRate,
-    },
+    farm: bonus,
   };
 }
 

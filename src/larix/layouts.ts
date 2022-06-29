@@ -1,13 +1,16 @@
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-  i64,
-} from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
+import { blob } from "@solana/buffer-layout";
+
+export const FARM_LAYOUT = struct(
+  [
+    publicKey("unCollSupply"),
+    u128("lTokenMiningIndex"),
+    u128("borrowMiningIndex"),
+    u64("totalMiningSpeed"),
+    u64("kinkUtilRate"),
+  ],
+  "bonus"
+);
 
 export const RESERVE_LAYOUT = struct([
   u8("version"),
@@ -59,14 +62,11 @@ export const RESERVE_LAYOUT = struct([
     ],
     "config"
   ),
-]);
-
-export const FARM_LAYOUT = struct([
-  publicKey("unCollSupply"),
-  u128("lTokenMiningIndex"),
-  u128("borrowMiningIndex"),
-  u64("totalMiningSpeed"),
-  u64("kinkUtilRate"),
+  FARM_LAYOUT,
+  u8("reentry"),
+  u64("depositLimit"),
+  u8("isLP"),
+  blob(239, "padding"),
 ]);
 
 export const MINER_LAYOUT = struct([
