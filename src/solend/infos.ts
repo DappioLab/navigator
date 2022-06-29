@@ -212,12 +212,10 @@ export class ReserveInfoWrapper {
 
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
-
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
 
   for (let reservesMeta of allReserves) {
     const newinfo = new ReserveInfoWrapper(reservesMeta[0], reservesMeta[1]);
-
     reserveInfoWrappers.push(newinfo);
   }
 
