@@ -25,15 +25,17 @@ import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
 import { parseTokenAccount } from "../utils";
 import { AMM_INFO_LAYOUT_V4 } from "./layouts";
-import { IFarmInfo, IPoolInfo, IFarmerInfo } from "../types";
+import {
+  IFarmInfo,
+  IPoolInfo,
+  IFarmerInfo,
+  IPoolInfoWrapper,
+  IFarmInfoWrapper,
+} from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
 export interface LedgerInfo extends IFarmerInfo {
-  // pubkey: PublicKey;
-  // farmId: string;
-  // owner: string;
-  // deposited: number;
   farmVersion: number;
   rewardDebts: number[];
   mints: { stakedTokenMint: string; rewardAMint: string; rewardBMint?: string };
@@ -285,7 +287,6 @@ export async function getAssociatedLedgerAccount({
 }
 
 export interface PoolInfo extends IPoolInfo {
-  // infoPubkey: PublicKey;
   version: number;
   status: BN;
   nonce: BN;
@@ -311,9 +312,6 @@ export interface PoolInfo extends IPoolInfo {
   systemDecimalsValue: BN;
   poolCoinTokenAccount: PublicKey;
   poolPcTokenAccount: PublicKey;
-  // coinMintAddress: PublicKey;
-  // pcMintAddress: PublicKey;
-  // lpMintAddress: PublicKey;
   ammOpenOrders: PublicKey;
   serumMarket: PublicKey;
   serumProgramId: PublicKey;
@@ -330,7 +328,7 @@ export interface PoolInfo extends IPoolInfo {
   ammOrderquoteTokenTotal?: BN;
 }
 
-export class PoolInfoWrapper {
+export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
 
   async calculateSwapOutAmount(
@@ -640,7 +638,6 @@ export async function updateAllTokenAmount(
 }
 
 export interface FarmInfo extends IFarmInfo {
-  // infoPubkey: PublicKey;
   version: number;
   state: BN;
   nonce: BN;
@@ -660,7 +657,7 @@ export interface FarmInfo extends IFarmInfo {
   poolRewardTokenAccountB?: TokenAccount;
 }
 
-export class FarmInfoWrapper {
+export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
 
   async updateAllTokenAccount(connection: Connection) {
@@ -688,6 +685,7 @@ export class FarmInfoWrapper {
     }
     return this;
   }
+
   async authority() {
     let seed = [this.farmInfo.farmId.toBuffer()];
     if (this.farmInfo.version > 3) {

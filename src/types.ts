@@ -18,3 +18,23 @@ export interface IFarmerInfo {
   userKey: PublicKey;
   amount: number;
 }
+
+// TODO
+export interface IReserveInfo {
+  reserveId: PublicKey;
+}
+
+// TODO: Util methods
+export interface IPoolInfoWrapper {
+  poolInfo: IPoolInfo;
+}
+
+// TODO: Util methods
+export interface IFarmInfoWrapper {
+  farmInfo: IFarmInfo;
+}
+
+// TODO: Util methods
+export interface IReserveInfoWrapper {
+  reserveInfo: IReserveInfo;
+}
