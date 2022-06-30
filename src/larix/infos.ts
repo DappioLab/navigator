@@ -234,6 +234,14 @@ async function getAllReserves(connection: Connection) {
   return reserves;
 }
 
+export async function getReserve(
+  connection: Connection,
+  reserveId: PublicKey
+): Promise<ReserveInfo> {
+  const reserveAccountInfo = await connection.getAccountInfo(reserveId);
+  return parseReserveData(reserveAccountInfo?.data, reserveId);
+}
+
 export interface MinerInfo {
   farmerId: PublicKey;
   version: BN;
