@@ -1,4 +1,3 @@
-import { seq } from "@solana/buffer-layout";
 import {
   Connection,
   PublicKey,
@@ -16,6 +15,8 @@ import {
   RESERVE_LAYOUT,
 } from "./layouts";
 import { getSlndPrice, isMining } from "./utils";
+// @ts-ignore
+import { seq } from "buffer-layout";
 
 export const RESERVE_LAYOUT_SPAN = 619;
 

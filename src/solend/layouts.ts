@@ -1,5 +1,6 @@
 import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
-import { blob } from "@solana/buffer-layout";
+// @ts-ignore
+import { blob } from "buffer-layout";
 
 export const RESERVE_LAYOUT = struct([
   u8("version"),
