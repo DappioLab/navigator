@@ -248,6 +248,14 @@ async function getAllReserves(connection: Connection) {
   return reserves;
 }
 
+export async function getReserve(
+  connection: Connection,
+  reserveId: PublicKey
+): Promise<ReserveInfo> {
+  const reserveAccountInfo = await connection.getAccountInfo(reserveId);
+  return parseReserveData(reserveAccountInfo?.data, reserveId);
+}
+
 export async function getObligation(connection: Connection, wallet: PublicKey) {
   let obligationAddress = await getObligationPublicKey(wallet);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
