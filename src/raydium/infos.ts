@@ -538,6 +538,32 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     return lpPrice;
   }
+
+  async getApr(
+    conn: Connection,
+    tradingVolumeIn24Hours: number,
+    lpPrice: number
+  ) {
+    const poolBalances = await this.getPoolBalances(conn);
+    const feeNumerator = poolBalances.fees.numerator;
+    const feeDenominator = poolBalances.fees.denominator;
+    const feeRate = feeNumerator / feeDenominator;
+
+    const [lpSupply, lpDecimals] = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) => {
+        const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+        const supply = Number(lpMintInfo.supply);
+        const decimals = lpMintInfo.decimals;
+        return [supply, decimals];
+      });
+
+    const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
+    const apr =
+      lpValue > 0 ? (tradingVolumeIn24Hours * feeRate * 365) / lpValue : 0;
+
+    return apr;
+  }
 }
 
 export function parseV4PoolInfo(data: any, infoPubkey: PublicKey) {
@@ -754,26 +780,27 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
     const lpPrice = mintAndPriceLp.price;
     const lpValue = lpAmount * lpPrice;
-    const RewardTokenAmount = Number(
-      this.farmInfo.poolRewardTokenAccount?.amount
-    );
+    const annualRewardAmount =
+      Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365);
     const RewardTokenPrice = mintAndPriceReward.price;
-    const RewardTokenAmountB =
-      Number(this.farmInfo.poolRewardTokenAccountB?.amount) ?? 0;
-    const RewardTokenPriceB = mintAndPriceRewardB?.price ?? 0;
 
     const apr =
       lpValue > 0
         ? Math.round(
-            ((RewardTokenAmount * RewardTokenPrice) / lpValue) * 10000
+            ((annualRewardAmount * RewardTokenPrice) / lpValue) * 10000
           ) / 100
         : 0;
 
     if (mintAndPriceRewardB != undefined) {
+      const annualRewardAmountB = this.farmInfo.perBlockB
+        ? Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)
+        : 0;
+      const RewardTokenPriceB = mintAndPriceRewardB?.price ?? 0;
+
       const aprB =
         lpValue > 0
           ? Math.round(
-              ((RewardTokenAmountB * RewardTokenPriceB) / lpValue) * 10000
+              ((annualRewardAmountB * RewardTokenPriceB) / lpValue) * 10000
             ) / 100
           : 0;
       return [apr, aprB];

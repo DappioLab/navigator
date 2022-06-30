@@ -605,6 +605,29 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     return lpPrice;
   }
+
+  async getApr(
+    conn: Connection,
+    tradingVolumeIn24Hours: number,
+    lpPrice: number
+  ) {
+    await this.updateAmount(conn);
+
+    const [lpSupply, lpDecimals] = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) => {
+        const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+        const supply = Number(lpMintInfo.supply);
+        const decimals = lpMintInfo.decimals;
+        return [supply, decimals];
+      });
+    const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
+    const tradingFee = Number(this.poolInfo.tradingFee) / 10e9;
+    const apr =
+      lpValue > 0 ? (tradingVolumeIn24Hours * tradingFee * 365) / lpValue : 0;
+
+    return apr;
+  }
 }
 
 export async function parseSwapInfoData(
