@@ -240,12 +240,28 @@ export interface FarmInfo extends IFarmInfo {
 export class FarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
 
-  getDepositedAmount(): number {
-    return Number(
+  getStakedAmount(): BN {
+    return this.farmInfo.totalTokensDeposited;
+  }
+
+  getApr(mintAndPriceLp: MintAndPrice, mintAndPriceReward: MintAndPrice) {
+    const lpAmount = Number(
       this.farmInfo.totalTokensDeposited.div(
         new BN(10).pow(this.farmInfo.tokenMintDecimals)
       )
     );
+    const lpPrice = mintAndPriceLp.price;
+    const lpValue = lpAmount * lpPrice;
+    const annualRewardAmount = Number(
+      this.farmInfo.annualRewardsRate.divn(10e5)
+    );
+    const rewardPrice = mintAndPriceReward.price;
+    const annualRewardValue = annualRewardAmount * rewardPrice;
+
+    const apr =
+      lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
+
+    return apr;
   }
 }
 
