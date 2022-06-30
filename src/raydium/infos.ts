@@ -737,10 +737,49 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V3);
   }
 
-  async getDepositedAmount(conn: Connection) {
+  async getStakedAmount(conn: Connection) {
     await this.updateAllTokenAccount(conn);
 
-    return Number(this.farmInfo.poolLpTokenAccount?.amount ?? 0);
+    return this.farmInfo.poolLpTokenAccount?.amount ?? new BN(0);
+  }
+
+  async getApr(
+    conn: Connection,
+    mintAndPriceLp: MintAndPrice,
+    mintAndPriceReward: MintAndPrice,
+    mintAndPriceRewardB?: MintAndPrice
+  ) {
+    await this.updateAllTokenAccount(conn);
+
+    const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
+    const lpPrice = mintAndPriceLp.price;
+    const lpValue = lpAmount * lpPrice;
+    const RewardTokenAmount = Number(
+      this.farmInfo.poolRewardTokenAccount?.amount
+    );
+    const RewardTokenPrice = mintAndPriceReward.price;
+    const RewardTokenAmountB =
+      Number(this.farmInfo.poolRewardTokenAccountB?.amount) ?? 0;
+    const RewardTokenPriceB = mintAndPriceRewardB?.price ?? 0;
+
+    const apr =
+      lpValue > 0
+        ? Math.round(
+            ((RewardTokenAmount * RewardTokenPrice) / lpValue) * 10000
+          ) / 100
+        : 0;
+
+    if (mintAndPriceRewardB != undefined) {
+      const aprB =
+        lpValue > 0
+          ? Math.round(
+              ((RewardTokenAmountB * RewardTokenPriceB) / lpValue) * 10000
+            ) / 100
+          : 0;
+      return [apr, aprB];
+    }
+
+    return [apr];
   }
 }
 
