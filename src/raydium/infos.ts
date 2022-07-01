@@ -414,8 +414,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const swapFeeNumerator = getBigNumber(parsedAmmId.swapFeeNumerator);
     const swapFeeDenominator = getBigNumber(parsedAmmId.swapFeeDenominator);
 
-    const coinDecimals = 6;
-    const pcDecimals = 6;
+    const coinDecimals = parsedAmmId.coinDecimals;
+    const pcDecimals = parsedAmmId.pcDecimals;
 
     // Calculate coinBalance and pcBalance
     let coinBalance = new TokenAmount(
@@ -515,12 +515,17 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const poolBalances = await this.getPoolBalances(conn);
     const coinBalance = poolBalances.coin.balance;
+    const coinDecimals = poolBalances.coin.decimals;
     const pcBalance = poolBalances.pc.balance;
-    const lpSupply = await conn
+    const pcDecimals = poolBalances.pc.decimals;
+    const [lpSupply, lpDecimals] = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) =>
-        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
-      );
+      .then((accountInfo) => {
+        const mintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+        const supply = Number(mintInfo.supply);
+        const decimals = mintInfo.decimals;
+        return [supply, decimals];
+      });
 
     const coinPrice = mintAndPriceA.mint.equals(this.poolInfo.tokenAMint)
       ? mintAndPriceA.price
@@ -531,8 +536,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const lpPrice =
       lpSupply > 0
-        ? (coinBalance.toWei().toNumber() * coinPrice +
-            pcBalance.toWei().toNumber() * pcPrice) /
+        ? (coinBalance.toEther().toNumber() * 10 ** lpDecimals * coinPrice +
+            pcBalance.toEther().toNumber() * 10 ** lpDecimals * pcPrice) /
           lpSupply
         : 0;
 
@@ -547,7 +552,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const poolBalances = await this.getPoolBalances(conn);
     const feeNumerator = poolBalances.fees.numerator;
     const feeDenominator = poolBalances.fees.denominator;
-    const feeRate = feeNumerator / feeDenominator;
+    const feeRate = feeNumerator / feeDenominator - 0.0003; // 0.03% out of 0.25%(radium swap fee) will deposit into stake
 
     const [lpSupply, lpDecimals] = await conn
       .getAccountInfo(this.poolInfo.lpMint)
@@ -560,7 +565,9 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
     const apr =
-      lpValue > 0 ? (tradingVolumeIn24Hours * feeRate * 365) / lpValue : 0;
+      lpValue > 0
+        ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100
+        : 0;
 
     return apr;
   }
