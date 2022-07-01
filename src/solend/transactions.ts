@@ -59,7 +59,7 @@ export async function createDepositTx(
   );
 
   let refreshIx = refreshReserveInstruction(
-    reserveInfoWrapper.reserveId,
+    reserveInfoWrapper.reserveInfo.reserveId,
     reserveInfoWrapper.reserveInfo.liquidity.pythOraclePubkey,
     reserveInfoWrapper.reserveInfo.liquidity.switchboardOraclePubkey
   );
@@ -75,7 +75,7 @@ export async function createDepositTx(
     amount,
     supplyTokenAddress,
     reserveTokenAddress,
-    reserveInfoWrapper.reserveId,
+    reserveInfoWrapper.reserveInfo.reserveId,
     reserveInfoWrapper.reserveInfo.liquidity.supplyPubkey,
     reserveInfoWrapper.reserveTokenMint(),
     SOLEND_LENDING_MARKET_ID,
@@ -108,7 +108,8 @@ export async function createWithdrawTx(
   for (let reserve of obligationInfoWrapper.obligationCollaterals) {
     depositReserves.push(reserve.reserveId);
     let reserveInfo = parseReserveData(
-      (await connection.getAccountInfo(reserve.reserveId))?.data
+      (await connection.getAccountInfo(reserve.reserveId))?.data,
+      reserve.reserveId
     );
     tx.add(
       refreshReserveInstruction(
@@ -121,7 +122,8 @@ export async function createWithdrawTx(
   for (let reserve of obligationInfoWrapper.obligationLoans) {
     borrowedReserves.push(reserve.reserveId);
     let reserveInfo = parseReserveData(
-      (await connection.getAccountInfo(reserve.reserveId))?.data
+      (await connection.getAccountInfo(reserve.reserveId))?.data,
+      reserve.reserveId
     );
     tx.add(
       refreshReserveInstruction(
