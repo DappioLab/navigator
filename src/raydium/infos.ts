@@ -552,7 +552,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const poolBalances = await this.getPoolBalances(conn);
     const feeNumerator = poolBalances.fees.numerator;
     const feeDenominator = poolBalances.fees.denominator;
-    const feeRate = feeNumerator / feeDenominator - 0.0003; // 0.03% out of 0.25%(radium swap fee) will deposit into stake
+    const feeRate =
+      feeDenominator > 0 &&
+      feeNumerator > 0 &&
+      feeNumerator / feeDenominator > 0.0003
+        ? feeNumerator / feeDenominator - 0.0003
+        : 0; // 0.03% out of 0.25%(radium swap fee) will deposit into stake
 
     const [lpSupply, lpDecimals] = await conn
       .getAccountInfo(this.poolInfo.lpMint)
