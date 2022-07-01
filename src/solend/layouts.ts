@@ -65,13 +65,13 @@ export const OBLIGATION_LAYOUT = struct([
 ]);
 
 export const COLLATERAL_LAYOUT = struct([
-  publicKey("reserveAddress"),
+  publicKey("reserveId"),
   u64("depositedAmount"),
   u128("marketValue"),
 ]);
 
 export const LOAN_LAYOUT = struct([
-  publicKey("reserveAddress"),
+  publicKey("reserveId"),
   u128("cumulativeBorrowRate"),
   u128("borrowedAmount"),
   u128("marketValue"),

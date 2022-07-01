@@ -431,9 +431,9 @@ export function parseObligationData(data: any) {
 
 export function parseCollateralData(data: any) {
   let collateralInfo = COLLATERAL_LAYOUT.decode(data);
-  let { reserveAddress, depositedAmount, marketValue } = collateralInfo;
+  let { reserveId, depositedAmount, marketValue } = collateralInfo;
   let collateral: ObligationCollateral = {
-    reserveId: reserveAddress,
+    reserveId,
     depositedAmount,
     marketValue,
   };

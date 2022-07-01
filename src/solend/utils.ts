@@ -4,9 +4,9 @@ import { parseAggregatorAccountData } from "@switchboard-xyz/switchboard-api";
 import { MINING_RESERVES } from "./infos";
 import { SLND_PRICE_ORACLE } from "./ids";
 
-export async function isMining(reserveAddress: PublicKey) {
+export async function isMining(reserveId: PublicKey) {
   for (let address of MINING_RESERVES) {
-    if (reserveAddress.equals(address)) {
+    if (reserveId.equals(address)) {
       return true;
     }
   }

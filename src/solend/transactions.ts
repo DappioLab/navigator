@@ -93,7 +93,7 @@ export async function createDepositTx(
 
 export async function createWithdrawTx(
   wallet: PublicKey,
-  reserveAddress: PublicKey,
+  reserveId: PublicKey,
   amount: BN,
   obligationInfoWrapper: ObligationInfoWrapper,
   reserveInfoWrapper: ReserveInfoWrapper,
@@ -175,7 +175,7 @@ export async function createWithdrawTx(
     amount,
     reserveInfoWrapper.reserveInfo.collateral.supplyPubkey,
     reserveTokenAddress,
-    reserveAddress,
+    reserveId,
     await getObligationPublicKey(wallet),
     SOLEND_LENDING_MARKET_ID,
     MARKET_PDA,
