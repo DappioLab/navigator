@@ -582,26 +582,22 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     }
 
     await this.updateAmount(conn);
-
-    const coinBalance = Number(this.poolInfo.AtokenAccountAmount!);
-    const pcBalance = Number(this.poolInfo.BtokenAccountAmount!);
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) =>
-        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
+      .then(
+        (accountInfo) =>
+          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
       );
-    const coinPrice = mintAndPriceA.mint.equals(this.poolInfo.tokenAMint)
-      ? mintAndPriceA.price
-      : mintAndPriceB.price;
-    const pcPrice = mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)
-      ? mintAndPriceB.price
-      : mintAndPriceA.price;
+    if (lpSupply.eq(ZERO)) {
+      return 0;
+    }
 
-    // Assume decimals is equal
+    const amp = this.poolInfo.targetAmpFactor;
+    const coinBalance = this.poolInfo.AtokenAccountAmount!;
+    const pcBalance = this.poolInfo.BtokenAccountAmount!;
+
     const lpPrice =
-      lpSupply > 0
-        ? (coinBalance * coinPrice + pcBalance * pcPrice) / lpSupply
-        : 0;
+      Number(computeD(amp, coinBalance, pcBalance)) / Number(lpSupply);
 
     return lpPrice;
   }
