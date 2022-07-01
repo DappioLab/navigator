@@ -624,7 +624,9 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
     const tradingFee = Number(this.poolInfo.tradingFee) / 10e9;
     const apr =
-      lpValue > 0 ? (tradingVolumeIn24Hours * tradingFee * 365) / lpValue : 0;
+      lpValue > 0
+        ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100
+        : 0;
 
     return apr;
   }
