@@ -34,6 +34,7 @@ import {
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
+import { getAllOptionPrams } from "../katana/coverCall/optionInfo";
 
 export interface LedgerInfo extends IFarmerInfo {
   farmVersion: number;
@@ -412,8 +413,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const swapFeeNumerator = getBigNumber(parsedAmmId.swapFeeNumerator);
     const swapFeeDenominator = getBigNumber(parsedAmmId.swapFeeDenominator);
 
-    const coinDecimals = 6;
-    const pcDecimals = 6;
+    const coinDecimals = parsedAmmId.coinDecimals;
+    const pcDecimals = parsedAmmId.pcDecimals;
 
     // Calculate coinBalance and pcBalance
     let coinBalance = new TokenAmount(
@@ -494,6 +495,67 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       tokenAmount / (balance.toWei().toNumber() + tokenAmount);
 
     return sharePercent * lpSupply;
+  }
+
+  async getLpPrice(conn: Connection, tokenAPrice: number, tokenBPrice: number) {
+    const poolBalances = await this.getPoolBalances(conn);
+    const coinBalance = poolBalances.coin.balance;
+    const coinDecimals = poolBalances.coin.decimals;
+    const pcBalance = poolBalances.pc.balance;
+    const pcDecimals = poolBalances.pc.decimals;
+    const [lpSupply, lpDecimals] = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) => {
+        const mintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+        const supply = Number(mintInfo.supply);
+        const decimals = mintInfo.decimals;
+        return [supply, decimals];
+      });
+
+    const coinPrice = tokenAPrice;
+    const pcPrice = tokenBPrice;
+
+    const lpPrice =
+      lpSupply > 0
+        ? (coinBalance.toEther().toNumber() * 10 ** lpDecimals * coinPrice +
+            pcBalance.toEther().toNumber() * 10 ** lpDecimals * pcPrice) /
+          lpSupply
+        : 0;
+
+    return lpPrice;
+  }
+
+  async getApr(
+    conn: Connection,
+    tradingVolumeIn24Hours: number,
+    lpPrice: number
+  ) {
+    const poolBalances = await this.getPoolBalances(conn);
+    const feeNumerator = poolBalances.fees.numerator;
+    const feeDenominator = poolBalances.fees.denominator;
+    const feeRate =
+      feeDenominator > 0 &&
+      feeNumerator > 0 &&
+      feeNumerator / feeDenominator > 0.0003
+        ? feeNumerator / feeDenominator - 0.0003
+        : 0; // 0.03% out of 0.25%(radium swap fee) will deposit into stake
+
+    const [lpSupply, lpDecimals] = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) => {
+        const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+        const supply = Number(lpMintInfo.supply);
+        const decimals = lpMintInfo.decimals;
+        return [supply, decimals];
+      });
+
+    const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
+    const apr =
+      lpValue > 0
+        ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100
+        : 0;
+
+    return apr;
   }
 }
 
@@ -692,6 +754,48 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V5);
     }
     return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V3);
+  }
+
+  async getStakedAmount(conn: Connection) {
+    await this.updateAllTokenAccount(conn);
+
+    return this.farmInfo.poolLpTokenAccount?.amount ?? new BN(0);
+  }
+
+  async getApr(
+    conn: Connection,
+    lpPrice: number,
+    rewardPrice: number,
+    rewardPriceB?: number
+  ) {
+    await this.updateAllTokenAccount(conn);
+
+    const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
+    const lpValue = lpAmount * lpPrice;
+    const annualRewardAmount =
+      Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365);
+
+    const apr =
+      lpValue > 0
+        ? Math.round(((annualRewardAmount * rewardPrice) / lpValue) * 10000) /
+          100
+        : 0;
+
+    if (rewardPriceB != undefined) {
+      const annualRewardAmountB = this.farmInfo.perBlockB
+        ? Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)
+        : 0;
+
+      const aprB =
+        lpValue > 0
+          ? Math.round(
+              ((annualRewardAmountB * rewardPriceB) / lpValue) * 10000
+            ) / 100
+          : 0;
+      return [apr, aprB];
+    }
+
+    return [apr];
   }
 }
 

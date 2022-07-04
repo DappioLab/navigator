@@ -37,7 +37,7 @@ import { parseLendingInfo } from "../lending/lendingInfo";
 import {
   parseV4PoolInfo,
   parseFarmV45,
-  STAKE_PROGRAM_ID_V5,
+  FARM_PROGRAM_ID_V5,
 } from "../../raydium";
 import { Market } from "@project-serum/serum";
 
@@ -178,7 +178,7 @@ export async function getWithdrawTx(
       strategy.authority.toBuffer(),
       Buffer.from("staker_info_v2_associated_seed", "utf-8"),
     ],
-    STAKE_PROGRAM_ID_V5
+    FARM_PROGRAM_ID_V5
   );
 
   preTx.add(updateLending(strategy));

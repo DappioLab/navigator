@@ -231,6 +231,32 @@ export interface FarmInfo extends IFarmInfo {
   numMiners: BN;
 }
 
+export class FarmInfoWrapper {
+  constructor(public farmInfo: FarmInfo) {}
+
+  getStakedAmount(): BN {
+    return this.farmInfo.totalTokensDeposited;
+  }
+
+  getApr(lpPrice: number, rewardTokenPrice: number) {
+    const lpAmount = Number(
+      this.farmInfo.totalTokensDeposited.div(
+        new BN(10).pow(this.farmInfo.tokenMintDecimals)
+      )
+    );
+    const lpValue = lpAmount * lpPrice;
+    const annualRewardAmount = Number(
+      this.farmInfo.annualRewardsRate.divn(10e5)
+    );
+    const annualRewardValue = annualRewardAmount * rewardTokenPrice;
+
+    const apr =
+      lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
+
+    return apr;
+  }
+}
+
 export function parseFarmInfo(data: any, farmPubkey: PublicKey): FarmInfo {
   let dataBuffer = data as Buffer;
   let infoData = dataBuffer.slice(8);
@@ -530,6 +556,53 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const lpAmount = Number(lpSupply.mul(d2.sub(d0)).div(d0));
     return lpAmount;
+  }
+
+  async getLpPrice(conn: Connection, tokenAPrice: number, tokenBPrice: number) {
+    await this.updateAmount(conn);
+    const lpSupply = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then(
+        (accountInfo) =>
+          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
+      );
+    if (lpSupply.eq(ZERO)) {
+      return 0;
+    }
+
+    const amp = this.poolInfo.targetAmpFactor;
+    const coinBalance = this.poolInfo.AtokenAccountAmount!;
+    const pcBalance = this.poolInfo.BtokenAccountAmount!;
+
+    const lpPrice =
+      Number(computeD(amp, coinBalance, pcBalance)) / Number(lpSupply);
+
+    return lpPrice;
+  }
+
+  async getApr(
+    conn: Connection,
+    tradingVolumeIn24Hours: number,
+    lpPrice: number
+  ) {
+    await this.updateAmount(conn);
+
+    const [lpSupply, lpDecimals] = await conn
+      .getAccountInfo(this.poolInfo.lpMint)
+      .then((accountInfo) => {
+        const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+        const supply = Number(lpMintInfo.supply);
+        const decimals = lpMintInfo.decimals;
+        return [supply, decimals];
+      });
+    const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
+    const tradingFee = Number(this.poolInfo.tradingFee) / 10e9;
+    const apr =
+      lpValue > 0
+        ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100
+        : 0;
+
+    return apr;
   }
 }
 
