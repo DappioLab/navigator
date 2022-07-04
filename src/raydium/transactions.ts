@@ -33,13 +33,13 @@ export async function swap(
   }
   let toTokenAccount = await findAssociatedTokenAddress(wallet, toMint);
   tx.add(await createATAWithoutCheckIx(wallet, toMint, wallet));
-  if (fromMint.toString() == NATIVE_MINT.toString()) {
+  if (fromMint.equals(NATIVE_MINT)) {
     tx.add(await wrapNative(amountIn, wallet, connection, true));
     cleanUpTx.add(
       createCloseAccountInstruction(fromTokenAccount, wallet, wallet, [])
     );
   }
-  if (toMint.toString() == NATIVE_MINT.toString()) {
+  if (toMint.equals(NATIVE_MINT)) {
     cleanUpTx.add(
       createCloseAccountInstruction(toTokenAccount, wallet, wallet, [])
     );
@@ -125,7 +125,7 @@ export async function addLiquidity(
     userLpTokenAccount = await findAssociatedTokenAddress(wallet, pool.lpMint);
   }
   tx.add(await createATAWithoutCheckIx(wallet, pool.lpMint));
-  if (pool.tokenAMint.toString() == NATIVE_MINT.toString()) {
+  if (pool.tokenAMint.equals(NATIVE_MINT)) {
     tx.add(await wrapNative(maxCoinAmount, wallet, connection, true));
     cleanUpTx.add(
       createCloseAccountInstruction(
@@ -136,7 +136,7 @@ export async function addLiquidity(
       )
     );
   }
-  if (pool.tokenBMint.toString() == NATIVE_MINT.toString()) {
+  if (pool.tokenBMint.equals(NATIVE_MINT)) {
     tx.add(await wrapNative(maxPcAmount, wallet, connection, true));
     cleanUpTx.add(
       createCloseAccountInstruction(

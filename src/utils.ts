@@ -78,7 +78,7 @@ export async function checkTokenAccount(
   connection: Connection
 ) {
   let accountInfo = await connection.getAccountInfo(publickey);
-  if (accountInfo?.owner.toString() == TOKEN_PROGRAM_ID.toString()) {
+  if (accountInfo?.owner.equals(TOKEN_PROGRAM_ID)) {
     return true;
   } else return false;
 }

@@ -75,11 +75,11 @@ export async function getDepositTx(
   let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.tokenBMint);
   let usrATA1 = await findAssociatedTokenAddress(wallet, ammInfo.tokenAMint);
 
-  if (ammInfo.tokenBMint.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenBMint.equals(NATIVE_MINT)) {
     preTx.add(await wrapNative(amount0, wallet, connection, false));
     cleanUpTx.add(createCloseAccountInstruction(usrATA0, wallet, wallet, []));
   }
-  if (ammInfo.tokenAMint.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenAMint.equals(NATIVE_MINT)) {
     preTx.add(await wrapNative(amount1, wallet, connection, false));
     cleanUpTx.add(createCloseAccountInstruction(usrATA1, wallet, wallet, []));
   }
@@ -155,10 +155,10 @@ export async function getWithdrawTx(
   let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.tokenBMint);
   let usrATA1 = await findAssociatedTokenAddress(wallet, ammInfo.tokenAMint);
 
-  if (ammInfo.tokenBMint.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenBMint.equals(NATIVE_MINT)) {
     cleanUpTx.add(createCloseAccountInstruction(usrATA0, wallet, wallet, []));
   }
-  if (ammInfo.tokenAMint.toString() == NATIVE_MINT.toString()) {
+  if (ammInfo.tokenAMint.equals(NATIVE_MINT)) {
     cleanUpTx.add(createCloseAccountInstruction(usrATA1, wallet, wallet, []));
   }
   const adminIdMemcmp: MemcmpFilter = {
