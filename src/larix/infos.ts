@@ -14,6 +14,8 @@ import {
   MINER_LAYOUT,
   RESERVE_LAYOUT,
 } from "./layouts";
+// @ts-ignore
+import { seq } from "buffer-layout";
 
 export const RESERVE_LAYOUT_SPAN = 873;
 
@@ -253,7 +255,7 @@ export interface MinerInfo {
 }
 
 export interface MinerIndex {
-  reserve: PublicKey;
+  reserveId: PublicKey;
   unCollLTokenAmount: BN;
   index: BN;
 }
@@ -261,21 +263,18 @@ export interface MinerIndex {
 export function parseMinerInfo(data: any, miner: PublicKey) {
   let dataBuffer = data as Buffer;
   let infoData = dataBuffer;
-  let indexData = dataBuffer.slice(MINER_LAYOUT.span);
   let newMinerInfo = MINER_LAYOUT.decode(infoData);
-  let { version, owner, lendingMarket, reservesLen, unclaimedMine } =
+  let { version, owner, lendingMarket, reservesLen, unclaimedMine, dataFlat } =
     newMinerInfo;
-  let indexs: MinerIndex[] = [];
-  for (let i = 0; i < new BN(reservesLen).toNumber(); i++) {
-    let currentIndexData = indexData.slice(i * MINER_INDEX_LAYOUT.span);
-    let decodedIndex = MINER_INDEX_LAYOUT.decode(currentIndexData);
-    let { reserve, unCollLTokenAmount, index } = decodedIndex;
-    indexs.push({
-      reserve,
-      unCollLTokenAmount,
-      index,
-    });
-  }
+
+  const minerIndicesBuffer = dataFlat.slice(
+    0,
+    reservesLen * MINER_INDEX_LAYOUT.span
+  );
+
+  const minerIndices = seq(MINER_INDEX_LAYOUT, reservesLen).decode(
+    minerIndicesBuffer
+  ) as MinerIndex[];
 
   return {
     farmerId: miner,
@@ -284,11 +283,11 @@ export function parseMinerInfo(data: any, miner: PublicKey) {
     lendingMarket,
     reservesLen: new BN(reservesLen),
     unclaimedMine: new BN(unclaimedMine),
-    indexs,
+    indexs: minerIndices,
   };
 }
 
-export async function getMiner(
+export async function getAllMiners(
   connection: Connection,
   wallet: PublicKey,
   reserverInfoWrapper?: ReserveInfoWrapper[]
@@ -317,7 +316,7 @@ export async function getMiner(
     for (let miner of allMinerInfo) {
       for (let indexData of miner.indexs) {
         for (let reserve of reserverInfoWrapper) {
-          if (indexData.reserve.equals(reserve.reserveInfo.reserveId)) {
+          if (indexData.reserveId.equals(reserve.reserveInfo.reserveId)) {
             let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(
               indexData.index
             );
@@ -330,6 +329,7 @@ export async function getMiner(
       }
     }
   }
+
   return allMinerInfo;
 }
 

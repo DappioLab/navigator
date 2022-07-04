@@ -179,7 +179,7 @@ export async function checkWrapped(
   wrapInfoArray: WrapInfo[]
 ): Promise<[boolean, WrapInfo]> {
   for (let info of wrapInfoArray) {
-    if (info.wrappedTokenMint.toString() == tokenMint.toString()) {
+    if (info.wrappedTokenMint.equals(tokenMint)) {
       return [true, info];
     }
   }
@@ -336,9 +336,7 @@ export function getFarmFromLpMint(
   allFarms: FarmInfo[],
   mintPubkey: PublicKey
 ): FarmInfo | null {
-  const farm = allFarms.filter(
-    (f) => f.tokenMintKey.toString() == mintPubkey.toString()
-  );
+  const farm = allFarms.filter((f) => f.tokenMintKey.equals(mintPubkey));
   return farm.length > 0 ? farm[0] : null;
 }
 
@@ -394,10 +392,7 @@ export async function minerCreated(
 ) {
   let minerKey = await getMinerKey(wallet, info.farmId);
   let minerAccountInfo = await connection.getAccountInfo(minerKey);
-  //console.log(miner[0].toString())
-  if (
-    minerAccountInfo?.owner.toString() == QURARRY_MINE_PROGRAM_ID.toString()
-  ) {
+  if (minerAccountInfo?.owner.equals(QURARRY_MINE_PROGRAM_ID)) {
     return true;
   }
   return false;

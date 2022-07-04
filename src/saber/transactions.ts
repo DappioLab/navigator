@@ -52,7 +52,7 @@ export async function createDepositTx(
 
   tx.add(await createATAWithoutCheckIx(wallet, poolInfo.lpMint));
   // check Token A is wSol
-  if (poolInfo.tokenAMint.toString() == NATIVE_MINT.toString()) {
+  if (poolInfo.tokenAMint.equals(NATIVE_MINT)) {
     // if true add a wrapNative IX
     let wrapNativeIns = await wrapNative(
       AtokenAmount,
@@ -68,7 +68,7 @@ export async function createDepositTx(
   // if Token A source account is created in this tx
 
   // check Token A is wSol
-  if (poolInfo.tokenBMint.toString() == NATIVE_MINT.toString()) {
+  if (poolInfo.tokenBMint.equals(NATIVE_MINT)) {
     // if true add a wrapNative IX
     let wrapNativeIns = await wrapNative(
       BtokenAmount,
@@ -274,7 +274,7 @@ export async function createWithdrawTx(
       )
     );
   }
-  if (recieveTokenAccountMint.toString() == NATIVE_MINT.toString()) {
+  if (recieveTokenAccountMint.equals(NATIVE_MINT)) {
     cleanupTx.add(
       createCloseAccountInstruction(recieveTokenAccount, wallet, wallet, [])
     );

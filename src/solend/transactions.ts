@@ -64,9 +64,7 @@ export async function createDepositTx(
     reserveInfoWrapper.reserveInfo.liquidity.switchboardOraclePubkey
   );
   tx.add(refreshIx);
-  if (
-    reserveInfoWrapper.supplyTokenMint().toString() == NATIVE_MINT.toString()
-  ) {
+  if (reserveInfoWrapper.supplyTokenMint().equals(NATIVE_MINT)) {
     let wrapIx = await wrapNative(amount, wallet, connection, true);
     tx.add(wrapIx);
   }
@@ -187,9 +185,7 @@ export async function createWithdrawTx(
   );
 
   tx.add(withdrawIns);
-  if (
-    reserveInfoWrapper.supplyTokenMint().toString() == NATIVE_MINT.toString()
-  ) {
+  if (reserveInfoWrapper.supplyTokenMint().equals(NATIVE_MINT)) {
     tx.add(
       createCloseAccountInstruction(withdrawTokenAddress, wallet, wallet, [])
     );

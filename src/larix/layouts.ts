@@ -76,10 +76,11 @@ export const MINER_LAYOUT = struct([
   publicKey("lendingMarket"),
   u8("reservesLen"),
   u128("unclaimedMine"),
+  blob(56 * 10, "dataFlat"),
 ]);
 
 export const MINER_INDEX_LAYOUT = struct([
-  publicKey("reserve"),
+  publicKey("reserveId"),
   u64("unCollLTokenAmount"),
   u128("index"),
 ]);

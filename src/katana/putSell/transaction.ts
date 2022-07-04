@@ -33,7 +33,7 @@ export async function deposit(
       vault.underlyingTokenMint
     );
   }
-  if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
+  if (vault.underlyingTokenMint.equals(NATIVE_MINT)) {
     tx.add(await wrapNative(amount, wallet, connection, true));
     cleanupTx.add(
       createCloseAccountInstruction(underlyingTokenAccount, wallet, wallet, [])
@@ -63,7 +63,7 @@ export async function instantWithdraw(
   tx.add(
     await ins.instantWithdrawIx(vault, wallet, underlyingTokenAccount, amount)
   );
-  if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
+  if (vault.underlyingTokenMint.equals(NATIVE_MINT)) {
     cleanupTx.add(
       createCloseAccountInstruction(underlyingTokenAccount, wallet, wallet, [])
     );
@@ -102,7 +102,7 @@ export async function completeWithdraw(vault: Vault, wallet: PublicKey) {
     vault.underlyingTokenMint
   );
   tx.add(await ins.completeWithdrawIx(vault, wallet, underlyingTokenAccount));
-  if (vault.underlyingTokenMint.toString() == NATIVE_MINT.toString()) {
+  if (vault.underlyingTokenMint.equals(NATIVE_MINT)) {
     cleanupTx.add(
       createCloseAccountInstruction(underlyingTokenAccount, wallet, wallet, [])
     );

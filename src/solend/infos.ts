@@ -259,7 +259,7 @@ export async function getReserve(
 export async function getObligation(connection: Connection, wallet: PublicKey) {
   let obligationAddress = await getObligationPublicKey(wallet);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
-  if (accountInfo?.owner.toString() == SOLEND_PROGRAM_ID.toString()) {
+  if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
     let obligationInfo = parseObligationData(accountInfo?.data);
     return obligationInfo;
   } else {
@@ -308,7 +308,7 @@ export async function obligationCreated(
   let obligationInfo = await connection.getAccountInfo(
     await getObligationPublicKey(wallet)
   );
-  if (obligationInfo?.owner.toString() == SOLEND_PROGRAM_ID.toString()) {
+  if (obligationInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
     return true;
   }
   return false;
@@ -328,8 +328,9 @@ export class ObligationInfoWrapper {
     for (let depositedReserve of this.obligationCollaterals) {
       for (let reserveInfoWrapper of reserveInfos) {
         if (
-          depositedReserve.reserveId.toString() ==
-          reserveInfoWrapper.reserveInfo.reserveId.toString()
+          depositedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId
+          )
         ) {
           let decimal = new BN(
             reserveInfoWrapper.reserveTokenDecimal()
@@ -356,8 +357,9 @@ export class ObligationInfoWrapper {
     for (let borrowedReserve of this.obligationLoans) {
       for (let reserveInfoWrapper of reserveInfos) {
         if (
-          borrowedReserve.reserveId.toString() ==
-          reserveInfoWrapper.reserveInfo.reserveId.toString()
+          borrowedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId
+          )
         ) {
           let decimal = new BN(
             reserveInfoWrapper.reserveTokenDecimal()
