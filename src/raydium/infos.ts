@@ -31,7 +31,6 @@ import {
   IFarmerInfo,
   IPoolInfoWrapper,
   IFarmInfoWrapper,
-  MintAndPrice,
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
@@ -498,21 +497,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return sharePercent * lpSupply;
   }
 
-  async getLpPrice(
-    conn: Connection,
-    mintAndPriceA: MintAndPrice,
-    mintAndPriceB: MintAndPrice
-  ) {
-    if (
-      (mintAndPriceA.mint.equals(this.poolInfo.tokenAMint) &&
-        mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)) ||
-      (mintAndPriceA.mint.equals(this.poolInfo.tokenBMint) &&
-        mintAndPriceB.mint.equals(this.poolInfo.tokenAMint))
-    ) {
-    } else {
-      throw new Error("Wrong token mint");
-    }
-
+  async getLpPrice(conn: Connection, tokenAPrice: number, tokenBPrice: number) {
     const poolBalances = await this.getPoolBalances(conn);
     const coinBalance = poolBalances.coin.balance;
     const coinDecimals = poolBalances.coin.decimals;
@@ -527,12 +512,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
         return [supply, decimals];
       });
 
-    const coinPrice = mintAndPriceA.mint.equals(this.poolInfo.tokenAMint)
-      ? mintAndPriceA.price
-      : mintAndPriceB.price;
-    const pcPrice = mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)
-      ? mintAndPriceB.price
-      : mintAndPriceA.price;
+    const coinPrice = tokenAPrice;
+    const pcPrice = tokenBPrice;
 
     const lpPrice =
       lpSupply > 0
@@ -783,36 +764,32 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 
   async getApr(
     conn: Connection,
-    mintAndPriceLp: MintAndPrice,
-    mintAndPriceReward: MintAndPrice,
-    mintAndPriceRewardB?: MintAndPrice
+    lpPrice: number,
+    rewardPrice: number,
+    rewardPriceB?: number
   ) {
     await this.updateAllTokenAccount(conn);
 
     const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
-    const lpPrice = mintAndPriceLp.price;
     const lpValue = lpAmount * lpPrice;
     const annualRewardAmount =
       Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365);
-    const RewardTokenPrice = mintAndPriceReward.price;
 
     const apr =
       lpValue > 0
-        ? Math.round(
-            ((annualRewardAmount * RewardTokenPrice) / lpValue) * 10000
-          ) / 100
+        ? Math.round(((annualRewardAmount * rewardPrice) / lpValue) * 10000) /
+          100
         : 0;
 
-    if (mintAndPriceRewardB != undefined) {
+    if (rewardPriceB != undefined) {
       const annualRewardAmountB = this.farmInfo.perBlockB
         ? Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)
         : 0;
-      const RewardTokenPriceB = mintAndPriceRewardB?.price ?? 0;
 
       const aprB =
         lpValue > 0
           ? Math.round(
-              ((annualRewardAmountB * RewardTokenPriceB) / lpValue) * 10000
+              ((annualRewardAmountB * rewardPriceB) / lpValue) * 10000
             ) / 100
           : 0;
       return [apr, aprB];

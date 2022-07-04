@@ -6,13 +6,7 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import {
-  IFarmerInfo,
-  IFarmInfo,
-  IPoolInfo,
-  IPoolInfoWrapper,
-  MintAndPrice,
-} from "../types";
+import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
 import {
   computeD,
   getTokenAccountAmount,
@@ -244,19 +238,17 @@ export class FarmInfoWrapper {
     return this.farmInfo.totalTokensDeposited;
   }
 
-  getApr(mintAndPriceLp: MintAndPrice, mintAndPriceReward: MintAndPrice) {
+  getApr(lpPrice: number, rewardTokenPrice: number) {
     const lpAmount = Number(
       this.farmInfo.totalTokensDeposited.div(
         new BN(10).pow(this.farmInfo.tokenMintDecimals)
       )
     );
-    const lpPrice = mintAndPriceLp.price;
     const lpValue = lpAmount * lpPrice;
     const annualRewardAmount = Number(
       this.farmInfo.annualRewardsRate.divn(10e5)
     );
-    const rewardPrice = mintAndPriceReward.price;
-    const annualRewardValue = annualRewardAmount * rewardPrice;
+    const annualRewardValue = annualRewardAmount * rewardTokenPrice;
 
     const apr =
       lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
@@ -566,21 +558,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpAmount;
   }
 
-  async getLpPrice(
-    conn: Connection,
-    mintAndPriceA: MintAndPrice,
-    mintAndPriceB: MintAndPrice
-  ) {
-    if (
-      (mintAndPriceA.mint.equals(this.poolInfo.tokenAMint) &&
-        mintAndPriceB.mint.equals(this.poolInfo.tokenBMint)) ||
-      (mintAndPriceA.mint.equals(this.poolInfo.tokenBMint) &&
-        mintAndPriceB.mint.equals(this.poolInfo.tokenAMint))
-    ) {
-    } else {
-      throw new Error("Wrong token mint");
-    }
-
+  async getLpPrice(conn: Connection, tokenAPrice: number, tokenBPrice: number) {
     await this.updateAmount(conn);
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
