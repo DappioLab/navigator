@@ -68,6 +68,7 @@ export const COLLATERAL_LAYOUT = struct([
   publicKey("reserveId"),
   u64("depositedAmount"),
   u128("marketValue"),
+  blob(32, "_padding"),
 ]);
 
 export const LOAN_LAYOUT = struct([
@@ -75,4 +76,5 @@ export const LOAN_LAYOUT = struct([
   u128("cumulativeBorrowRate"),
   u128("borrowedAmount"),
   u128("marketValue"),
+  blob(32, "_padding"),
 ]);
