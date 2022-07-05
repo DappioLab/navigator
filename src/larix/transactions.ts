@@ -198,7 +198,7 @@ export async function claimReward(
   let tx: Transaction = new Transaction();
   let reservepub: PublicKey[] = [];
   for (let index of minerInfo.indexs) {
-    reservepub.push(index.reserve);
+    reservepub.push(index.reserveId);
   }
   let reserveAccounts = await connection.getMultipleAccountsInfo(reservepub);
   let allReserve: ReserveInfo[] = [];
