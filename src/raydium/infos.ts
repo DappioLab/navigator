@@ -739,11 +739,18 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       allToken[1]?.data,
       this.farmInfo.poolRewardTokenAccountPubkey
     );
-    if (this.farmInfo.poolRewardTokenAccountPubkeyB) {
-      this.farmInfo.poolRewardTokenAccountB = parseTokenAccount(
-        allToken[2]?.data,
-        this.farmInfo.poolRewardTokenAccountPubkeyB
-      );
+    if (this.farmInfo.poolRewardTokenAccountPubkeyB && allToken[2]) {
+      try {
+        this.farmInfo.poolRewardTokenAccountB = parseTokenAccount(
+          allToken[2]?.data,
+          this.farmInfo.poolRewardTokenAccountPubkeyB
+        );
+      } catch (e) {
+        console.log(
+          "[dappio-ts/src/raydium/infos.ts] -> updateAllTokenAccount() failed at parseTokenAccount\n",
+          e
+        );
+      }
     }
     return this;
   }
