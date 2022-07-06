@@ -569,8 +569,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const coinBalance = this.poolInfo.AtokenAccountAmount!;
     const pcBalance = this.poolInfo.BtokenAccountAmount!;
 
-    const lpPrice =
+    const virtualPrice =
       Number(computeD(amp, coinBalance, pcBalance)) / Number(lpSupply);
+
+    const min_price = Math.min(tokenAPrice, tokenBPrice);
+
+    const lpPrice = min_price * virtualPrice;
 
     return lpPrice;
   }
