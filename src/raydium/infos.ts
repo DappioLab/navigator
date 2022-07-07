@@ -1022,7 +1022,12 @@ export async function getFarm(
   // v3 size = 200
   // v5 size = 224
   const version = farmInfoAccount?.data.length == 200 ? 3 : 5;
-  let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
+  let parsedFarm: FarmInfoWrapper;
+  if (version == 3) {
+    parsedFarm = parseFarmV1(farmInfoAccount?.data, farmInfoKey);
+  } else {
+    parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
+  }
   if (parsedFarm.farmInfo.state.toNumber() == 1) {
     farm = parsedFarm.farmInfo;
   }
