@@ -776,11 +776,25 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     rewardPriceB?: number
   ) {
     await this.updateAllTokenAccount(conn);
+    const tokenMintList: PublicKey[] = [
+      this.farmInfo.poolLpTokenAccount?.mint!,
+      this.farmInfo.poolRewardTokenAccount?.mint!,
+    ];
+    if (this.farmInfo.poolRewardTokenAccountB) {
+      tokenMintList.push(this.farmInfo.poolRewardTokenAccountB?.mint!);
+    }
+    const allData = await conn.getMultipleAccountsInfo(tokenMintList);
 
     const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
+    const lpDecimals = MintLayout.decode(allData[0]?.data as Buffer).decimals;
     const lpValue = lpAmount * lpPrice;
+
+    const rewardDecimals = MintLayout.decode(
+      allData[1]?.data as Buffer
+    ).decimals;
     const annualRewardAmount =
-      Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365);
+      (Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365)) /
+      10 ** (rewardDecimals - lpDecimals);
 
     const apr =
       lpValue > 0
@@ -788,9 +802,13 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
           100
         : 0;
 
-    if (rewardPriceB != undefined) {
+    if (rewardPriceB != undefined && allData[2]) {
+      const rewardBDecimals = MintLayout.decode(
+        allData[2]?.data as Buffer
+      ).decimals;
       const annualRewardAmountB = this.farmInfo.perBlockB
-        ? Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)
+        ? (Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)) /
+          10 ** (rewardBDecimals - lpDecimals)
         : 0;
 
       const aprB =
