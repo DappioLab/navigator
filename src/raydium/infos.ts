@@ -739,11 +739,18 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       allToken[1]?.data,
       this.farmInfo.poolRewardTokenAccountPubkey
     );
-    if (this.farmInfo.poolRewardTokenAccountPubkeyB) {
-      this.farmInfo.poolRewardTokenAccountB = parseTokenAccount(
-        allToken[2]?.data,
-        this.farmInfo.poolRewardTokenAccountPubkeyB
-      );
+    if (this.farmInfo.poolRewardTokenAccountPubkeyB && allToken[2]) {
+      try {
+        this.farmInfo.poolRewardTokenAccountB = parseTokenAccount(
+          allToken[2]?.data,
+          this.farmInfo.poolRewardTokenAccountPubkeyB
+        );
+      } catch (e) {
+        console.log(
+          "[dappio-ts/src/raydium/infos.ts] -> updateAllTokenAccount() failed at parseTokenAccount\n",
+          e
+        );
+      }
     }
     return this;
   }
@@ -769,11 +776,25 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     rewardPriceB?: number
   ) {
     await this.updateAllTokenAccount(conn);
+    const tokenMintList: PublicKey[] = [
+      this.farmInfo.poolLpTokenAccount?.mint!,
+      this.farmInfo.poolRewardTokenAccount?.mint!,
+    ];
+    if (this.farmInfo.poolRewardTokenAccountB) {
+      tokenMintList.push(this.farmInfo.poolRewardTokenAccountB?.mint!);
+    }
+    const allData = await conn.getMultipleAccountsInfo(tokenMintList);
 
     const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
+    const lpDecimals = MintLayout.decode(allData[0]?.data as Buffer).decimals;
     const lpValue = lpAmount * lpPrice;
+
+    const rewardDecimals = MintLayout.decode(
+      allData[1]?.data as Buffer
+    ).decimals;
     const annualRewardAmount =
-      Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365);
+      (Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365)) /
+      10 ** (rewardDecimals - lpDecimals);
 
     const apr =
       lpValue > 0
@@ -781,9 +802,13 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
           100
         : 0;
 
-    if (rewardPriceB != undefined) {
+    if (rewardPriceB != undefined && allData[2]) {
+      const rewardBDecimals = MintLayout.decode(
+        allData[2]?.data as Buffer
+      ).decimals;
       const annualRewardAmountB = this.farmInfo.perBlockB
-        ? Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)
+        ? (Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)) /
+          10 ** (rewardBDecimals - lpDecimals)
         : 0;
 
       const aprB =
@@ -1015,7 +1040,12 @@ export async function getFarm(
   // v3 size = 200
   // v5 size = 224
   const version = farmInfoAccount?.data.length == 200 ? 3 : 5;
-  let parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
+  let parsedFarm: FarmInfoWrapper;
+  if (version == 3) {
+    parsedFarm = parseFarmV1(farmInfoAccount?.data, farmInfoKey);
+  } else {
+    parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
+  }
   if (parsedFarm.farmInfo.state.toNumber() == 1) {
     farm = parsedFarm.farmInfo;
   }
