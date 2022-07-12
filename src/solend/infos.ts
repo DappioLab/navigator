@@ -256,8 +256,12 @@ export async function getReserve(
   return parseReserveData(reserveAccountInfo?.data, reserveId);
 }
 
-export async function getObligation(connection: Connection, wallet: PublicKey) {
-  let obligationAddress = await getObligationPublicKey(wallet);
+export async function getObligation(
+  connection: Connection,
+  wallet: PublicKey,
+  lendingMarket = SOLEND_LENDING_MARKET_ID
+) {
+  let obligationAddress = await getObligationPublicKey(wallet, lendingMarket);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
   if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
     let obligationInfo = parseObligationData(accountInfo?.data);
@@ -291,14 +295,30 @@ export interface ObligationInfo {
   unhealthyBorrowValue: BN;
 }
 
-export async function getObligationPublicKey(wallet: PublicKey) {
-  const seed = SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
+export async function getObligationPublicKey(
+  wallet: PublicKey,
+  lendingMarket = SOLEND_LENDING_MARKET_ID
+) {
+  const seed = lendingMarket.toString().slice(0, 32);
   const obligationAddress = await PublicKey.createWithSeed(
     wallet,
     seed,
     SOLEND_PROGRAM_ID
   );
   return obligationAddress;
+}
+
+export async function getLendingMarketAuthority(
+  lendingMarket: PublicKey
+): Promise<PublicKey> {
+  const authority = (
+    await PublicKey.findProgramAddress(
+      [lendingMarket.toBuffer()],
+      SOLEND_PROGRAM_ID
+    )
+  )[0];
+
+  return authority;
 }
 
 export async function obligationCreated(
