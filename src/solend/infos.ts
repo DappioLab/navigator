@@ -7,7 +7,7 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { SOLEND_LENDING_MARKET_ID, SOLEND_PROGRAM_ID } from "./ids";
+import { SOLEND_LENDING_MARKET_ID_MAIN_POOL, SOLEND_PROGRAM_ID } from "./ids";
 import {
   COLLATERAL_LAYOUT,
   LOAN_LAYOUT,
@@ -265,7 +265,7 @@ export async function getReserve(
 export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
-  lendingMarket = SOLEND_LENDING_MARKET_ID
+  lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL
 ) {
   let obligationAddress = await getObligationPublicKey(wallet, lendingMarket);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
@@ -303,7 +303,7 @@ export interface ObligationInfo {
 
 export async function getObligationPublicKey(
   wallet: PublicKey,
-  lendingMarket = SOLEND_LENDING_MARKET_ID
+  lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL
 ) {
   const seed = lendingMarket.toString().slice(0, 32);
   const obligationAddress = await PublicKey.createWithSeed(
