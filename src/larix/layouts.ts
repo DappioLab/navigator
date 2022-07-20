@@ -63,6 +63,7 @@ export const RESERVE_LAYOUT = struct([
     ],
     "config"
   ),
+  blob(164,"padding"),
   FARM_LAYOUT,
   u8("reentry"),
   u64("depositLimit"),
