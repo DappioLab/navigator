@@ -7,7 +7,11 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { SOLEND_LENDING_MARKET_ID_MAIN_POOL, SOLEND_PROGRAM_ID } from "./ids";
+import {
+  SOLEND_LENDING_MARKET_ID_ALL,
+  SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+  SOLEND_PROGRAM_ID,
+} from "./ids";
 import {
   COLLATERAL_LAYOUT,
   LOAN_LAYOUT,
@@ -273,6 +277,31 @@ export async function getObligation(
   } else {
     return defaultObligation();
   }
+}
+
+export async function getAllObligation(
+  connection: Connection,
+  wallet: PublicKey
+) {
+  let allObligationAddress: PublicKey[] = [];
+  let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
+  for (let lendingMarket of SOLEND_LENDING_MARKET_ID_ALL) {
+    allObligationAddress.push(
+      await getObligationPublicKey(wallet, lendingMarket)
+    );
+  }
+  let allAccountInfo = await connection.getMultipleAccountsInfo(
+    allObligationAddress
+  );
+
+  allAccountInfo.map((accountInfo) => {
+    if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
+      let obligationInfo = parseObligationData(accountInfo?.data);
+      allObligationInfoWrapper.push(obligationInfo);
+    }
+  });
+
+  return allObligationInfoWrapper;
 }
 
 interface ObligationCollateral {
