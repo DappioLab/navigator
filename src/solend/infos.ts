@@ -142,7 +142,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
   async miningApy(connection: Connection): Promise<number> {
     let miningApy = 0;
-    let decimal = new BN(this.reserveInfo.liquidity.mintDecimals).toNumber();
+    let decimal = Number(new BN(this.reserveInfo.liquidity.mintDecimals));
     if (MINING_MULTIPLIER(this.reserveInfo.reserveId).eq(new BN(0))) {
       miningApy = 0;
     } else {
@@ -156,8 +156,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
         .mul(this.reserveInfo.liquidity.marketPrice)
         .div(new BN(`1${"".padEnd(18, "0")}`));
 
-      miningApy =
-        slndPerYear.mul(slndPrice).toNumber() / supplyUSDValue.toNumber();
+      miningApy = Number(slndPerYear.mul(slndPrice)) / Number(supplyUSDValue);
     }
     return miningApy;
   }
@@ -168,31 +167,30 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     );
     const totalAmount =
       this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
-    const currentUtilization =
-      borrowedAmount.toNumber() / totalAmount.toNumber();
+    const currentUtilization = Number(borrowedAmount) / Number(totalAmount);
     return currentUtilization;
   }
 
   calculateBorrowAPY() {
     const currentUtilization = this.calculateUtilizationRatio();
     const optimalUtilization =
-      new BN(this.reserveInfo.config.optimalUtilizationRate).toNumber() / 100;
+      Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
     let borrowAPY;
     if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
       const normalizedFactor = currentUtilization / optimalUtilization;
       const optimalBorrowRate =
-        new BN(this.reserveInfo.config.optimalBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
       const minBorrowRate =
-        new BN(this.reserveInfo.config.minBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
       borrowAPY =
         normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
     } else {
       const normalizedFactor =
         (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
       const optimalBorrowRate =
-        new BN(this.reserveInfo.config.optimalBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
       const maxBorrowRate =
-        new BN(this.reserveInfo.config.maxBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
       borrowAPY =
         normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
         optimalBorrowRate;
@@ -358,9 +356,9 @@ export class ObligationInfoWrapper {
             reserveInfoWrapper.reserveInfo.reserveId
           )
         ) {
-          let decimal = new BN(
-            reserveInfoWrapper.reserveTokenDecimal()
-          ).toNumber();
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
           let thisDepositedValue = depositedReserve.depositedAmount
             .mul(reserveInfoWrapper.supplyAmount())
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
@@ -387,9 +385,9 @@ export class ObligationInfoWrapper {
             reserveInfoWrapper.reserveInfo.reserveId
           )
         ) {
-          let decimal = new BN(
-            reserveInfoWrapper.reserveTokenDecimal()
-          ).toNumber();
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
           let thisborrowedValue = borrowedReserve.borrowedAmount
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
