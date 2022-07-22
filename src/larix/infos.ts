@@ -148,6 +148,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       Math.trunc(this.calculateUtilizationRatio() * 100) / 100;
     let borrowAPY = this.calculateBorrowAPY() as number;
     let apy = (UtilizationRatio * borrowAPY * 998) / 1000;
+    return apy;
   }
 
   miningApy() {
