@@ -7,7 +7,11 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { SOLEND_LENDING_MARKET_ID, SOLEND_PROGRAM_ID } from "./ids";
+import {
+  SOLEND_LENDING_MARKET_ID_ALL,
+  SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+  SOLEND_PROGRAM_ID,
+} from "./ids";
 import {
   COLLATERAL_LAYOUT,
   LOAN_LAYOUT,
@@ -142,7 +146,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
   async miningApy(connection: Connection): Promise<number> {
     let miningApy = 0;
-    let decimal = new BN(this.reserveInfo.liquidity.mintDecimals).toNumber();
+    let decimal = Number(new BN(this.reserveInfo.liquidity.mintDecimals));
     if (MINING_MULTIPLIER(this.reserveInfo.reserveId).eq(new BN(0))) {
       miningApy = 0;
     } else {
@@ -156,8 +160,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
         .mul(this.reserveInfo.liquidity.marketPrice)
         .div(new BN(`1${"".padEnd(18, "0")}`));
 
-      miningApy =
-        slndPerYear.mul(slndPrice).toNumber() / supplyUSDValue.toNumber();
+      miningApy = Number(slndPerYear.mul(slndPrice)) / Number(supplyUSDValue);
     }
     return miningApy;
   }
@@ -168,31 +171,30 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     );
     const totalAmount =
       this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
-    const currentUtilization =
-      borrowedAmount.toNumber() / totalAmount.toNumber();
+    const currentUtilization = Number(borrowedAmount) / Number(totalAmount);
     return currentUtilization;
   }
 
   calculateBorrowAPY() {
     const currentUtilization = this.calculateUtilizationRatio();
     const optimalUtilization =
-      new BN(this.reserveInfo.config.optimalUtilizationRate).toNumber() / 100;
+      Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
     let borrowAPY;
     if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
       const normalizedFactor = currentUtilization / optimalUtilization;
       const optimalBorrowRate =
-        new BN(this.reserveInfo.config.optimalBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
       const minBorrowRate =
-        new BN(this.reserveInfo.config.minBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
       borrowAPY =
         normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
     } else {
       const normalizedFactor =
         (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
       const optimalBorrowRate =
-        new BN(this.reserveInfo.config.optimalBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
       const maxBorrowRate =
-        new BN(this.reserveInfo.config.maxBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
       borrowAPY =
         normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
         optimalBorrowRate;
@@ -265,7 +267,7 @@ export async function getReserve(
 export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
-  lendingMarket = SOLEND_LENDING_MARKET_ID
+  lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL
 ) {
   let obligationAddress = await getObligationPublicKey(wallet, lendingMarket);
   let accountInfo = await connection.getAccountInfo(obligationAddress);
@@ -275,6 +277,31 @@ export async function getObligation(
   } else {
     return defaultObligation();
   }
+}
+
+export async function getAllObligation(
+  connection: Connection,
+  wallet: PublicKey
+) {
+  let allObligationAddress: PublicKey[] = [];
+  let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
+  for (let lendingMarket of SOLEND_LENDING_MARKET_ID_ALL) {
+    allObligationAddress.push(
+      await getObligationPublicKey(wallet, lendingMarket)
+    );
+  }
+  let allAccountInfo = await connection.getMultipleAccountsInfo(
+    allObligationAddress
+  );
+
+  allAccountInfo.map((accountInfo) => {
+    if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
+      let obligationInfo = parseObligationData(accountInfo?.data);
+      allObligationInfoWrapper.push(obligationInfo);
+    }
+  });
+
+  return allObligationInfoWrapper;
 }
 
 interface ObligationCollateral {
@@ -303,7 +330,7 @@ export interface ObligationInfo {
 
 export async function getObligationPublicKey(
   wallet: PublicKey,
-  lendingMarket = SOLEND_LENDING_MARKET_ID
+  lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL
 ) {
   const seed = lendingMarket.toString().slice(0, 32);
   const obligationAddress = await PublicKey.createWithSeed(
@@ -358,9 +385,9 @@ export class ObligationInfoWrapper {
             reserveInfoWrapper.reserveInfo.reserveId
           )
         ) {
-          let decimal = new BN(
-            reserveInfoWrapper.reserveTokenDecimal()
-          ).toNumber();
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
           let thisDepositedValue = depositedReserve.depositedAmount
             .mul(reserveInfoWrapper.supplyAmount())
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
@@ -387,9 +414,9 @@ export class ObligationInfoWrapper {
             reserveInfoWrapper.reserveInfo.reserveId
           )
         ) {
-          let decimal = new BN(
-            reserveInfoWrapper.reserveTokenDecimal()
-          ).toNumber();
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
           let thisborrowedValue = borrowedReserve.borrowedAmount
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(decimal, "0")}`));

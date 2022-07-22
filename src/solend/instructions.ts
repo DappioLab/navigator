@@ -9,7 +9,7 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
-import { SOLEND_LENDING_MARKET_ID, SOLEND_PROGRAM_ID } from "./ids";
+import { SOLEND_LENDING_MARKET_ID_MAIN_POOL, SOLEND_PROGRAM_ID } from "./ids";
 import { getObligationPublicKey } from "./infos";
 
 enum LendingInstruction {
@@ -240,7 +240,7 @@ export async function createObligationAccountIx(
   payer?: PublicKey
 ) {
   let tx = new Transaction();
-  const seed = SOLEND_LENDING_MARKET_ID.toString().slice(0, 32);
+  const seed = SOLEND_LENDING_MARKET_ID_MAIN_POOL.toString().slice(0, 32);
   if (payer) {
   } else {
     payer = wallet;
@@ -265,7 +265,11 @@ export async function createObligationAccountIx(
       isSigner: false,
       isWritable: true,
     },
-    { pubkey: SOLEND_LENDING_MARKET_ID, isSigner: false, isWritable: false },
+    {
+      pubkey: SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+      isSigner: false,
+      isWritable: false,
+    },
     { pubkey: wallet, isSigner: true, isWritable: true },
   ];
   keys.push({

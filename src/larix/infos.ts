@@ -162,31 +162,30 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     );
     const totalAmount =
       this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
-    const currentUtilization =
-      borrowedAmount.toNumber() / totalAmount.toNumber();
+    const currentUtilization = Number(borrowedAmount) / Number(totalAmount);
     return currentUtilization;
   }
 
   calculateBorrowAPY() {
     const currentUtilization = this.calculateUtilizationRatio();
     const optimalUtilization =
-      new BN(this.reserveInfo.config.optimalUtilizationRate).toNumber() / 100;
+      Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
     let borrowAPY;
     if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
       const normalizedFactor = currentUtilization / optimalUtilization;
       const optimalBorrowRate =
-        new BN(this.reserveInfo.config.optimalBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
       const minBorrowRate =
-        new BN(this.reserveInfo.config.minBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
       borrowAPY =
         normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
     } else {
       const normalizedFactor =
         (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
       const optimalBorrowRate =
-        new BN(this.reserveInfo.config.optimalBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
       const maxBorrowRate =
-        new BN(this.reserveInfo.config.maxBorrowRate).toNumber() / 100;
+        Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
       borrowAPY =
         normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
         optimalBorrowRate;

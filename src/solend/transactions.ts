@@ -16,7 +16,10 @@ import {
   parseReserveData,
   ReserveInfoWrapper,
 } from "./infos";
-import { MARKET_PDA, SOLEND_LENDING_MARKET_ID } from "./ids";
+import {
+  MARKET_PDA_MAIN_POOL,
+  SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+} from "./ids";
 import {
   createObligationAccountIx,
   depositReserveLiquidityAndObligationCollateralInstruction,
@@ -76,8 +79,8 @@ export async function createDepositTx(
     reserveInfoWrapper.reserveInfo.reserveId,
     reserveInfoWrapper.reserveInfo.liquidity.supplyPubkey,
     reserveInfoWrapper.reserveTokenMint(),
-    SOLEND_LENDING_MARKET_ID,
-    MARKET_PDA,
+    SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+    MARKET_PDA_MAIN_POOL,
     reserveInfoWrapper.reserveInfo.collateral.supplyPubkey,
     await getObligationPublicKey(wallet),
     wallet,
@@ -175,8 +178,8 @@ export async function createWithdrawTx(
     reserveTokenAddress,
     reserveId,
     await getObligationPublicKey(wallet),
-    SOLEND_LENDING_MARKET_ID,
-    MARKET_PDA,
+    SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+    MARKET_PDA_MAIN_POOL,
     withdrawTokenAddress,
     reserveInfoWrapper.reserveTokenMint(),
     reserveInfoWrapper.reserveInfo.liquidity.supplyPubkey,
