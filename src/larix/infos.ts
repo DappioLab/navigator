@@ -127,14 +127,14 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
   supplyAmount() {
     let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
+      new BN(`1${"".padEnd(18, "0")}`),
     );
 
     let availableAmount = this.reserveInfo.liquidity.availableAmount;
 
     return borrowedAmount.add(availableAmount);
   }
-
+  
   // supplyLimit() {
   //   return this.reserveInfo.config.depositLimit;
   // }
@@ -158,7 +158,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   calculateUtilizationRatio() {
     let decimal = new BN(this.reserveInfo.liquidity.mintDecimals);
     const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
+      new BN(`1${"".padEnd(18, "0")}`),
     );
     const totalAmount =
       this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
@@ -224,7 +224,7 @@ async function getAllReserves(connection: Connection) {
   const config: GetProgramAccountsConfig = { filters: filters };
   const reserveAccounts = await connection.getProgramAccounts(
     LARIX_PROGRAM_ID,
-    config
+    config,
   );
 
   let reserves = [] as ReserveInfo[];
@@ -238,7 +238,7 @@ async function getAllReserves(connection: Connection) {
 
 export async function getReserve(
   connection: Connection,
-  reserveId: PublicKey
+  reserveId: PublicKey,
 ): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
   return parseReserveData(reserveAccountInfo?.data, reserveId);
@@ -269,11 +269,11 @@ export function parseMinerInfo(data: any, miner: PublicKey) {
 
   const minerIndicesBuffer = dataFlat.slice(
     0,
-    reservesLen * MINER_INDEX_LAYOUT.span
+    reservesLen * MINER_INDEX_LAYOUT.span,
   );
 
   const minerIndices = seq(MINER_INDEX_LAYOUT, reservesLen).decode(
-    minerIndicesBuffer
+    minerIndicesBuffer,
   ) as MinerIndex[];
 
   return {
@@ -290,7 +290,7 @@ export function parseMinerInfo(data: any, miner: PublicKey) {
 export async function getAllMiners(
   connection: Connection,
   wallet: PublicKey,
-  reserverInfoWrapper?: ReserveInfoWrapper[]
+  reserverInfoWrapper?: ReserveInfoWrapper[],
 ) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
@@ -305,7 +305,7 @@ export async function getAllMiners(
   const config: GetProgramAccountsConfig = { filters: filters };
   const allMinerAccount = await connection.getProgramAccounts(
     LARIX_PROGRAM_ID,
-    config
+    config,
   );
   let allMinerInfo: MinerInfo[] = [];
   for (let account of allMinerAccount) {
@@ -318,7 +318,7 @@ export async function getAllMiners(
         for (let reserve of reserverInfoWrapper) {
           if (indexData.reserveId.equals(reserve.reserveInfo.reserveId)) {
             let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(
-              indexData.index
+              indexData.index,
             );
 
             let reward = indexSub.mul(indexData.unCollLTokenAmount);
@@ -333,36 +333,49 @@ export async function getAllMiners(
   return allMinerInfo;
 }
 
+export async function getMiner(
+  connection: Connection,
+  wallet: PublicKey,
+  reserverInfoWrapper?: ReserveInfoWrapper[],
+) {
+  let minerPub = await newMinerAccountPub(wallet);
+  let minerInfo = await connection.getAccountInfo(minerPub);
+  if ((minerInfo?.data.length as number) > 0) {
+    let miner = parseMinerInfo(minerInfo?.data, minerPub);
+    if (reserverInfoWrapper) {
+      for (let indexData of miner.indexs) {
+        for (let reserve of reserverInfoWrapper) {
+          if (indexData.reserveId.equals(reserve.reserveInfo.reserveId)) {
+            let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(
+              indexData.index,
+            );
+            let reward = indexSub.mul(indexData.unCollLTokenAmount);
+            miner.unclaimedMine = miner.unclaimedMine.add(reward);
+          }
+        }
+      }
+    }
+    return miner;
+  }
+  return null;
+}
 export async function checkMinerCreated(
   connection: Connection,
-  wallet: PublicKey
+  wallet: PublicKey,
 ) {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 1,
-      bytes: wallet.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 642,
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allMinerAccount = await connection.getProgramAccounts(
-    LARIX_PROGRAM_ID,
-    config
-  );
-  if (allMinerAccount.length == 0) {
-    return false;
+  let minerPub = await newMinerAccountPub(wallet);
+  let minerInfo = await connection.getAccountInfo(minerPub);
+  if ((minerInfo?.data.length as number) > 0) {
+    return true;
   }
-  return true;
+  return false;
 }
 
 export async function newMinerAccountPub(wallet: PublicKey) {
   let newMiner = await PublicKey.createWithSeed(
     wallet,
     "Dappio",
-    LARIX_PROGRAM_ID
+    LARIX_PROGRAM_ID,
   );
   return newMiner;
 }
