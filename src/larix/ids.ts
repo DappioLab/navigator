@@ -25,3 +25,4 @@ export const LARIX_MINT = new PublicKey(
 export const MINE_SUPPLY = new PublicKey(
   "HCUZ8TiRfFcXAwCMEeTrirfrGCB1jB2KAocTi1jbfHrd"
 );
+export const LARIX_LENDING_MARKET_ID_ALL = [LARIX_MARKET_ID];

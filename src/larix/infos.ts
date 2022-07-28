@@ -7,7 +7,11 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { LARIX_MARKET_ID, LARIX_PROGRAM_ID } from "./ids";
+import {
+  LARIX_LENDING_MARKET_ID_ALL,
+  LARIX_MARKET_ID,
+  LARIX_PROGRAM_ID,
+} from "./ids";
 import {
   COLLATERAL_LAYOUT,
   FARM_LAYOUT,
@@ -614,4 +618,44 @@ export function defaultObligation() {
   } as ObligationInfo;
 
   return new ObligationInfoWrapper(obligationInfo, [], []);
+}
+
+export async function getObligation(
+  connection: Connection,
+  wallet: PublicKey,
+  lendingMarket = LARIX_MARKET_ID
+) {
+  let obligationAddress = await getObligationPublicKey(wallet, lendingMarket);
+  let accountInfo = await connection.getAccountInfo(obligationAddress);
+  if (accountInfo?.owner.equals(LARIX_PROGRAM_ID)) {
+    let obligationInfo = parseObligationData(accountInfo?.data);
+    return obligationInfo;
+  } else {
+    return defaultObligation();
+  }
+}
+
+export async function getAllObligation(
+  connection: Connection,
+  wallet: PublicKey
+) {
+  let allObligationAddress: PublicKey[] = [];
+  let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
+  for (let lendingMarket of LARIX_LENDING_MARKET_ID_ALL) {
+    allObligationAddress.push(
+      await getObligationPublicKey(wallet, lendingMarket)
+    );
+  }
+  let allAccountInfo = await connection.getMultipleAccountsInfo(
+    allObligationAddress
+  );
+
+  allAccountInfo.map((accountInfo) => {
+    if (accountInfo?.owner.equals(LARIX_PROGRAM_ID)) {
+      let obligationInfo = parseObligationData(accountInfo?.data);
+      allObligationInfoWrapper.push(obligationInfo);
+    }
+  });
+
+  return allObligationInfoWrapper;
 }
