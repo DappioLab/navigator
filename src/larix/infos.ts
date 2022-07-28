@@ -9,9 +9,12 @@ import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
 import { LARIX_MARKET_ID, LARIX_PROGRAM_ID } from "./ids";
 import {
+  COLLATERAL_LAYOUT,
   FARM_LAYOUT,
+  LOAN_LAYOUT,
   MINER_INDEX_LAYOUT,
   MINER_LAYOUT,
+  OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
 } from "./layouts";
 // @ts-ignore
@@ -391,4 +394,224 @@ export async function newMinerAccountPub(wallet: PublicKey) {
     LARIX_PROGRAM_ID
   );
   return newMiner;
+}
+
+// TODO Add Obligation section
+interface ObligationCollateral {
+  index: BN;
+  reserveId: PublicKey;
+  depositedAmount: BN;
+  marketValue: BN;
+}
+
+interface ObligationLoan {
+  index: BN;
+  reserveId: PublicKey;
+  cumulativeBorrowRate: BN;
+  borrowedAmount: BN;
+  marketValue: BN;
+}
+export interface ObligationInfo {
+  version: BN;
+  lastUpdate: LastUpdate;
+  lendingMarket: PublicKey;
+  owner: PublicKey;
+  // deposits: ObligationCollateral[];
+  // borrows: ObligationLiquidity[];
+  depositedValue: BN; // decimals
+  borrowedValue: BN; // decimals
+  allowedBorrowValue: BN; // decimals
+  unhealthyBorrowValue: BN; // decimals
+  unclaimedMine: BN;
+}
+
+export async function getObligationPublicKey(
+  wallet: PublicKey,
+  lendingMarket = LARIX_MARKET_ID
+) {
+  const seed = lendingMarket.toString().slice(0, 32);
+  const obligationAddress = await PublicKey.createWithSeed(
+    wallet,
+    seed,
+    LARIX_PROGRAM_ID
+  );
+  return obligationAddress;
+}
+
+export async function getLendingMarketAuthority(
+  lendingMarket: PublicKey
+): Promise<PublicKey> {
+  const authority = (
+    await PublicKey.findProgramAddress(
+      [lendingMarket.toBuffer()],
+      LARIX_PROGRAM_ID
+    )
+  )[0];
+
+  return authority;
+}
+
+export async function obligationCreated(
+  connection: Connection,
+  wallet: PublicKey
+) {
+  let obligationInfo = await connection.getAccountInfo(
+    await getObligationPublicKey(wallet)
+  );
+  if (obligationInfo?.owner.equals(LARIX_PROGRAM_ID)) {
+    return true;
+  }
+  return false;
+}
+
+export class ObligationInfoWrapper {
+  constructor(
+    public obligationInfo: ObligationInfo,
+    public obligationCollaterals: ObligationCollateral[],
+    public obligationLoans: ObligationLoan[]
+  ) {}
+
+  update(reserveInfos: ReserveInfoWrapper[]) {
+    let unhealthyBorrowValue = new BN(0);
+    let borrowedValue = new BN(0);
+    let depositedValue = new BN(0);
+    for (let depositedReserve of this.obligationCollaterals) {
+      for (let reserveInfoWrapper of reserveInfos) {
+        if (
+          depositedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId
+          )
+        ) {
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
+          let thisDepositedValue = depositedReserve.depositedAmount
+            .mul(reserveInfoWrapper.supplyAmount())
+            .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
+            .div(reserveInfoWrapper.reserveInfo.collateral.mintTotalSupply)
+            .div(new BN(`1${"".padEnd(decimal, "0")}`));
+          depositedValue = depositedValue.add(thisDepositedValue);
+
+          let thisUnhealthyBorrowValue = new BN(
+            reserveInfoWrapper.reserveInfo.config.liquidationThreshold
+          )
+            .mul(thisDepositedValue)
+            .div(new BN(`1${"".padEnd(2, "0")}`));
+          unhealthyBorrowValue = unhealthyBorrowValue.add(
+            thisUnhealthyBorrowValue
+          );
+        }
+      }
+    }
+
+    for (let borrowedReserve of this.obligationLoans) {
+      for (let reserveInfoWrapper of reserveInfos) {
+        if (
+          borrowedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId
+          )
+        ) {
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
+          let thisborrowedValue = borrowedReserve.borrowedAmount
+            .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
+            .div(new BN(`1${"".padEnd(decimal, "0")}`));
+          borrowedValue = borrowedValue.add(thisborrowedValue);
+        }
+      }
+    }
+
+    this.obligationInfo.borrowedValue = borrowedValue;
+    this.obligationInfo.depositedValue = depositedValue;
+    this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
+  }
+}
+
+export function parseObligationData(data: any) {
+  let dataBuffer = data as Buffer;
+  let decodedInfo = OBLIGATION_LAYOUT.decode(dataBuffer);
+  let {
+    version,
+    lastUpdate,
+    lendingMarket,
+    owner,
+    depositedValue,
+    borrowedValue,
+    allowedBorrowValue,
+    unhealthyBorrowValue,
+    depositsLen,
+    borrowsLen,
+    unclaimedMine,
+    dataFlat,
+  } = decodedInfo;
+
+  if (lastUpdate.slot.isZero()) {
+    throw new Error("lastUpdate.slot.isZero()");
+  }
+
+  const depositsBuffer = dataFlat.slice(
+    0,
+    depositsLen * COLLATERAL_LAYOUT.span
+  );
+  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
+    depositsBuffer
+  ) as ObligationCollateral[];
+
+  const borrowsBuffer = dataFlat.slice(
+    depositsBuffer.length,
+    depositsBuffer.length + borrowsLen * LOAN_LAYOUT.span
+  );
+  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(
+    borrowsBuffer
+  ) as ObligationLoan[];
+
+  const obligationInfo = {
+    version,
+    lastUpdate,
+    lendingMarket,
+    owner,
+    depositedValue,
+    borrowedValue,
+    allowedBorrowValue,
+    unhealthyBorrowValue,
+    unclaimedMine,
+  } as ObligationInfo;
+
+  const obligationInfoWrapper = new ObligationInfoWrapper(
+    obligationInfo,
+    depositCollaterals,
+    borrowLoans
+  );
+
+  return obligationInfoWrapper;
+}
+
+export function parseCollateralData(data: any) {
+  let collateralInfo = COLLATERAL_LAYOUT.decode(data);
+  let { reserveId, depositedAmount, marketValue, index } = collateralInfo;
+  let collateral: ObligationCollateral = {
+    index,
+    reserveId,
+    depositedAmount,
+    marketValue,
+  };
+
+  return collateral;
+}
+
+export function defaultObligation() {
+  const obligationInfo = {
+    version: new BN(1),
+    lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
+    lendingMarket: PublicKey.default,
+    owner: PublicKey.default,
+    depositedValue: new BN(0),
+    borrowedValue: new BN(0),
+    allowedBorrowValue: new BN(0),
+    unhealthyBorrowValue: new BN(0),
+    unclaimedMine: new BN(0),
+  } as ObligationInfo;
+
+  return new ObligationInfoWrapper(obligationInfo, [], []);
 }
