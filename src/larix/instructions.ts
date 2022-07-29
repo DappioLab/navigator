@@ -1,19 +1,8 @@
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
-import {
-  PublicKey,
-  SYSVAR_CLOCK_PUBKEY,
-  Transaction,
-  TransactionInstruction,
-  SystemProgram,
-} from "@solana/web3.js";
+import { PublicKey, SYSVAR_CLOCK_PUBKEY, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
-import {
-  LARIX_MARKET_ID,
-  LARIX_PROGRAM_ID,
-  MARKET_AUTHORITY,
-  MINE_SUPPLY,
-} from "./ids";
+import { LARIX_MARKET_ID_MAIN_POOL, LARIX_PROGRAM_ID, MARKET_AUTHORITY, MINE_SUPPLY } from "./ids";
 
 /// Deposit liquidity into a reserve in exchange for collateral, and deposit the collateral as well.
 
@@ -103,7 +92,7 @@ export const RedeemReserveLiquidity = (
     { pubkey: withdrawReserve, isSigner: false, isWritable: true },
     { pubkey: reserveCollateralMint, isSigner: false, isWritable: true },
     { pubkey: reserveLiquiditySupply, isSigner: false, isWritable: true },
-    { pubkey: LARIX_MARKET_ID, isSigner: false, isWritable: false },
+    { pubkey: LARIX_MARKET_ID_MAIN_POOL, isSigner: false, isWritable: false },
     { pubkey: MARKET_AUTHORITY, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
     // { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },  // TODO Breaking change (Removed)
@@ -166,11 +155,7 @@ export const refreshReserveInstruction = (
 
 export async function createInitMinningIx(wallet: PublicKey) {
   let tx = new Transaction();
-  let newMiner = await PublicKey.createWithSeed(
-    wallet,
-    "Dappio",
-    LARIX_PROGRAM_ID
-  );
+  let newMiner = await PublicKey.createWithSeed(wallet, "Dappio", LARIX_PROGRAM_ID);
   let config = {
     basePubkey: wallet,
     fromPubkey: wallet,
@@ -189,7 +174,7 @@ export async function createInitMinningIx(wallet: PublicKey) {
   const keys = [
     { pubkey: newMiner, isSigner: false, isWritable: true },
     { pubkey: wallet, isSigner: true, isWritable: true },
-    { pubkey: LARIX_MARKET_ID, isSigner: false, isWritable: true },
+    { pubkey: LARIX_MARKET_ID_MAIN_POOL, isSigner: false, isWritable: true },
     // { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false }, // TODO checked (Removed), no breaking
   ];
   tx.add(
@@ -227,7 +212,7 @@ export async function depositToMiner(
     { pubkey: mining, isSigner: false, isWritable: true },
 
     { pubkey: reservePub, isSigner: false, isWritable: false },
-    { pubkey: LARIX_MARKET_ID, isSigner: false, isWritable: false },
+    { pubkey: LARIX_MARKET_ID_MAIN_POOL, isSigner: false, isWritable: false },
     // { pubkey: info.MARKETAUTHORITY, isSigner: false, isWritable: false }, // TODO Breaking change (Removed)
 
     { pubkey: wallet, isSigner: true, isWritable: false },
@@ -268,7 +253,7 @@ export async function withdrawFromMiner(
     { pubkey: desAccount, isSigner: false, isWritable: true },
     { pubkey: mining, isSigner: false, isWritable: true },
     { pubkey: reservePub, isSigner: false, isWritable: false },
-    { pubkey: LARIX_MARKET_ID, isSigner: false, isWritable: false },
+    { pubkey: LARIX_MARKET_ID_MAIN_POOL, isSigner: false, isWritable: false },
     { pubkey: MARKET_AUTHORITY, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
@@ -281,12 +266,7 @@ export async function withdrawFromMiner(
     data,
   });
 }
-export function claimRewardIx(
-  desAccount: PublicKey,
-  miner: PublicKey,
-  wallet: PublicKey,
-  reservePub: PublicKey[]
-) {
+export function claimRewardIx(desAccount: PublicKey, miner: PublicKey, wallet: PublicKey, reservePub: PublicKey[]) {
   const dataLayout = struct([u8("instruction")]);
 
   const data = Buffer.alloc(dataLayout.span);
@@ -298,7 +278,7 @@ export function claimRewardIx(
     { pubkey: desAccount, isSigner: false, isWritable: true },
 
     { pubkey: wallet, isSigner: true, isWritable: false },
-    { pubkey: LARIX_MARKET_ID, isSigner: false, isWritable: false },
+    { pubkey: LARIX_MARKET_ID_MAIN_POOL, isSigner: false, isWritable: false },
     { pubkey: MARKET_AUTHORITY, isSigner: false, isWritable: false },
 
     // { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
