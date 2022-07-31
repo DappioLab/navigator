@@ -30,7 +30,14 @@ export const MINING_RESERVES = [] as PublicKey[];
 export const SLND_PER_YEAR = new BN(10e6);
 
 export function MINING_MULTIPLIER(reserve: PublicKey) {
+  
   switch (reserve.toString()) {
+    case "CviGNzD2C9ZCMmjDt5DKCce5cLV4Emrcm3NFvwudBFKA":
+      return (new BN(2)).mul(SLND_PER_YEAR).divn(24);
+    case "5sjkv6HD8wycocJ4tC4U36HHbvgcXYqcyiPRUkncnwWs":
+      return (new BN(1)).mul(SLND_PER_YEAR).divn(24);
+    case "CCpirWrgNuBVLdkP2haxLTbD6XqEgaYuVXixbbpxUB6":
+      return (new BN(1)).mul(SLND_PER_YEAR).divn(24);
     default:
       return new BN(0);
   }
