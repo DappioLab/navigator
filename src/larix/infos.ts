@@ -181,6 +181,10 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
     return borrowAPY;
   }
+
+  convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
+    return reserveAmount.mul(this.supplyAmount()).div(this.reserveTokenSupply());
+  }
 }
 
 export async function getAllReserveWrappers(connection: Connection) {
