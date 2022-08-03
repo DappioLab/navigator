@@ -151,8 +151,20 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return apy;
   }
 
-  miningApy() {
-    return 0;
+  miningApy(larix_price: number) {
+    let decimal = this.supplyTokenDecimal() as unknown as number;
+    let poolTotalSupplyValue = this.supplyAmount()
+    .mul(this.reserveInfo.liquidity.marketPrice)
+    .div(new BN(`1${"".padEnd(18, "0")}`))
+    .div(new BN(`1${"".padEnd(decimal, "0")}`));
+    let miningRate = this.reserveInfo.farm.kinkUtilRate;
+    let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
+    let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
+    console.log("mint", this.supplyTokenMint().toString());
+    let apy =
+      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
+      poolTotalSupplyValue.toNumber()/10**7;
+    return apy;
   }
 
   calculateUtilizationRatio() {
