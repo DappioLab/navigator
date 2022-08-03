@@ -844,7 +844,7 @@ export function parseFarmV1(data: any, infoPubkey: PublicKey): FarmInfoWrapper {
 
   return new FarmInfoWrapper({
     farmId: infoPubkey,
-    version: 1,
+    version: 3,
     state,
     nonce,
     poolLpTokenAccountPubkey,
@@ -880,6 +880,7 @@ export function parseFarmV45(
     lastBlock,
     owner,
   } = rawFarmData;
+
   return new FarmInfoWrapper({
     farmId: infoPubkey,
     version,
