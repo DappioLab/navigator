@@ -19,7 +19,7 @@ import {
   RESERVE_LAYOUT,
 } from "./layouts";
 import { getSlndPrice, isMining } from "./utils";
-import { getTokenList } from "../utils";
+import { getTokenList, IServicesTokenInfo } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";
@@ -114,7 +114,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  partnerRewardData = {};
+  partnerRewardData = {} as { token: IServicesTokenInfo; rate: number };
 
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
