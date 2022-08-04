@@ -114,9 +114,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  allPartnerRewardData: any = [];
   constructor(public reserveInfo: ReserveInfo) {}
-
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
   }
@@ -218,14 +216,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return UtilizationRatio * borrowAPY;
   }
 
-  getSupplyPartnerRewardData() {
-    console.log(this.allPartnerRewardData, "allPartnerRewardData");
-
-    return {
-      token: "123",
-      rate: 0,
-    };
-  }
+  getSupplyPartnerRewardData() {}
 }
 
 export async function getAllReserveWrappers(connection: Connection) {
@@ -243,28 +234,27 @@ export async function getAllReserveWrappers(connection: Connection) {
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
   const allPartnersRewardData = await getAllPartnersRewardData();
   const tokenList = await getTokenList();
-  console.log(tokenList, "tokenList");
 
   for (let reservesMeta of allReserves) {
-    const newinfo = new ReserveInfoWrapper(reservesMeta);
+    const newInfo = new ReserveInfoWrapper(reservesMeta);
 
     let supplyTokenRewardData = allPartnersRewardData.filter(
       // @ts-ignore
       (item) =>
-        item.tokenMint === newinfo.supplyTokenMint().toBase58() &&
-        newinfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
+        item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
+        newInfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
         item.side === "supply"
     );
 
     let price = tokenList.find(
-      (t: any) => t.mint === newinfo.supplyTokenMint().toBase58()
+      (t: any) => t.mint === newInfo.supplyTokenMint().toBase58()
     )?.price;
     let partnerRewardRate = 0;
     let partnerRewardToken: any = {};
     let partnerRewardData: any = null;
     const poolTotalSupply =
-      Number(newinfo.supplyAmount()) /
-      10 ** Number(newinfo.supplyTokenDecimal());
+      Number(newInfo.supplyAmount()) /
+      10 ** Number(newInfo.supplyTokenDecimal());
     const poolTotalSupplyValue = poolTotalSupply * price;
 
     if (supplyTokenRewardData.length !== 0) {
@@ -295,11 +285,13 @@ export async function getAllReserveWrappers(connection: Connection) {
       });
     }
 
-    if (partnerRewardData) {
-      console.log(partnerRewardData, "partnerRewardData");
-    }
-    newinfo.getSupplyPartnerRewardData = partnerRewardData;
-    reserveInfoWrappers.push(newinfo);
+    newInfo.getSupplyPartnerRewardData = () => partnerRewardData;
+    console.log(
+      newInfo.getSupplyPartnerRewardData(),
+      "newInfo.getSupplyPartnerRewardData()"
+    );
+
+    reserveInfoWrappers.push(newInfo);
   }
 
   return reserveInfoWrappers;
