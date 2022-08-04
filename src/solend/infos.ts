@@ -223,27 +223,38 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 }
 
+interface ISolendAPIPartnerReward {
+  rewardsPerShare: string;
+  totalBalance: string;
+  lastSlot: number;
+  side: string;
+  tokenMint: string;
+  reserveID: string;
+  market: string;
+  mint: string;
+  rewardMint: string;
+  rewardSymbol: string;
+  rewardRates: {
+    beginningSlot: number;
+    rewardRate: number;
+    name: 0;
+  }[];
+}
+
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
-  console.log(1);
-
-  const getAllPartnersRewardData = async () => {
-    return await (
-      await axios.get(
-        "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
-      )
-    ).data;
-  };
-
-  let reserveInfoWrappers = [] as ReserveInfoWrapper[];
-  const allPartnersRewardData = await getAllPartnersRewardData();
+  const allPartnersRewardData: ISolendAPIPartnerReward[] = await (
+    await axios.get(
+      "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
+    )
+  ).data;
   const tokenList = await getTokenList();
 
+  let reserveInfoWrappers = [] as ReserveInfoWrapper[];
   for (let reservesMeta of allReserves) {
     const newInfo = new ReserveInfoWrapper(reservesMeta);
 
     let supplyTokenRewardData = allPartnersRewardData.filter(
-      // @ts-ignore
       (item) =>
         item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
         newInfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
@@ -251,7 +262,7 @@ export async function getAllReserveWrappers(connection: Connection) {
     );
 
     let price = tokenList.find(
-      (t: any) => t.mint === newInfo.supplyTokenMint().toBase58()
+      (t) => t.mint === newInfo.supplyTokenMint().toBase58()
     )?.price;
     let partnerRewardRate = 0;
     let partnerRewardToken: any = {};
@@ -259,10 +270,9 @@ export async function getAllReserveWrappers(connection: Connection) {
     const poolTotalSupply =
       Number(newInfo.supplyAmount()) /
       10 ** Number(newInfo.supplyTokenDecimal());
-    const poolTotalSupplyValue = poolTotalSupply * price;
+    const poolTotalSupplyValue = poolTotalSupply * price!;
 
     if (supplyTokenRewardData.length !== 0) {
-      // @ts-ignore
       supplyTokenRewardData.map((supplyReward) => {
         let rewardRate =
           supplyReward.rewardRates[supplyReward.rewardRates.length - 1]
@@ -289,13 +299,7 @@ export async function getAllReserveWrappers(connection: Connection) {
       });
     }
 
-    // newInfo.getSupplyPartnerRewardData = () => partnerRewardData;
     newInfo.partnerRewardData = partnerRewardData;
-    // console.log(
-    //   newInfo.getSupplyPartnerRewardData(),
-    //   "newInfo.getSupplyPartnerRewardData()"
-    // );
-
     reserveInfoWrappers.push(newInfo);
   }
 
@@ -590,17 +594,3 @@ export function defaultObligation() {
 
   return new ObligationInfoWrapper(obligationInfo, [], []);
 }
-
-let connection = new Connection("https://ssc-dao.genesysgo.net", {
-  wsEndpoint: "",
-  commitment: "processed",
-});
-(async () => {
-  let wrapper = await getAllReserveWrappers(connection);
-  wrapper.map((item) =>
-    console.log(
-      item.getSupplyPartnerRewardData(),
-      "item.getSupplyPartnerRewardData()"
-    )
-  );
-})();
