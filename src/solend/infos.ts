@@ -549,5 +549,3 @@ export function defaultObligation() {
 
   return new ObligationInfoWrapper(obligationInfo, [], []);
 }
-
-getAllReserveWrappers();
