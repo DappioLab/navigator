@@ -286,10 +286,10 @@ export async function getAllReserveWrappers(connection: Connection) {
     }
 
     newInfo.getSupplyPartnerRewardData = () => partnerRewardData;
-    console.log(
-      newInfo.getSupplyPartnerRewardData(),
-      "newInfo.getSupplyPartnerRewardData()"
-    );
+    // console.log(
+    //   newInfo.getSupplyPartnerRewardData(),
+    //   "newInfo.getSupplyPartnerRewardData()"
+    // );
 
     reserveInfoWrappers.push(newInfo);
   }
@@ -590,4 +590,12 @@ export function defaultObligation() {
 //   wsEndpoint: "",
 //   commitment: "processed",
 // });
-// getAllReserveWrappers(connection);
+// (async () => {
+//   let wrapper = await getAllReserveWrappers(connection);
+//   wrapper.map((item) =>
+//     console.log(
+//       item.getSupplyPartnerRewardData(),
+//       "item.getSupplyPartnerRewardData()"
+//     )
+//   );
+// })();
