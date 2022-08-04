@@ -18,7 +18,8 @@ import {
   OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
 } from "./layouts";
-import { getSlndPrice, isMining, getTokenList } from "./utils";
+import { getSlndPrice, isMining } from "./utils";
+import { getTokenList } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";
@@ -548,3 +549,5 @@ export function defaultObligation() {
 
   return new ObligationInfoWrapper(obligationInfo, [], []);
 }
+
+getAllReserveWrappers();
