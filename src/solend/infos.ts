@@ -18,7 +18,7 @@ import {
   OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
 } from "./layouts";
-import { getSlndPrice, isMining } from "./utils";
+import { getSlndPrice, isMining, getTokenList } from "./utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";
@@ -114,19 +114,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
   allPartnerRewardData: any = [];
-  constructor(public reserveInfo: ReserveInfo) {
-    (async () => {
-      this.allPartnerRewardData = await this.getAllPartnersRewardData();
-    })();
-  }
-
-  getAllPartnersRewardData = async () => {
-    return await (
-      await axios.get(
-        "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
-      )
-    ).data;
-  };
+  constructor(public reserveInfo: ReserveInfo) {}
 
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -241,10 +229,31 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
+  const getAllPartnersRewardData = async () => {
+    return await (
+      await axios.get(
+        "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
+      )
+    ).data;
+  };
+
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
+  const allPartnersRewardData = await getAllPartnersRewardData();
+  const tokenList = await getTokenList();
+  console.log(allPartnersRewardData, "allPartnersRewardData");
+  console.log(tokenList, "tokenList");
 
   for (let reservesMeta of allReserves) {
     const newinfo = new ReserveInfoWrapper(reservesMeta);
+
+    // let supplyTokenRewardData = allPartnersRewardData.filter(
+    //   // @ts-ignore
+    //   (item) =>
+    //     item.tokenMint === newinfo.supplyTokenMint &&
+    //     newinfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
+    //     item.side === "supply"
+    // );
+
     reserveInfoWrappers.push(newinfo);
   }
 
