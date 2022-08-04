@@ -294,6 +294,19 @@ export const normalizedTradeFee = (trade: BN, n_coins: BN, amount: BN): BN => {
   return amount.div(ONE).mul(trade).mul(adjustedTradeFee);
 };
 
+export interface IServicesTokenInfo {
+  mint: string;
+  protocol: null | string;
+  price: number;
+  chainId: string;
+  decimals: number;
+  extensions: any;
+  logoURI: string;
+  name: string;
+  symbol: string;
+  tags: string[];
+}
+
 export const getTokenList = async () => {
   const query = `
   {
@@ -310,5 +323,6 @@ export const getTokenList = async () => {
   `;
   let serviceEndpoint = "https://services-v2.dappio.xyz/graphql";
   let data = await request(serviceEndpoint, query);
-  return data.TokenInfos;
+  let tokenInfos: IServicesTokenInfo[] = data.TokenInfos;
+  return tokenInfos;
 };
