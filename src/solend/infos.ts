@@ -115,8 +115,8 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
   allPartnerRewardData: any = [];
   constructor(public reserveInfo: ReserveInfo) {
-    this.allPartnerRewardData = async () => {
-      await this.getAllPartnersRewardData();
+    async () => {
+      this.allPartnerRewardData = await this.getAllPartnersRewardData();
     };
   }
 
