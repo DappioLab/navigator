@@ -116,7 +116,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   allPartnerRewardData: any = [];
   constructor(public reserveInfo: ReserveInfo) {
     (async () => {
-      this.allPartnerRewardData = this.getAllPartnersRewardData();
+      this.allPartnerRewardData = await this.getAllPartnersRewardData();
     })();
   }
 
