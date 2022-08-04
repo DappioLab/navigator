@@ -114,6 +114,8 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
+  partnerRewardData = {};
+
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -216,7 +218,9 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return UtilizationRatio * borrowAPY;
   }
 
-  getSupplyPartnerRewardData() {}
+  getSupplyPartnerRewardData() {
+    return this.partnerRewardData;
+  }
 }
 
 export async function getAllReserveWrappers(connection: Connection) {
@@ -285,7 +289,8 @@ export async function getAllReserveWrappers(connection: Connection) {
       });
     }
 
-    newInfo.getSupplyPartnerRewardData = () => partnerRewardData;
+    // newInfo.getSupplyPartnerRewardData = () => partnerRewardData;
+    newInfo.partnerRewardData = partnerRewardData;
     // console.log(
     //   newInfo.getSupplyPartnerRewardData(),
     //   "newInfo.getSupplyPartnerRewardData()"
@@ -586,16 +591,16 @@ export function defaultObligation() {
   return new ObligationInfoWrapper(obligationInfo, [], []);
 }
 
-// let connection = new Connection("https://ssc-dao.genesysgo.net", {
-//   wsEndpoint: "",
-//   commitment: "processed",
-// });
-// (async () => {
-//   let wrapper = await getAllReserveWrappers(connection);
-//   wrapper.map((item) =>
-//     console.log(
-//       item.getSupplyPartnerRewardData(),
-//       "item.getSupplyPartnerRewardData()"
-//     )
-//   );
-// })();
+let connection = new Connection("https://ssc-dao.genesysgo.net", {
+  wsEndpoint: "",
+  commitment: "processed",
+});
+(async () => {
+  let wrapper = await getAllReserveWrappers(connection);
+  wrapper.map((item) =>
+    console.log(
+      item.getSupplyPartnerRewardData(),
+      "item.getSupplyPartnerRewardData()"
+    )
+  );
+})();
