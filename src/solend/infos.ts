@@ -243,6 +243,7 @@ export async function getAllReserveWrappers(connection: Connection) {
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
   const allPartnersRewardData = await getAllPartnersRewardData();
   const tokenList = await getTokenList();
+  console.log(tokenList, "tokenList");
 
   for (let reservesMeta of allReserves) {
     const newinfo = new ReserveInfoWrapper(reservesMeta);
@@ -593,8 +594,8 @@ export function defaultObligation() {
   return new ObligationInfoWrapper(obligationInfo, [], []);
 }
 
-let connection = new Connection("https://ssc-dao.genesysgo.net", {
-  wsEndpoint: "",
-  commitment: "processed",
-});
-getAllReserveWrappers(connection);
+// let connection = new Connection("https://ssc-dao.genesysgo.net", {
+//   wsEndpoint: "",
+//   commitment: "processed",
+// });
+// getAllReserveWrappers(connection);
