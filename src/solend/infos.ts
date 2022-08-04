@@ -230,6 +230,8 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
+  console.log(1);
+
   const getAllPartnersRewardData = async () => {
     return await (
       await axios.get(
@@ -241,20 +243,61 @@ export async function getAllReserveWrappers(connection: Connection) {
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
   const allPartnersRewardData = await getAllPartnersRewardData();
   const tokenList = await getTokenList();
-  console.log(allPartnersRewardData, "allPartnersRewardData");
-  console.log(tokenList, "tokenList");
 
   for (let reservesMeta of allReserves) {
     const newinfo = new ReserveInfoWrapper(reservesMeta);
 
-    // let supplyTokenRewardData = allPartnersRewardData.filter(
-    //   // @ts-ignore
-    //   (item) =>
-    //     item.tokenMint === newinfo.supplyTokenMint &&
-    //     newinfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
-    //     item.side === "supply"
-    // );
+    let supplyTokenRewardData = allPartnersRewardData.filter(
+      // @ts-ignore
+      (item) =>
+        item.tokenMint === newinfo.supplyTokenMint().toBase58() &&
+        newinfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
+        item.side === "supply"
+    );
 
+    let price = tokenList.find(
+      (t: any) => t.mint === newinfo.supplyTokenMint().toBase58()
+    )?.price;
+    let partnerRewardRate = 0;
+    let partnerRewardToken: any = {};
+    let partnerRewardData: any = null;
+    const poolTotalSupply =
+      Number(newinfo.supplyAmount()) /
+      10 ** Number(newinfo.supplyTokenDecimal());
+    const poolTotalSupplyValue = poolTotalSupply * price;
+
+    if (supplyTokenRewardData.length !== 0) {
+      // @ts-ignore
+      supplyTokenRewardData.map((supplyReward) => {
+        let rewardRate =
+          supplyReward.rewardRates[supplyReward.rewardRates.length - 1]
+            .rewardRate;
+        partnerRewardToken = tokenList.find(
+          (token: any) => token.mint === supplyReward.rewardMint
+        )!;
+        if (partnerRewardToken) {
+          let rewardTokenPrice = partnerRewardToken?.price!;
+          partnerRewardRate = Number(
+            (
+              ((rewardRate * rewardTokenPrice) /
+                poolTotalSupplyValue /
+                10 ** 36) *
+              100
+            ).toFixed(2)
+          );
+
+          partnerRewardData = {
+            rewardToken: partnerRewardToken,
+            rate: partnerRewardRate,
+          };
+        }
+      });
+    }
+
+    if (partnerRewardData) {
+      console.log(partnerRewardData, "partnerRewardData");
+    }
+    newinfo.getSupplyPartnerRewardData = partnerRewardData;
     reserveInfoWrappers.push(newinfo);
   }
 
@@ -549,3 +592,9 @@ export function defaultObligation() {
 
   return new ObligationInfoWrapper(obligationInfo, [], []);
 }
+
+let connection = new Connection("https://ssc-dao.genesysgo.net", {
+  wsEndpoint: "",
+  commitment: "processed",
+});
+getAllReserveWrappers(connection);
