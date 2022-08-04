@@ -21,6 +21,7 @@ import {
 import { getSlndPrice, isMining } from "./utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
+import axios from "axios";
 
 export const RESERVE_LAYOUT_SPAN = 619;
 
@@ -30,14 +31,13 @@ export const MINING_RESERVES = [] as PublicKey[];
 export const SLND_PER_YEAR = new BN(10e6);
 
 export function MINING_MULTIPLIER(reserve: PublicKey) {
-  
   switch (reserve.toString()) {
     case "CviGNzD2C9ZCMmjDt5DKCce5cLV4Emrcm3NFvwudBFKA":
-      return (new BN(2)).mul(SLND_PER_YEAR).divn(24);
+      return new BN(2).mul(SLND_PER_YEAR).divn(24);
     case "5sjkv6HD8wycocJ4tC4U36HHbvgcXYqcyiPRUkncnwWs":
-      return (new BN(1)).mul(SLND_PER_YEAR).divn(24);
+      return new BN(1).mul(SLND_PER_YEAR).divn(24);
     case "CCpirWrgNuBVLdkP2haxLTbD6XqEgaYuVXixbbpxUB6":
-      return (new BN(1)).mul(SLND_PER_YEAR).divn(24);
+      return new BN(1).mul(SLND_PER_YEAR).divn(24);
     default:
       return new BN(0);
   }
@@ -113,7 +113,18 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  constructor(public reserveInfo: ReserveInfo) {}
+  allPartnerRewardData: any = [];
+  constructor(public reserveInfo: ReserveInfo) {
+    this.allPartnerRewardData = this.getAllPartnersRewardData();
+  }
+
+  getAllPartnersRewardData = async () => {
+    return await (
+      await axios.get(
+        "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
+      )
+    ).data;
+  };
 
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -214,6 +225,15 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let UtilizationRatio = this.calculateUtilizationRatio();
     let borrowAPY = this.calculateBorrowAPY() as number;
     return UtilizationRatio * borrowAPY;
+  }
+
+  getSupplyPartnerRewardData() {
+    console.log(this.allPartnerRewardData, "allPartnerRewardData");
+
+    return {
+      token: "123",
+      rate: 0,
+    };
   }
 }
 
