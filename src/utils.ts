@@ -27,6 +27,8 @@ import {
   u16,
   u32,
 } from "@project-serum/borsh";
+import request from "graphql-request";
+
 export async function wrapNative(
   amount: BN,
   walletPublicKey: PublicKey,
@@ -290,4 +292,37 @@ export const computeY = (ampFactor: BN, x: BN, d: BN): BN => {
 export const normalizedTradeFee = (trade: BN, n_coins: BN, amount: BN): BN => {
   const adjustedTradeFee = n_coins.div(n_coins.sub(ONE).mul(new BN(4)));
   return amount.div(ONE).mul(trade).mul(adjustedTradeFee);
+};
+
+export interface IServicesTokenInfo {
+  mint: string;
+  protocol: null | string;
+  price: number;
+  chainId: string;
+  decimals: number;
+  extensions: any;
+  logoURI: string;
+  name: string;
+  symbol: string;
+  tags: string[];
+}
+
+export const getTokenList = async () => {
+  const query = `
+  {
+    TokenInfos {
+      chainId
+      price
+      mint
+      name
+      decimals
+      symbol
+      logoURI
+    }
+  }
+  `;
+  let serviceEndpoint = "https://services-v2.dappio.xyz/graphql";
+  let data = await request(serviceEndpoint, query);
+  let tokenInfos: IServicesTokenInfo[] = data.TokenInfos;
+  return tokenInfos;
 };

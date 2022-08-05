@@ -19,8 +19,10 @@ import {
   RESERVE_LAYOUT,
 } from "./layouts";
 import { getSlndPrice, isMining } from "./utils";
+import { getTokenList, IServicesTokenInfo } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
+import axios from "axios";
 
 export const RESERVE_LAYOUT_SPAN = 619;
 
@@ -30,14 +32,13 @@ export const MINING_RESERVES = [] as PublicKey[];
 export const SLND_PER_YEAR = new BN(10e6);
 
 export function MINING_MULTIPLIER(reserve: PublicKey) {
-  
   switch (reserve.toString()) {
     case "CviGNzD2C9ZCMmjDt5DKCce5cLV4Emrcm3NFvwudBFKA":
-      return (new BN(2)).mul(SLND_PER_YEAR).divn(24);
+      return new BN(2).mul(SLND_PER_YEAR).divn(24);
     case "5sjkv6HD8wycocJ4tC4U36HHbvgcXYqcyiPRUkncnwWs":
-      return (new BN(1)).mul(SLND_PER_YEAR).divn(24);
+      return new BN(1).mul(SLND_PER_YEAR).divn(24);
     case "CCpirWrgNuBVLdkP2haxLTbD6XqEgaYuVXixbbpxUB6":
-      return (new BN(1)).mul(SLND_PER_YEAR).divn(24);
+      return new BN(1).mul(SLND_PER_YEAR).divn(24);
     default:
       return new BN(0);
   }
@@ -113,8 +114,9 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  constructor(public reserveInfo: ReserveInfo) {}
+  partnerRewardData = {} as { token: IServicesTokenInfo; rate: number };
 
+  constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
   }
@@ -215,15 +217,90 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let borrowAPY = this.calculateBorrowAPY() as number;
     return UtilizationRatio * borrowAPY;
   }
+
+  getSupplyPartnerRewardData() {
+    return this.partnerRewardData;
+  }
+}
+
+interface ISolendAPIPartnerReward {
+  rewardsPerShare: string;
+  totalBalance: string;
+  lastSlot: number;
+  side: string;
+  tokenMint: string;
+  reserveID: string;
+  market: string;
+  mint: string;
+  rewardMint: string;
+  rewardSymbol: string;
+  rewardRates: {
+    beginningSlot: number;
+    rewardRate: number;
+    name: 0;
+  }[];
 }
 
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
-  let reserveInfoWrappers = [] as ReserveInfoWrapper[];
+  const allPartnersRewardData: ISolendAPIPartnerReward[] = await (
+    await axios.get(
+      "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
+    )
+  ).data;
+  const tokenList = await getTokenList();
 
+  let reserveInfoWrappers = [] as ReserveInfoWrapper[];
   for (let reservesMeta of allReserves) {
-    const newinfo = new ReserveInfoWrapper(reservesMeta);
-    reserveInfoWrappers.push(newinfo);
+    const newInfo = new ReserveInfoWrapper(reservesMeta);
+
+    let supplyTokenRewardData = allPartnersRewardData.filter(
+      (item) =>
+        item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
+        newInfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
+        item.side === "supply"
+    );
+
+    let price = tokenList.find(
+      (t) => t.mint === newInfo.supplyTokenMint().toBase58()
+    )?.price;
+    let partnerRewardRate = 0;
+    let partnerRewardToken: any = {};
+    let partnerRewardData: any = null;
+    const poolTotalSupply =
+      Number(newInfo.supplyAmount()) /
+      10 ** Number(newInfo.supplyTokenDecimal());
+    const poolTotalSupplyValue = poolTotalSupply * price!;
+
+    if (supplyTokenRewardData.length !== 0) {
+      supplyTokenRewardData.map((supplyReward) => {
+        let rewardRate =
+          supplyReward.rewardRates[supplyReward.rewardRates.length - 1]
+            .rewardRate;
+        partnerRewardToken = tokenList.find(
+          (token: any) => token.mint === supplyReward.rewardMint
+        )!;
+        if (partnerRewardToken) {
+          let rewardTokenPrice = partnerRewardToken?.price!;
+          partnerRewardRate = Number(
+            (
+              ((rewardRate * rewardTokenPrice) /
+                poolTotalSupplyValue /
+                10 ** 36) *
+              100
+            ).toFixed(2)
+          );
+
+          partnerRewardData = {
+            rewardToken: partnerRewardToken,
+            rate: partnerRewardRate,
+          };
+        }
+      });
+    }
+
+    newInfo.partnerRewardData = partnerRewardData;
+    reserveInfoWrappers.push(newInfo);
   }
 
   return reserveInfoWrappers;
