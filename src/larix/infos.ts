@@ -123,10 +123,6 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return borrowedAmount.add(availableAmount);
   }
 
-  // supplyLimit() {
-  //   return this.reserveInfo.config.depositLimit;
-  // }
-
   isMining() {
     this.reserveInfo.farm.kinkUtilRate.gt(new BN(0));
   }
@@ -148,10 +144,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
     console.log("mint", this.supplyTokenMint().toString());
-    let apy =
-      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
-      poolTotalSupplyValue.toNumber() /
-      10 ** 7;
+    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
 
@@ -342,7 +335,6 @@ export async function newMinerAccountPub(wallet: PublicKey) {
   return newMiner;
 }
 
-// TODO: Add Obligation section (On-going)
 interface ObligationCollateral {
   index: BN;
   reserveId: PublicKey;
@@ -362,8 +354,6 @@ export interface ObligationInfo {
   lastUpdate: LastUpdate;
   lendingMarket: PublicKey;
   owner: PublicKey;
-  // deposits: ObligationCollateral[];
-  // borrows: ObligationLiquidity[];
   depositedValue: BN; // decimals
   borrowedValue: BN; // decimals
   allowedBorrowValue: BN; // decimals
@@ -371,25 +361,11 @@ export interface ObligationInfo {
   unclaimedMine: BN;
 }
 
-// export async function getObligationPublicKey(wallet: PublicKey, lendingMarket = LARIX_MARKET_ID) {
-//   const seed = lendingMarket.toString().slice(0, 32);
-//   const obligationAddress = await PublicKey.createWithSeed(wallet, seed, LARIX_PROGRAM_ID);
-//   return obligationAddress;
-// }
-
 export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
   const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], LARIX_PROGRAM_ID))[0];
 
   return authority;
 }
-
-// export async function obligationCreated(connection: Connection, wallet: PublicKey) {
-//   let obligationInfo = await connection.getAccountInfo(await getObligationPublicKey(wallet));
-//   if (obligationInfo?.owner.equals(LARIX_PROGRAM_ID)) {
-//     return true;
-//   }
-//   return false;
-// }
 
 export class ObligationInfoWrapper {
   constructor(
@@ -457,6 +433,7 @@ export function parseObligationData(data: any) {
     dataFlat,
   } = decodedInfo;
 
+  // TODO: TBC in Larix SDK
   // if (lastUpdate.slot.isZero()) {
   //   throw new Error("lastUpdate.slot.isZero()");
   // }
