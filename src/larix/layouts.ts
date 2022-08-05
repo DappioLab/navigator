@@ -70,7 +70,6 @@ export const MINER_LAYOUT = struct([
 
 export const MINER_INDEX_LAYOUT = struct([publicKey("reserveId"), u64("unCollLTokenAmount"), u128("index")]);
 
-// TODO add obligation (On-going)
 export const OBLIGATION_LAYOUT = struct([
   u8("version"),
   struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate"),
@@ -80,7 +79,6 @@ export const OBLIGATION_LAYOUT = struct([
   u128("borrowedValue"),
   u128("allowedBorrowValue"),
   u128("unhealthyBorrowValue"),
-  // blob(64, "_padding"),
   u8("depositsLen"),
   u8("borrowsLen"),
   u128("unclaimedMine"),
@@ -92,7 +90,6 @@ export const COLLATERAL_LAYOUT = struct([
   u64("depositedAmount"),
   u128("marketValue"),
   u128("index"),
-  // blob(32, "_padding"),
 ]);
 
 export const LOAN_LAYOUT = struct([
@@ -101,5 +98,4 @@ export const LOAN_LAYOUT = struct([
   u128("borrowedAmount"),
   u128("marketValue"),
   u128("index"),
-  // blob(32, "_padding"),
 ]);
