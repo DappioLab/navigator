@@ -354,10 +354,10 @@ export interface ObligationInfo {
   lastUpdate: LastUpdate;
   lendingMarket: PublicKey;
   owner: PublicKey;
-  depositedValue: BN; // decimals
-  borrowedValue: BN; // decimals
-  allowedBorrowValue: BN; // decimals
-  unhealthyBorrowValue: BN; // decimals
+  depositedValue: BN;
+  borrowedValue: BN;
+  allowedBorrowValue: BN;
+  unhealthyBorrowValue: BN;
   unclaimedMine: BN;
 }
 
