@@ -69,6 +69,13 @@ interface ReserveFees {
   hostFeePercentage: BN;
 }
 
+// TODO: Refactor partner reward
+interface IPartnerReward {
+  rewardToken: IServicesTokenInfo;
+  rate: number;
+  side: string;
+}
+
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: LastUpdate;
@@ -98,8 +105,9 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  partnerRewardData = {} as { token: IServicesTokenInfo; rate: number };
-
+  // TODO: will be empty partnerReward when init class directly (can only be got from getAllReserveWrapper). Needs refactor.
+  // CONCERN: Increasing Solend API querying (internet traffic)
+  partnerRewardData = {} as IPartnerReward;
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -186,7 +194,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return UtilizationRatio * borrowAPY;
   }
 
-  getSupplyPartnerRewardData() {
+  getPartnerRewardData() {
     return this.partnerRewardData;
   }
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
@@ -223,38 +231,37 @@ export async function getAllReserveWrappers(connection: Connection) {
   for (let reservesMeta of allReserves) {
     const newInfo = new ReserveInfoWrapper(reservesMeta);
 
-    let supplyTokenRewardData = allPartnersRewardData.filter(
-      (item) =>
-        item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
-        newInfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
-        item.side === "supply"
-    );
+    let partnerRewards =
+      allPartnersRewardData.filter(
+        (item) =>
+          item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
+          newInfo.reserveInfo.reserveId.toBase58() === item.reserveID
+      ) ?? null;
 
     let price = tokenList.find((t) => t.mint === newInfo.supplyTokenMint().toBase58())?.price;
-    let partnerRewardRate = 0;
-    let partnerRewardToken: any = {};
-    let partnerRewardData: any = null;
+    let partnerRewardData = {} as IPartnerReward;
+
     const poolTotalSupply = Number(newInfo.supplyAmount()) / 10 ** Number(newInfo.supplyTokenDecimal());
     const poolTotalSupplyValue = poolTotalSupply * price!;
 
-    if (supplyTokenRewardData.length !== 0) {
-      supplyTokenRewardData.map((supplyReward) => {
-        let rewardRate = supplyReward.rewardRates[supplyReward.rewardRates.length - 1].rewardRate;
-        partnerRewardToken = tokenList.find((token: any) => token.mint === supplyReward.rewardMint)!;
-        if (partnerRewardToken) {
-          let rewardTokenPrice = partnerRewardToken?.price!;
-          partnerRewardRate = Number(
-            (((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)
-          );
+    if (partnerRewards.length > 0) {
+      partnerRewardData = partnerRewards
+        .map((r) => {
+          const rewardRate = r.rewardRates.slice(-1)[0].rewardRate;
+          const rewardToken = tokenList.find((t) => t.mint === r.rewardMint);
+          if (rewardToken) {
+            const rewardTokenPrice = rewardToken.price;
 
-          partnerRewardData = {
-            rewardToken: partnerRewardToken,
-            rate: partnerRewardRate,
-          };
-        }
-      });
+            return {
+              rewardToken,
+              rate: Number((((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)),
+              side: r.side,
+            } as IPartnerReward;
+          }
+        })
+        // TODO: Might need to deal with multi partner rewards in the future
+        .find((p) => p) as IPartnerReward;
     }
-
     newInfo.partnerRewardData = partnerRewardData;
     reserveInfoWrappers.push(newInfo);
   }
