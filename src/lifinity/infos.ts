@@ -8,11 +8,11 @@ import {
 import BN from "bn.js";
 import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
 import { MintLayout } from "@solana/spl-token-v2";
-import { LIFINITY_AMM_LAYOUT } from "./layouts";
-import { LIFINITY_PROGRAM_ID } from "./ids";
+import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
+import { LIFINITY_ALL_AMM_ID, LIFINITY_PROGRAM_ID } from "./ids";
 
 export interface PoolInfo extends IPoolInfo {
-  index: BN;
+  index: BN; // discriminator
   initializerKey: PublicKey;
   initializerDepositTokenAccount: PublicKey;
   initializerReceiveTokenAccount: PublicKey;
@@ -27,7 +27,39 @@ export interface PoolInfo extends IPoolInfo {
   tokenProgramId: PublicKey;
   tokenAAccount: PublicKey;
   tokenBAccount: PublicKey;
-  // poolMint: PublicKey;
+  // poolMint: PublicKey; // lpMint
+  // tokenAMint: PublicKey;
+  // tokenBMint: PublicKey;
+  poolFeeAccount: PublicKey;
+  pythAccount: PublicKey;
+  pythPcAccount: PublicKey;
+  configAccount: ConfigAccount;
+  // ammTemp1: PublicKey;
+  // ammTemp2: PublicKey;
+  // ammTemp3: PublicKey;
+  tradeFee: BN;
+  hostFee: BN;
+  curveType: BN;
+  curveParameters: BN;
+}
+
+interface PoolLayout extends IPoolInfo {
+  index: BN; // discriminator
+  initializerKey: PublicKey;
+  initializerDepositTokenAccount: PublicKey;
+  initializerReceiveTokenAccount: PublicKey;
+  initializerAmount: BN;
+  takerAmount: BN;
+  initialized: BN;
+  bumpSeed: BN;
+  freezeTrade: BN;
+  freezeDeposit: BN;
+  freezeWithdraw: BN;
+  baseDecimals: BN;
+  tokenProgramId: PublicKey;
+  tokenAAccount: PublicKey;
+  tokenBAccount: PublicKey;
+  // poolMint: PublicKey; // lpMint
   // tokenAMint: PublicKey;
   // tokenBMint: PublicKey;
   poolFeeAccount: PublicKey;
@@ -43,29 +75,78 @@ export interface PoolInfo extends IPoolInfo {
   curveParameters: BN;
 }
 
+interface ConfigAccount {
+  key: PublicKey;
+  index: BN; // discriminator
+  concentrationRatio: BN;
+  lastPrice: BN;
+  adjustRatio: BN;
+  balanceRatio: BN;
+  lastBalancedPrice: BN;
+  configDenominator: BN;
+  pythConfidenceLimit: BN;
+  pythSlotLimit: BN;
+  volumeX: BN;
+  volumeY: BN;
+  volumeXinY: BN;
+  coefficientUp: BN;
+  coefficientDown: BN;
+  oracleStatus: BN;
+  depositCap: BN;
+  configTemp2: BN;
+}
+
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
+
+  getTargetLiquidity() {
+    return this.poolInfo.configAccount.depositCap;
+  }
 }
 
 export async function getAllPool(connection: Connection): Promise<PoolInfo[]> {
   const sizeFilter: DataSizeFilter = {
-    dataSize: 615,
+    dataSize: 136,
   };
   const filters = [sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allLifinityAccount = await connection.getProgramAccounts(
+  const allLifinityConfigAccount = await connection.getProgramAccounts(
     LIFINITY_PROGRAM_ID,
     config
   );
+  const allLifinityAccount = await connection.getMultipleAccountsInfo(
+    LIFINITY_ALL_AMM_ID
+  );
 
+  let rawPoolInfoArray: PoolLayout[] = [];
+  let configAccountArray: PublicKey[] = [];
   let poolInfoArray: PoolInfo[] = [];
-  for (let lifinityAccount of allLifinityAccount) {
-    const poolInfo = await parsePoolInfoData(
-      lifinityAccount.account.data,
-      lifinityAccount.pubkey
+
+  for (let index in allLifinityAccount) {
+    const lifinityAccount = allLifinityAccount[index];
+    const poolInfo = parsePoolInfoData(
+      lifinityAccount?.data,
+      LIFINITY_ALL_AMM_ID[index]
     );
-    poolInfoArray.push(poolInfo.poolInfo);
+    rawPoolInfoArray.push(poolInfo);
+    configAccountArray.push(poolInfo.configAccount);
   }
+
+  const allConfigAccountInfo = await connection.getMultipleAccountsInfo(
+    configAccountArray
+  );
+
+  rawPoolInfoArray.forEach((rawPoolInfo, index) => {
+    const configAccount = parseConfigAccountData(
+      allConfigAccountInfo[index]?.data,
+      configAccountArray[index]
+    );
+    const poolInfo: PoolInfo = {
+      ...rawPoolInfo,
+      configAccount: configAccount,
+    };
+    poolInfoArray.push(poolInfo);
+  });
 
   return poolInfoArray;
 }
@@ -76,19 +157,25 @@ export async function getPool(
 ): Promise<PoolInfo> {
   const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
 
-  let poolInfoWapper = await parsePoolInfoData(
-    lifinityAccount?.data,
-    poolInfoKey
+  const rawPoolInfo = parsePoolInfoData(lifinityAccount?.data, poolInfoKey);
+  const configAccount = await connection.getAccountInfo(
+    rawPoolInfo.configAccount
   );
-  return poolInfoWapper.poolInfo;
+  const configAccountInfo = parseConfigAccountData(
+    configAccount?.data,
+    rawPoolInfo.configAccount
+  );
+  const poolInfo: PoolInfo = {
+    ...rawPoolInfo,
+    configAccount: configAccountInfo,
+  };
+
+  return poolInfo;
 }
 
 const DIGIT = new BN(10000000000);
 
-export async function parsePoolInfoData(
-  data: any,
-  pubkey: PublicKey
-): Promise<PoolInfoWrapper> {
+export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolLayout {
   const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
   let {
     index,
@@ -131,7 +218,7 @@ export async function parsePoolInfoData(
     ? hostFeeDenominator
     : hostFeeNumerator.mul(DIGIT).div(hostFeeDenominator);
 
-  let poolInfo = new PoolInfoWrapper({
+  let poolInfo: PoolLayout = {
     poolId: pubkey,
     index: new BN(index),
     initializerKey,
@@ -162,7 +249,56 @@ export async function parsePoolInfoData(
     hostFee: new BN(hostFee),
     curveType: new BN(curveType),
     curveParameters: new BN(curveParameters),
-  });
+  };
 
   return poolInfo;
+}
+
+export function parseConfigAccountData(
+  data: any,
+  pubkey: PublicKey
+): ConfigAccount {
+  const decodedData = CONFIG_LAYOUT.decode(data);
+  let {
+    index,
+    concentrationRatio,
+    lastPrice,
+    adjustRatio,
+    balanceRatio,
+    lastBalancedPrice,
+    configDenominator,
+    pythConfidenceLimit,
+    pythSlotLimit,
+    volumeX,
+    volumeY,
+    volumeXinY,
+    coefficientUp,
+    coefficientDown,
+    oracleStatus,
+    depositCap,
+    configTemp2,
+  } = decodedData;
+
+  const configAccount: ConfigAccount = {
+    key: pubkey,
+    index: new BN(index),
+    concentrationRatio: new BN(concentrationRatio),
+    lastPrice: new BN(lastPrice),
+    adjustRatio: new BN(adjustRatio),
+    balanceRatio: new BN(balanceRatio),
+    lastBalancedPrice: new BN(lastBalancedPrice),
+    configDenominator: new BN(configDenominator),
+    pythConfidenceLimit: new BN(pythConfidenceLimit),
+    pythSlotLimit: new BN(pythSlotLimit),
+    volumeX: new BN(volumeX),
+    volumeY: new BN(volumeY),
+    volumeXinY: new BN(volumeXinY),
+    coefficientUp: new BN(coefficientUp),
+    coefficientDown: new BN(coefficientDown),
+    oracleStatus: new BN(oracleStatus),
+    depositCap: new BN(depositCap),
+    configTemp2: new BN(configTemp2),
+  };
+
+  return configAccount;
 }

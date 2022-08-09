@@ -63,6 +63,6 @@ export const CONFIG_LAYOUT = struct([
   u64("coefficientUp"),
   u64("coefficientDown"),
   u64("oracleStatus"),
-  u64("configTemp1"),
+  u64("depositCap"),
   u64("configTemp2"),
 ]);
