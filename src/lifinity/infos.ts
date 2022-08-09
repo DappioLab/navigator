@@ -104,7 +104,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 }
 
-export async function getAllPool(connection: Connection): Promise<PoolInfo[]> {
+export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const sizeFilter: DataSizeFilter = {
     dataSize: 136,
   };
