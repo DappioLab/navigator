@@ -279,7 +279,7 @@ export async function parseFarmInfoData(
     baseTokenMint: baseTokenMint,
     baseTokenVault: baseTokenVault,
     rewardTokenVault: rewardTokenVault,
-    authority:authority[0],
+    authority: authority[0],
     farmTokenMint: farmTokenMint,
     emissionsPerSecondNumerator: emissionsPerSecondNumerator,
     emissionsPerSecondDenominator: emissionsPerSecondDenominator,
@@ -346,12 +346,12 @@ export async function getPool(poolKey: PublicKey, connection: Connection) {
   return pool;
 }
 
-export async function getSwapAuthority(poolKey: PublicKey) {
-  let swapAuthority = await PublicKey.findProgramAddress(
+export async function getPoolAuthority(poolKey: PublicKey) {
+  let poolAuthority = await PublicKey.findProgramAddress(
     [poolKey.toBuffer()],
     ORCA_SWAP_PROGRAM_ID,
   );
-  return swapAuthority;
+  return poolAuthority;
 }
 
 export async function checkFarmer(
@@ -361,7 +361,7 @@ export async function checkFarmer(
 ) {
   let farmer = await getFarmerKey(farmId, wallet);
   let farmerAccount = await connection.getAccountInfo(farmer[0]);
-  if (farmerAccount?.data.length as number > 0) {
+  if ((farmerAccount?.data.length as number) > 0) {
     return true;
   }
   return false;
@@ -375,12 +375,12 @@ export async function getFarmerKey(farmId: PublicKey, wallet: PublicKey) {
   return farmerKey;
 }
 
-export async function getFarm(farmId:PublicKey, connection: Connection) {
+export async function getFarm(farmId: PublicKey, connection: Connection) {
   let data = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
   let farm = await parseFarmInfoData(data.data, farmId);
   return farm;
 }
-export async function getFarmer(farmerID: PublicKey, connection:Connection) {
+export async function getFarmer(farmerID: PublicKey, connection: Connection) {
   let data = (await connection.getAccountInfo(farmerID)) as AccountInfo<Buffer>;
   let farmer = await parseFarmerInfoData(data.data, farmerID);
   return farmer;
