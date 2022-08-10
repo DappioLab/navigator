@@ -95,7 +95,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
     );
     poolInfoArray[index] = {
       ...poolInfo,
-      poolConfig: poolConfig,
+      poolConfig,
     };
   });
 
@@ -109,15 +109,17 @@ export async function getPool(
   const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
 
   let poolInfo = parsePoolInfo(lifinityAccount?.data, poolInfoKey);
-  const poolConfig = await connection.getAccountInfo(poolInfo.poolConfig.key);
-  const poolConfigInfo = parsePoolConfig(
-    poolConfig?.data,
+  const poolConfigInfo = await connection.getAccountInfo(
+    poolInfo.poolConfig.key
+  );
+  const poolConfig = parsePoolConfig(
+    poolConfigInfo?.data,
     poolInfo.poolConfig.key
   );
 
   poolInfo = {
     ...poolInfo,
-    poolConfig: poolConfigInfo,
+    poolConfig,
   };
 
   return poolInfo;
