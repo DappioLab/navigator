@@ -13,6 +13,7 @@
     "coverCall": "ts-node ./coverCall.ts",
     "putSell": "ts-node ./putSell.ts",
     "larixTest": "ts-node ./larixTest.ts",
+    "orcaTest": "ts-node ./test/orca.ts",
     "start": "ts-node ./index.ts"
   },
   "keywords": [],
