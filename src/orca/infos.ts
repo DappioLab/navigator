@@ -170,7 +170,7 @@ export async function parsePoolInfoData(
     mintB,
     feeAccount,
   } = decodedData;
-  let poolInfo = new PoolInfoWrapper({
+  let poolInfo: PoolInfo = {
     poolId: pubkey,
     version: version,
     isInitialized: new BN(isInitialized),
@@ -185,8 +185,8 @@ export async function parsePoolInfoData(
     lpSupply: new BN(0),
     tokenSupplyA: new BN(0),
     tokenSupplyB: new BN(0),
-  });
-  return poolInfo.poolInfo;
+  };
+  return poolInfo;
 }
 
 export async function getAllFarmers(
