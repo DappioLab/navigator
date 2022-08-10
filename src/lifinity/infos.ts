@@ -76,7 +76,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
 
   for (let index in allLifinityAccount) {
     const lifinityAccount = allLifinityAccount[index];
-    const poolInfo = parsePoolInfoData(
+    const poolInfo = parsePoolInfo(
       lifinityAccount?.data,
       LIFINITY_ALL_AMM_ID[index]
     );
@@ -89,7 +89,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   );
 
   poolInfoArray.forEach((poolInfo, index) => {
-    const configAccount = parseConfigAccountData(
+    const configAccount = parsePoolConfig(
       allConfigAccountInfo[index]?.data,
       configAccountArray[index]
     );
@@ -108,11 +108,11 @@ export async function getPool(
 ): Promise<PoolInfo> {
   const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
 
-  let poolInfo = parsePoolInfoData(lifinityAccount?.data, poolInfoKey);
+  let poolInfo = parsePoolInfo(lifinityAccount?.data, poolInfoKey);
   const configAccount = await connection.getAccountInfo(
     poolInfo.configAccount.key
   );
-  const configAccountInfo = parseConfigAccountData(
+  const configAccountInfo = parsePoolConfig(
     configAccount?.data,
     poolInfo.configAccount.key
   );
@@ -127,7 +127,7 @@ export async function getPool(
 
 const DIGIT = new BN(10000000000);
 
-export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolInfo {
+export function parsePoolInfo(data: any, pubkey: PublicKey): PoolInfo {
   const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
   let {
     index,
@@ -200,10 +200,7 @@ export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolInfo {
   return poolInfo;
 }
 
-export function parseConfigAccountData(
-  data: any,
-  pubkey: PublicKey
-): PoolConfig {
+export function parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
   const decodedData = CONFIG_LAYOUT.decode(data);
   let {
     index,
