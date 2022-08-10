@@ -30,7 +30,7 @@ export interface PoolInfo extends IPoolInfo {
   poolFeeAccount: PublicKey;
   pythAccount: PublicKey;
   pythPcAccount: PublicKey;
-  configAccount: PoolConfig;
+  poolConfig: PoolConfig;
   tradeFee: BN;
   hostFee: BN;
   curveType: BN;
@@ -62,7 +62,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
 
   getTargetLiquidity() {
-    return this.poolInfo.configAccount.depositCap;
+    return this.poolInfo.poolConfig.depositCap;
   }
 }
 
@@ -71,7 +71,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
     LIFINITY_ALL_AMM_ID
   );
 
-  let configAccountArray: PublicKey[] = [];
+  let poolConfigArray: PublicKey[] = [];
   let poolInfoArray: PoolInfo[] = [];
 
   for (let index in allLifinityAccount) {
@@ -81,21 +81,21 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
       LIFINITY_ALL_AMM_ID[index]
     );
     poolInfoArray.push(poolInfo);
-    configAccountArray.push(poolInfo.configAccount.key);
+    poolConfigArray.push(poolInfo.poolConfig.key);
   }
 
-  const allConfigAccountInfo = await connection.getMultipleAccountsInfo(
-    configAccountArray
+  const allpoolConfigInfo = await connection.getMultipleAccountsInfo(
+    poolConfigArray
   );
 
   poolInfoArray.forEach((poolInfo, index) => {
-    const configAccount = parsePoolConfig(
-      allConfigAccountInfo[index]?.data,
-      configAccountArray[index]
+    const poolConfig = parsePoolConfig(
+      allpoolConfigInfo[index]?.data,
+      poolConfigArray[index]
     );
     poolInfoArray[index] = {
       ...poolInfo,
-      configAccount: configAccount,
+      poolConfig: poolConfig,
     };
   });
 
@@ -109,17 +109,15 @@ export async function getPool(
   const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
 
   let poolInfo = parsePoolInfo(lifinityAccount?.data, poolInfoKey);
-  const configAccount = await connection.getAccountInfo(
-    poolInfo.configAccount.key
-  );
-  const configAccountInfo = parsePoolConfig(
-    configAccount?.data,
-    poolInfo.configAccount.key
+  const poolConfig = await connection.getAccountInfo(poolInfo.poolConfig.key);
+  const poolConfigInfo = parsePoolConfig(
+    poolConfig?.data,
+    poolInfo.poolConfig.key
   );
 
   poolInfo = {
     ...poolInfo,
-    configAccount: configAccountInfo,
+    poolConfig: poolConfigInfo,
   };
 
   return poolInfo;
@@ -190,7 +188,7 @@ export function parsePoolInfo(data: any, pubkey: PublicKey): PoolInfo {
     poolFeeAccount,
     pythAccount,
     pythPcAccount,
-    configAccount: { ...defaultPoolConfig, key: configAccount },
+    poolConfig: { ...defaultPoolConfig, key: configAccount },
     tradeFee: new BN(tradeFee),
     hostFee: new BN(hostFee),
     curveType: new BN(curveType),
@@ -222,7 +220,7 @@ export function parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
     configTemp2,
   } = decodedData;
 
-  const configAccount: PoolConfig = {
+  const poolConfig: PoolConfig = {
     key: pubkey,
     index: new BN(index),
     concentrationRatio: new BN(concentrationRatio),
@@ -243,7 +241,7 @@ export function parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
     configTemp2: new BN(configTemp2),
   };
 
-  return configAccount;
+  return poolConfig;
 }
 
 export const defaultPoolConfig: PoolConfig = {
