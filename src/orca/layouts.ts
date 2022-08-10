@@ -10,7 +10,7 @@ import {
 } from "@project-serum/borsh";
 // @ts-ignore
 import { blob } from "buffer-layout";
-export const SWAP_LAYOUT = struct([
+export const POOL_LAYOUT = struct([
   u8("version"),
   u8("isInitialized"),
   u8("nonce"),

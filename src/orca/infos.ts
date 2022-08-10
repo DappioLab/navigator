@@ -4,6 +4,7 @@ import {
   GetProgramAccountsConfig,
   DataSizeFilter,
   PublicKey,
+  AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
@@ -16,7 +17,7 @@ import {
   ZERO,
 } from "../utils";
 import { ORCA_FARM_PROGRAM_ID, ORCA_SWAP_PROGRAM_ID } from "./ids";
-import { FARMER_LAYOUT, FARM_LAYOUT, SWAP_LAYOUT } from "./layouts";
+import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { MintLayout } from "@solana/spl-token-v2";
 import { utils } from "..";
 export interface PoolInfo extends IPoolInfo {
@@ -71,7 +72,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
     config,
   );
   for (const accountInfo of allOrcaPool) {
-    let pooldata = await parseSwapInfoData(
+    let pooldata = await parsePoolInfoData(
       accountInfo.account.data,
       accountInfo.pubkey,
     );
@@ -107,14 +108,21 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
       });
     }
   }
-  for (let i = 0; i < allPools.length; i++) {
-    allPools[i].tokenSupplyA = accounts[i].tokenAccountA;
-    allPools[i].tokenSupplyB = accounts[i].tokenAccountB;
-    allPools[i].lpSupply = accounts[i].LPsupply;
-    if (accounts[i].LPsupply.cmpn(0)) {
-      newAllPools.push(allPools[i]);
+
+  allPools.map((item, index) => {
+    const { tokenAccountA, tokenAccountB, LPsupply } = accounts[index];
+    let newItem = item;
+    newItem = {
+      ...newItem,
+      tokenSupplyA: tokenAccountA,
+      tokenSupplyB: tokenAccountB,
+      lpSupply: LPsupply,
+    };
+    if (newItem.lpSupply.cmpn(0)) {
+      newAllPools.push(newItem);
     }
-  }
+  });
+
   return newAllPools;
 }
 
@@ -144,11 +152,11 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return new BN(0);
   }
 }
-export async function parseSwapInfoData(
+export async function parsePoolInfoData(
   data: any,
   pubkey: PublicKey,
 ): Promise<PoolInfo> {
-  const decodedData = SWAP_LAYOUT.decode(data);
+  const decodedData = POOL_LAYOUT.decode(data);
   let {
     version,
     isInitialized,
@@ -201,7 +209,7 @@ export async function getAllFarmers(
     ORCA_FARM_PROGRAM_ID,
     config,
   );
-  for(const accountInfo of allOrcaPool) {
+  for (const accountInfo of allOrcaPool) {
     let farmerInfo = await parseFarmerInfoData(
       accountInfo.account.data,
       accountInfo.pubkey,
@@ -306,4 +314,36 @@ export async function parseFarmerInfoData(
     ),
   };
   return farmerInfo;
+}
+
+export async function getPool(poolKey: PublicKey, connection: Connection) {
+  let data = (await connection.getAccountInfo(poolKey)) as AccountInfo<Buffer>;
+  let pool = await parsePoolInfoData(data.data, poolKey);
+  let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
+  let balanceAccounts = (await connection.getMultipleAccountsInfo(
+    accounts,
+  )) as AccountInfo<Buffer>[];
+  let tokenAccountABalance = utils.parseTokenAccount(
+    balanceAccounts[0].data,
+    accounts[0],
+  ).amount;
+  let tokenAccountBBalance = utils.parseTokenAccount(
+    balanceAccounts[1].data,
+    accounts[1],
+  ).amount;
+  let lpMintBalance = new BN(
+    Number(MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply),
+  );
+  pool.tokenSupplyA = tokenAccountABalance;
+  pool.tokenSupplyB = tokenAccountBBalance;
+  pool.lpSupply = lpMintBalance;
+  return pool;
+}
+
+export async function getSwapAuthority(poolKey: PublicKey) {
+  let swapAuthority = await PublicKey.findProgramAddress(
+    [poolKey.toBuffer()],
+    ORCA_SWAP_PROGRAM_ID,
+  );
+  return swapAuthority;
 }
