@@ -351,7 +351,7 @@ export async function getPoolAuthority(poolKey: PublicKey) {
     [poolKey.toBuffer()],
     ORCA_SWAP_PROGRAM_ID,
   );
-  return poolAuthority;
+  return poolAuthority[0];
 }
 
 export async function checkFarmer(
