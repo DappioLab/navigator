@@ -16,7 +16,7 @@ import {
   N_COINS,
   ZERO,
 } from "../utils";
-import { ORCA_FARM_PROGRAM_ID, ORCA_SWAP_PROGRAM_ID } from "./ids";
+import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { utils } from "..";
@@ -69,7 +69,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const filters = [sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
   const allOrcaPool = await connection.getProgramAccounts(
-    ORCA_SWAP_PROGRAM_ID,
+    ORCA_POOL_PROGRAM_ID,
     config,
   );
   for (const accountInfo of allOrcaPool) {
@@ -349,7 +349,7 @@ export async function getPool(poolKey: PublicKey, connection: Connection) {
 export async function getPoolAuthority(poolKey: PublicKey) {
   let poolAuthority = await PublicKey.findProgramAddress(
     [poolKey.toBuffer()],
-    ORCA_SWAP_PROGRAM_ID,
+    ORCA_POOL_PROGRAM_ID,
   );
   return poolAuthority[0];
 }
