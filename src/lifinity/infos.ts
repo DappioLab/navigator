@@ -27,55 +27,17 @@ export interface PoolInfo extends IPoolInfo {
   tokenProgramId: PublicKey;
   tokenAAccount: PublicKey;
   tokenBAccount: PublicKey;
-  // poolMint: PublicKey; // lpMint
-  // tokenAMint: PublicKey;
-  // tokenBMint: PublicKey;
   poolFeeAccount: PublicKey;
   pythAccount: PublicKey;
   pythPcAccount: PublicKey;
-  configAccount: ConfigAccount;
-  // ammTemp1: PublicKey;
-  // ammTemp2: PublicKey;
-  // ammTemp3: PublicKey;
+  configAccount: PoolConfig;
   tradeFee: BN;
   hostFee: BN;
   curveType: BN;
   curveParameters: BN;
 }
 
-interface PoolLayout extends IPoolInfo {
-  index: BN; // discriminator
-  initializerKey: PublicKey;
-  initializerDepositTokenAccount: PublicKey;
-  initializerReceiveTokenAccount: PublicKey;
-  initializerAmount: BN;
-  takerAmount: BN;
-  initialized: BN;
-  bumpSeed: BN;
-  freezeTrade: BN;
-  freezeDeposit: BN;
-  freezeWithdraw: BN;
-  baseDecimals: BN;
-  tokenProgramId: PublicKey;
-  tokenAAccount: PublicKey;
-  tokenBAccount: PublicKey;
-  // poolMint: PublicKey; // lpMint
-  // tokenAMint: PublicKey;
-  // tokenBMint: PublicKey;
-  poolFeeAccount: PublicKey;
-  pythAccount: PublicKey;
-  pythPcAccount: PublicKey;
-  configAccount: PublicKey;
-  // ammTemp1: PublicKey;
-  // ammTemp2: PublicKey;
-  // ammTemp3: PublicKey;
-  tradeFee: BN;
-  hostFee: BN;
-  curveType: BN;
-  curveParameters: BN;
-}
-
-interface ConfigAccount {
+interface PoolConfig {
   key: PublicKey;
   index: BN; // discriminator
   concentrationRatio: BN;
@@ -105,20 +67,10 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 }
 
 export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 136,
-  };
-  const filters = [sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allLifinityConfigAccount = await connection.getProgramAccounts(
-    LIFINITY_PROGRAM_ID,
-    config
-  );
   const allLifinityAccount = await connection.getMultipleAccountsInfo(
     LIFINITY_ALL_AMM_ID
   );
 
-  let rawPoolInfoArray: PoolLayout[] = [];
   let configAccountArray: PublicKey[] = [];
   let poolInfoArray: PoolInfo[] = [];
 
@@ -128,24 +80,23 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
       lifinityAccount?.data,
       LIFINITY_ALL_AMM_ID[index]
     );
-    rawPoolInfoArray.push(poolInfo);
-    configAccountArray.push(poolInfo.configAccount);
+    poolInfoArray.push(poolInfo);
+    configAccountArray.push(poolInfo.configAccount.key);
   }
 
   const allConfigAccountInfo = await connection.getMultipleAccountsInfo(
     configAccountArray
   );
 
-  rawPoolInfoArray.forEach((rawPoolInfo, index) => {
+  poolInfoArray.forEach((poolInfo, index) => {
     const configAccount = parseConfigAccountData(
       allConfigAccountInfo[index]?.data,
       configAccountArray[index]
     );
-    const poolInfo: PoolInfo = {
-      ...rawPoolInfo,
+    poolInfoArray[index] = {
+      ...poolInfo,
       configAccount: configAccount,
     };
-    poolInfoArray.push(poolInfo);
   });
 
   return poolInfoArray;
@@ -157,16 +108,17 @@ export async function getPool(
 ): Promise<PoolInfo> {
   const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
 
-  const rawPoolInfo = parsePoolInfoData(lifinityAccount?.data, poolInfoKey);
+  let poolInfo = parsePoolInfoData(lifinityAccount?.data, poolInfoKey);
   const configAccount = await connection.getAccountInfo(
-    rawPoolInfo.configAccount
+    poolInfo.configAccount.key
   );
   const configAccountInfo = parseConfigAccountData(
     configAccount?.data,
-    rawPoolInfo.configAccount
+    poolInfo.configAccount.key
   );
-  const poolInfo: PoolInfo = {
-    ...rawPoolInfo,
+
+  poolInfo = {
+    ...poolInfo,
     configAccount: configAccountInfo,
   };
 
@@ -175,7 +127,7 @@ export async function getPool(
 
 const DIGIT = new BN(10000000000);
 
-export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolLayout {
+export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolInfo {
   const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
   let {
     index,
@@ -200,9 +152,6 @@ export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolLayout {
     pythAccount,
     pythPcAccount,
     configAccount,
-    // ammTemp1,
-    // ammTemp2,
-    // ammTemp3,
     tradeFeeNumerator,
     tradeFeeDenominator,
     hostFeeNumerator,
@@ -218,7 +167,7 @@ export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolLayout {
     ? hostFeeDenominator
     : hostFeeNumerator.mul(DIGIT).div(hostFeeDenominator);
 
-  let poolInfo: PoolLayout = {
+  let poolInfo: PoolInfo = {
     poolId: pubkey,
     index: new BN(index),
     initializerKey,
@@ -241,10 +190,7 @@ export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolLayout {
     poolFeeAccount,
     pythAccount,
     pythPcAccount,
-    configAccount,
-    // ammTemp1,
-    // ammTemp2,
-    // ammTemp3,
+    configAccount: { ...defaultPoolConfig, key: configAccount },
     tradeFee: new BN(tradeFee),
     hostFee: new BN(hostFee),
     curveType: new BN(curveType),
@@ -257,7 +203,7 @@ export function parsePoolInfoData(data: any, pubkey: PublicKey): PoolLayout {
 export function parseConfigAccountData(
   data: any,
   pubkey: PublicKey
-): ConfigAccount {
+): PoolConfig {
   const decodedData = CONFIG_LAYOUT.decode(data);
   let {
     index,
@@ -279,7 +225,7 @@ export function parseConfigAccountData(
     configTemp2,
   } = decodedData;
 
-  const configAccount: ConfigAccount = {
+  const configAccount: PoolConfig = {
     key: pubkey,
     index: new BN(index),
     concentrationRatio: new BN(concentrationRatio),
@@ -302,3 +248,24 @@ export function parseConfigAccountData(
 
   return configAccount;
 }
+
+export const defaultPoolConfig: PoolConfig = {
+  key: new PublicKey(0),
+  index: new BN(0),
+  concentrationRatio: new BN(0),
+  lastPrice: new BN(0),
+  adjustRatio: new BN(0),
+  balanceRatio: new BN(0),
+  lastBalancedPrice: new BN(0),
+  configDenominator: new BN(0),
+  pythConfidenceLimit: new BN(0),
+  pythSlotLimit: new BN(0),
+  volumeX: new BN(0),
+  volumeY: new BN(0),
+  volumeXinY: new BN(0),
+  coefficientUp: new BN(0),
+  coefficientDown: new BN(0),
+  oracleStatus: new BN(0),
+  depositCap: new BN(0),
+  configTemp2: new BN(0),
+};
