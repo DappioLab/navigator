@@ -18,7 +18,7 @@ import {
 } from "../utils";
 import { ORCA_FARM_PROGRAM_ID, ORCA_SWAP_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
-import { MintLayout } from "@solana/spl-token-v2";
+import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { utils } from "..";
 export interface PoolInfo extends IPoolInfo {
   version: BN;
@@ -43,6 +43,7 @@ export interface FarmInfo extends IFarmInfo {
   baseTokenVault: PublicKey;
   rewardTokenVault: PublicKey;
   farmTokenMint: PublicKey;
+  authority: PublicKey;
   emissionsPerSecondNumerator: BN;
   emissionsPerSecondDenominator: BN;
   lastUpdatedTimestamp: BN;
@@ -247,6 +248,10 @@ export async function parseFarmInfoData(
   pubkey: PublicKey,
 ): Promise<FarmInfo> {
   const decodedData = FARM_LAYOUT.decode(data);
+  let authority = await PublicKey.findProgramAddress(
+    [pubkey.toBuffer()],
+    ORCA_FARM_PROGRAM_ID,
+  );
   let {
     isInitialized,
     accountType,
@@ -274,6 +279,7 @@ export async function parseFarmInfoData(
     baseTokenMint: baseTokenMint,
     baseTokenVault: baseTokenVault,
     rewardTokenVault: rewardTokenVault,
+    authority:authority[0],
     farmTokenMint: farmTokenMint,
     emissionsPerSecondNumerator: emissionsPerSecondNumerator,
     emissionsPerSecondDenominator: emissionsPerSecondDenominator,
@@ -346,4 +352,36 @@ export async function getSwapAuthority(poolKey: PublicKey) {
     ORCA_SWAP_PROGRAM_ID,
   );
   return swapAuthority;
+}
+
+export async function checkFarmer(
+  farmId: PublicKey,
+  wallet: PublicKey,
+  connection: Connection,
+) {
+  let farmer = await getFarmerKey(farmId, wallet);
+  let farmerAccount = await connection.getAccountInfo(farmer[0]);
+  if (farmerAccount?.data.length as number > 0) {
+    return true;
+  }
+  return false;
+}
+
+export async function getFarmerKey(farmId: PublicKey, wallet: PublicKey) {
+  let farmerKey = await PublicKey.findProgramAddress(
+    [farmId.toBuffer(), wallet.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
+    ORCA_FARM_PROGRAM_ID,
+  );
+  return farmerKey;
+}
+
+export async function getFarm(farmId:PublicKey, connection: Connection) {
+  let data = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
+  let farm = await parseFarmInfoData(data.data, farmId);
+  return farm;
+}
+export async function getFarmer(farmerID: PublicKey, connection:Connection) {
+  let data = (await connection.getAccountInfo(farmerID)) as AccountInfo<Buffer>;
+  let farmer = await parseFarmerInfoData(data.data, farmerID);
+  return farmer;
 }
