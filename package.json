@@ -36,6 +36,7 @@
     "@types/bn.js": "^5.1.0",
     "@types/mocha": "^9.1.0",
     "@types/node": "^14.14.25",
+    "graphql": "^16.5.0",
     "ts-node": "^10.8.1",
     "typescript": "^4.7.3"
   }
