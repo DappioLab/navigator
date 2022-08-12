@@ -1,7 +1,7 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { LARIX_LENDING_MARKET_ID_ALL, LARIX_MARKET_ID_MAIN_POOL, LARIX_PROGRAM_ID } from "./ids";
+import { LARIX_LENDING_MARKET_ID_ALL, LARIX_MAIN_POOL_MINER_SEED, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_MARKET_ID_MAIN_POOL, LARIX_PROGRAM_ID } from "./ids";
 import {
   COLLATERAL_LAYOUT,
   FARM_LAYOUT,
@@ -329,10 +329,24 @@ export async function checkMinerCreated(connection: Connection, wallet: PublicKe
   }
   return false;
 }
+export async function checkObligationCreated(connection: Connection, wallet: PublicKey) {
+  let obligationPub = await newObligationAccountPub(wallet);
+  let obligationInfo = await connection.getAccountInfo(obligationPub);
+  
+  if ((obligationInfo?.data.length as number) > 0) {
+    return true;
+  }
+  return false;
+}
 
 export async function newMinerAccountPub(wallet: PublicKey) {
-  let newMiner = await PublicKey.createWithSeed(wallet, "Dappio", LARIX_PROGRAM_ID);
+  let newMiner = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_MINER_SEED, LARIX_PROGRAM_ID);
   return newMiner;
+}
+
+export async function newObligationAccountPub(wallet: PublicKey) {
+  let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED , LARIX_PROGRAM_ID);
+  return newObligation;
 }
 
 interface ObligationCollateral {
@@ -352,6 +366,7 @@ interface ObligationLoan {
 export interface ObligationInfo {
   version: BN;
   lastUpdate: LastUpdate;
+  obligationKey: PublicKey;
   lendingMarket: PublicKey;
   owner: PublicKey;
   depositedValue: BN;
@@ -415,7 +430,7 @@ export class ObligationInfoWrapper {
   }
 }
 
-export function parseObligationData(data: any) {
+export function parseObligationData(data: any,obligationKey:PublicKey) {
   let dataBuffer = data as Buffer;
   let decodedInfo = OBLIGATION_LAYOUT.decode(dataBuffer);
   let {
@@ -447,6 +462,7 @@ export function parseObligationData(data: any) {
   const obligationInfo = {
     version,
     lastUpdate,
+    obligationKey,
     lendingMarket,
     owner,
     depositedValue,
@@ -474,10 +490,11 @@ export function parseCollateralData(data: any) {
   return collateral;
 }
 
-export function defaultObligation() {
+export function defaultObligation(obligationKey?:PublicKey) {
   const obligationInfo = {
     version: new BN(1),
     lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
+    obligationKey: obligationKey? obligationKey: PublicKey.default,
     lendingMarket: PublicKey.default,
     owner: PublicKey.default,
     depositedValue: new BN(0),
@@ -493,8 +510,17 @@ export function defaultObligation() {
 export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
-  lendingMarket = LARIX_MARKET_ID_MAIN_POOL
+  lendingMarket = LARIX_MARKET_ID_MAIN_POOL,
+  obligationPublicKey?: PublicKey,
 ) {
+  if(obligationPublicKey) {
+    const accountInfo = await connection.getAccountInfo(obligationPublicKey);
+    if (accountInfo?.data.length){
+      const obligationInfo = parseObligationData(accountInfo?.data,obligationPublicKey);
+      return obligationInfo;
+    }
+    
+  }
   const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
     filters: [
       {
@@ -511,11 +537,12 @@ export async function getObligation(
   });
   for (const accountInfo of accountInfos) {
     if (accountInfo.account.owner.equals(LARIX_PROGRAM_ID)) {
-      const obligationInfo = parseObligationData(accountInfo.account.data);
+      const obligationInfo = parseObligationData(accountInfo.account.data,accountInfo.pubkey);
       return obligationInfo;
     }
-    return defaultObligation();
   }
+  let defaultObligationAddress = await newObligationAccountPub(wallet)
+  return defaultObligation(defaultObligationAddress);
 }
 
 export async function getAllObligation(connection: Connection, wallet: PublicKey) {
@@ -537,7 +564,7 @@ export async function getAllObligation(connection: Connection, wallet: PublicKey
 
   accountInfos.map((accountInfo) => {
     if (accountInfo?.account.owner.equals(LARIX_PROGRAM_ID)) {
-      let obligationInfo = parseObligationData(accountInfo?.account.data);
+      let obligationInfo = parseObligationData(accountInfo?.account.data,accountInfo.pubkey);
       allObligationInfoWrapper.push(obligationInfo);
     }
   });
