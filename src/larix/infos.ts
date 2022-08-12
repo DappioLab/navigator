@@ -143,7 +143,6 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let miningRate = this.reserveInfo.farm.kinkUtilRate;
     let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    console.log("mint", this.supplyTokenMint().toString());
     let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
