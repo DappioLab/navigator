@@ -26,3 +26,6 @@ export const LARIX_LENDING_MARKET_ID_ALL = [
   LARIX_MARKET_ID_STEP_POOL,
   LARIX_MARKET_ID_XSOL_POOL,
 ];
+
+export const LARIX_MAIN_POOL_MINER_SEED = "Dappio";
+export const LARIX_MAIN_POOL_OBLIGATION_SEED = "Dappio-l-main-ob";
