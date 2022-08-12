@@ -510,16 +510,15 @@ export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
   lendingMarket = LARIX_MARKET_ID_MAIN_POOL,
-  obligationPublicKey?: PublicKey,
 ) {
-  if(obligationPublicKey) {
-    const accountInfo = await connection.getAccountInfo(obligationPublicKey);
+  let defaultObligationAddress = await newObligationAccountPub(wallet)
+    const accountInfo = await connection.getAccountInfo(defaultObligationAddress);
     if (accountInfo?.data.length){
-      const obligationInfo = parseObligationData(accountInfo?.data,obligationPublicKey);
+      const obligationInfo = parseObligationData(accountInfo?.data,defaultObligationAddress);
       return obligationInfo;
     }
     
-  }
+
   const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
     filters: [
       {
@@ -540,7 +539,7 @@ export async function getObligation(
       return obligationInfo;
     }
   }
-  let defaultObligationAddress = await newObligationAccountPub(wallet)
+  
   return defaultObligation(defaultObligationAddress);
 }
 
