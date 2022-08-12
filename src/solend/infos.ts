@@ -107,7 +107,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
   // TODO: will be empty partnerReward when init class directly (can only be got from getAllReserveWrapper). Needs refactor.
   // CONCERN: Increasing Solend API querying (internet traffic)
-  partnerRewardData = {} as IPartnerReward;
+  partnerRewardData: IPartnerReward | null = null;
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -239,7 +239,7 @@ export async function getAllReserveWrappers(connection: Connection) {
       ) ?? null;
 
     let price = tokenList.find((t) => t.mint === newInfo.supplyTokenMint().toBase58())?.price;
-    let partnerRewardData = {} as IPartnerReward;
+    let partnerRewardData: IPartnerReward | null = null;
 
     const poolTotalSupply = Number(newInfo.supplyAmount()) / 10 ** Number(newInfo.supplyTokenDecimal());
     const poolTotalSupplyValue = poolTotalSupply * price!;
@@ -261,6 +261,8 @@ export async function getAllReserveWrappers(connection: Connection) {
         })
         // TODO: Might need to deal with multi partner rewards in the future
         .find((p) => p) as IPartnerReward;
+    } else {
+      partnerRewardData = null;
     }
     newInfo.partnerRewardData = partnerRewardData;
     reserveInfoWrappers.push(newInfo);
