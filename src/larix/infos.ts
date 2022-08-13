@@ -517,28 +517,6 @@ export async function getObligation(
       const obligationInfo = parseObligationData(accountInfo?.data,defaultObligationAddress);
       return obligationInfo;
     }
-    
-
-  const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
-    filters: [
-      {
-        dataSize: OBLIGATION_LAYOUT.span,
-      },
-      {
-        memcmp: {
-          offset: u8("version").span + struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate").span + 32,
-          /** data to match, as base-58 encoded string and limited to less than 129 bytes */
-          bytes: wallet.toBase58(),
-        },
-      },
-    ],
-  });
-  for (const accountInfo of accountInfos) {
-    if (accountInfo.account.owner.equals(LARIX_PROGRAM_ID)) {
-      const obligationInfo = parseObligationData(accountInfo.account.data,accountInfo.pubkey);
-      return obligationInfo;
-    }
-  }
   
   return defaultObligation(defaultObligationAddress);
 }
