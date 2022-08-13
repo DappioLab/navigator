@@ -30,4 +30,4 @@ export const LARIX_LENDING_MARKET_ID_ALL = [
 ];
 
 export const LARIX_MAIN_POOL_MINER_SEED = "Dappio";
-export const LARIX_MAIN_POOL_OBLIGATION_SEED = "Dappio-l-maain-ob";
+export const LARIX_MAIN_POOL_OBLIGATION_SEED = LARIX_MARKET_ID_MAIN_POOL.toString().slice(0, 32);
