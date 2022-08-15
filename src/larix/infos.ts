@@ -329,13 +329,10 @@ export async function checkMinerCreated(connection: Connection, wallet: PublicKe
   return false;
 }
 export async function checkObligationCreated(connection: Connection, wallet: PublicKey) {
-  let obligationPub = await newObligationAccountPub(wallet);
+  let obligationPub = await newObligationKey(wallet);
   let obligationInfo = await connection.getAccountInfo(obligationPub);
   
-  if ((obligationInfo?.data.length as number) > 0) {
-    return true;
-  }
-  return false;
+  return obligationInfo?.data.length as number > 0;
 }
 
 export async function newMinerAccountPub(wallet: PublicKey) {
@@ -343,7 +340,7 @@ export async function newMinerAccountPub(wallet: PublicKey) {
   return newMiner;
 }
 
-export async function newObligationAccountPub(wallet: PublicKey) {
+export async function newObligationKey(wallet: PublicKey) {
   let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED , LARIX_PROGRAM_ID);
   return newObligation;
 }
@@ -511,7 +508,7 @@ export async function getObligation(
   wallet: PublicKey,
   lendingMarket = LARIX_MARKET_ID_MAIN_POOL,
 ) {
-  let defaultObligationAddress = await newObligationAccountPub(wallet)
+  let defaultObligationAddress = await newObligationKey(wallet)
     const accountInfo = await connection.getAccountInfo(defaultObligationAddress);
     if (accountInfo?.data.length){
       const obligationInfo = parseObligationData(accountInfo?.data,defaultObligationAddress);
@@ -521,7 +518,7 @@ export async function getObligation(
   return defaultObligation(defaultObligationAddress);
 }
 
-export async function getAllObligation(connection: Connection, wallet: PublicKey) {
+export async function getAllObligations(connection: Connection, wallet: PublicKey) {
   let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
   const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
     filters: [
