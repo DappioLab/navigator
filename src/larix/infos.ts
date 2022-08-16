@@ -1,7 +1,19 @@
-import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  DataSizeFilter,
+  GetProgramAccountsConfig,
+  MemcmpFilter,
+  PublicKey,
+} from "@solana/web3.js";
 import BN from "bn.js";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { LARIX_LENDING_MARKET_ID_ALL, LARIX_MARKET_ID_MAIN_POOL, LARIX_PROGRAM_ID } from "./ids";
+import {
+  LARIX_LENDING_MARKET_ID_ALL,
+  LARIX_MAIN_POOL_MINER_SEED,
+  LARIX_MAIN_POOL_OBLIGATION_SEED,
+  LARIX_MARKET_ID_MAIN_POOL,
+  LARIX_PROGRAM_ID,
+} from "./ids";
 import {
   COLLATERAL_LAYOUT,
   FARM_LAYOUT,
@@ -78,7 +90,15 @@ export interface FarmInfo {
 
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
-  let { version, lastUpdate, lendingMarket, liquidity, collateral, config, bonus } = decodedData;
+  let {
+    version,
+    lastUpdate,
+    lendingMarket,
+    liquidity,
+    collateral,
+    config,
+    bonus,
+  } = decodedData;
 
   return {
     reserveId: pubkey,
@@ -116,7 +136,9 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   supplyAmount() {
-    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
+    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
+      new BN(`1${"".padEnd(18, "0")}`),
+    );
 
     let availableAmount = this.reserveInfo.liquidity.availableAmount;
 
@@ -128,7 +150,8 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   supplyApy() {
-    let UtilizationRatio = Math.trunc(this.calculateUtilizationRatio() * 100) / 100;
+    let UtilizationRatio =
+      Math.trunc(this.calculateUtilizationRatio() * 100) / 100;
     let borrowAPY = this.calculateBorrowAPY() as number;
     let apy = (UtilizationRatio * borrowAPY * 998) / 1000;
     return apy;
@@ -143,40 +166,56 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let miningRate = this.reserveInfo.farm.kinkUtilRate;
     let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    console.log("mint", this.supplyTokenMint().toString());
-    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
+    let apy =
+      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
+      poolTotalSupplyValue.toNumber() /
+      10 ** 7;
     return apy;
   }
 
   calculateUtilizationRatio() {
     let decimal = new BN(this.reserveInfo.liquidity.mintDecimals);
-    const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
-    const totalAmount = this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
+    const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
+      new BN(`1${"".padEnd(18, "0")}`),
+    );
+    const totalAmount =
+      this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
     const currentUtilization = Number(borrowedAmount) / Number(totalAmount);
     return currentUtilization;
   }
 
   calculateBorrowAPY() {
     const currentUtilization = this.calculateUtilizationRatio();
-    const optimalUtilization = Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
+    const optimalUtilization =
+      Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
     let borrowAPY;
     if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
       const normalizedFactor = currentUtilization / optimalUtilization;
-      const optimalBorrowRate = Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
-      const minBorrowRate = Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
-      borrowAPY = normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
+      const optimalBorrowRate =
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
+      const minBorrowRate =
+        Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
+      borrowAPY =
+        normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
     } else {
-      const normalizedFactor = (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
-      const optimalBorrowRate = Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
-      const maxBorrowRate = Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
-      borrowAPY = normalizedFactor * (maxBorrowRate - optimalBorrowRate) + optimalBorrowRate;
+      const normalizedFactor =
+        (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
+      const optimalBorrowRate =
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
+      const maxBorrowRate =
+        Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
+      borrowAPY =
+        normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
+        optimalBorrowRate;
     }
 
     return borrowAPY;
   }
 
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
-    return reserveAmount.mul(this.supplyAmount()).div(this.reserveTokenSupply());
+    return reserveAmount
+      .mul(this.supplyAmount())
+      .div(this.reserveTokenSupply());
   }
 }
 
@@ -207,7 +246,10 @@ async function getAllReserves(connection: Connection) {
   const filters = [programIdMemcmp, dataSizeFilters];
 
   const config: GetProgramAccountsConfig = { filters: filters };
-  const reserveAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
+  const reserveAccounts = await connection.getProgramAccounts(
+    LARIX_PROGRAM_ID,
+    config,
+  );
 
   let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
@@ -218,7 +260,10 @@ async function getAllReserves(connection: Connection) {
   return reserves;
 }
 
-export async function getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
+export async function getReserve(
+  connection: Connection,
+  reserveId: PublicKey,
+): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
   return parseReserveData(reserveAccountInfo?.data, reserveId);
 }
@@ -243,11 +288,17 @@ export function parseMinerInfo(data: any, miner: PublicKey) {
   let dataBuffer = data as Buffer;
   let infoData = dataBuffer;
   let newMinerInfo = MINER_LAYOUT.decode(infoData);
-  let { version, owner, lendingMarket, reservesLen, unclaimedMine, dataFlat } = newMinerInfo;
+  let { version, owner, lendingMarket, reservesLen, unclaimedMine, dataFlat } =
+    newMinerInfo;
 
-  const minerIndicesBuffer = dataFlat.slice(0, reservesLen * MINER_INDEX_LAYOUT.span);
+  const minerIndicesBuffer = dataFlat.slice(
+    0,
+    reservesLen * MINER_INDEX_LAYOUT.span,
+  );
 
-  const minerIndices = seq(MINER_INDEX_LAYOUT, reservesLen).decode(minerIndicesBuffer) as MinerIndex[];
+  const minerIndices = seq(MINER_INDEX_LAYOUT, reservesLen).decode(
+    minerIndicesBuffer,
+  ) as MinerIndex[];
 
   return {
     farmerId: miner,
@@ -263,7 +314,7 @@ export function parseMinerInfo(data: any, miner: PublicKey) {
 export async function getAllMiners(
   connection: Connection,
   wallet: PublicKey,
-  reserverInfoWrapper?: ReserveInfoWrapper[]
+  reserverInfoWrapper?: ReserveInfoWrapper[],
 ) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
@@ -276,7 +327,10 @@ export async function getAllMiners(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allMinerAccount = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
+  const allMinerAccount = await connection.getProgramAccounts(
+    LARIX_PROGRAM_ID,
+    config,
+  );
   let allMinerInfo: MinerInfo[] = [];
   for (let account of allMinerAccount) {
     let currentFarmInfo = parseMinerInfo(account.account.data, account.pubkey);
@@ -287,7 +341,9 @@ export async function getAllMiners(
       for (let indexData of miner.indexs) {
         for (let reserve of reserverInfoWrapper) {
           if (indexData.reserveId.equals(reserve.reserveInfo.reserveId)) {
-            let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(indexData.index);
+            let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(
+              indexData.index,
+            );
 
             let reward = indexSub.mul(indexData.unCollLTokenAmount);
 
@@ -301,7 +357,11 @@ export async function getAllMiners(
   return allMinerInfo;
 }
 
-export async function getMiner(connection: Connection, wallet: PublicKey, reserverInfoWrapper?: ReserveInfoWrapper[]) {
+export async function getMiner(
+  connection: Connection,
+  wallet: PublicKey,
+  reserverInfoWrapper?: ReserveInfoWrapper[],
+) {
   let minerPub = await newMinerAccountPub(wallet);
   let minerInfo = await connection.getAccountInfo(minerPub);
   if ((minerInfo?.data.length as number) > 0) {
@@ -310,7 +370,9 @@ export async function getMiner(connection: Connection, wallet: PublicKey, reserv
       for (let indexData of miner.indexs) {
         for (let reserve of reserverInfoWrapper) {
           if (indexData.reserveId.equals(reserve.reserveInfo.reserveId)) {
-            let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(indexData.index);
+            let indexSub = reserve.reserveInfo.farm.lTokenMiningIndex.sub(
+              indexData.index,
+            );
             let reward = indexSub.mul(indexData.unCollLTokenAmount);
             miner.unclaimedMine = miner.unclaimedMine.add(reward);
           }
@@ -321,18 +383,40 @@ export async function getMiner(connection: Connection, wallet: PublicKey, reserv
   }
   return null;
 }
-export async function checkMinerCreated(connection: Connection, wallet: PublicKey) {
+export async function checkMinerCreated(
+  connection: Connection,
+  wallet: PublicKey,
+) {
   let minerPub = await newMinerAccountPub(wallet);
   let minerInfo = await connection.getAccountInfo(minerPub);
-  if ((minerInfo?.data.length as number) > 0) {
-    return true;
-  }
-  return false;
+  return (minerInfo?.data.length as number) > 0;
+}
+export async function checkObligationCreated(
+  connection: Connection,
+  wallet: PublicKey,
+) {
+  let obligationPub = await newObligationKey(wallet);
+  let obligationInfo = await connection.getAccountInfo(obligationPub);
+
+  return (obligationInfo?.data.length as number) > 0;
 }
 
 export async function newMinerAccountPub(wallet: PublicKey) {
-  let newMiner = await PublicKey.createWithSeed(wallet, "Dappio", LARIX_PROGRAM_ID);
+  let newMiner = await PublicKey.createWithSeed(
+    wallet,
+    LARIX_MAIN_POOL_MINER_SEED,
+    LARIX_PROGRAM_ID,
+  );
   return newMiner;
+}
+
+export async function newObligationKey(wallet: PublicKey) {
+  let newObligation = await PublicKey.createWithSeed(
+    wallet,
+    LARIX_MAIN_POOL_OBLIGATION_SEED,
+    LARIX_PROGRAM_ID,
+  );
+  return newObligation;
 }
 
 interface ObligationCollateral {
@@ -352,6 +436,7 @@ interface ObligationLoan {
 export interface ObligationInfo {
   version: BN;
   lastUpdate: LastUpdate;
+  obligationKey: PublicKey;
   lendingMarket: PublicKey;
   owner: PublicKey;
   depositedValue: BN;
@@ -361,8 +446,15 @@ export interface ObligationInfo {
   unclaimedMine: BN;
 }
 
-export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
-  const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], LARIX_PROGRAM_ID))[0];
+export async function getLendingMarketAuthority(
+  lendingMarket: PublicKey,
+): Promise<PublicKey> {
+  const authority = (
+    await PublicKey.findProgramAddress(
+      [lendingMarket.toBuffer()],
+      LARIX_PROGRAM_ID,
+    )
+  )[0];
 
   return authority;
 }
@@ -371,7 +463,7 @@ export class ObligationInfoWrapper {
   constructor(
     public obligationInfo: ObligationInfo,
     public obligationCollaterals: ObligationCollateral[],
-    public obligationLoans: ObligationLoan[]
+    public obligationLoans: ObligationLoan[],
   ) {}
 
   update(reserveInfos: ReserveInfoWrapper[]) {
@@ -380,8 +472,14 @@ export class ObligationInfoWrapper {
     let depositedValue = new BN(0);
     for (let depositedReserve of this.obligationCollaterals) {
       for (let reserveInfoWrapper of reserveInfos) {
-        if (depositedReserve.reserveId.equals(reserveInfoWrapper.reserveInfo.reserveId)) {
-          let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
+        if (
+          depositedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId,
+          )
+        ) {
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal()),
+          );
           let thisDepositedValue = depositedReserve.depositedAmount
             .mul(reserveInfoWrapper.supplyAmount())
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
@@ -389,18 +487,28 @@ export class ObligationInfoWrapper {
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
           depositedValue = depositedValue.add(thisDepositedValue);
 
-          let thisUnhealthyBorrowValue = new BN(reserveInfoWrapper.reserveInfo.config.liquidationThreshold)
+          let thisUnhealthyBorrowValue = new BN(
+            reserveInfoWrapper.reserveInfo.config.liquidationThreshold,
+          )
             .mul(thisDepositedValue)
             .div(new BN(`1${"".padEnd(2, "0")}`));
-          unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
+          unhealthyBorrowValue = unhealthyBorrowValue.add(
+            thisUnhealthyBorrowValue,
+          );
         }
       }
     }
 
     for (let borrowedReserve of this.obligationLoans) {
       for (let reserveInfoWrapper of reserveInfos) {
-        if (borrowedReserve.reserveId.equals(reserveInfoWrapper.reserveInfo.reserveId)) {
-          let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
+        if (
+          borrowedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId,
+          )
+        ) {
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal()),
+          );
           let thisborrowedValue = borrowedReserve.borrowedAmount
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
@@ -415,7 +523,7 @@ export class ObligationInfoWrapper {
   }
 }
 
-export function parseObligationData(data: any) {
+export function parseObligationData(data: any, obligationKey: PublicKey) {
   let dataBuffer = data as Buffer;
   let decodedInfo = OBLIGATION_LAYOUT.decode(dataBuffer);
   let {
@@ -438,15 +546,26 @@ export function parseObligationData(data: any) {
   //   throw new Error("lastUpdate.slot.isZero()");
   // }
 
-  const depositsBuffer = dataFlat.slice(0, depositsLen * COLLATERAL_LAYOUT.span);
-  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(depositsBuffer) as ObligationCollateral[];
+  const depositsBuffer = dataFlat.slice(
+    0,
+    depositsLen * COLLATERAL_LAYOUT.span,
+  );
+  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
+    depositsBuffer,
+  ) as ObligationCollateral[];
 
-  const borrowsBuffer = dataFlat.slice(depositsBuffer.length, depositsBuffer.length + borrowsLen * LOAN_LAYOUT.span);
-  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as ObligationLoan[];
+  const borrowsBuffer = dataFlat.slice(
+    depositsBuffer.length,
+    depositsBuffer.length + borrowsLen * LOAN_LAYOUT.span,
+  );
+  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(
+    borrowsBuffer,
+  ) as ObligationLoan[];
 
   const obligationInfo = {
     version,
     lastUpdate,
+    obligationKey,
     lendingMarket,
     owner,
     depositedValue,
@@ -456,7 +575,11 @@ export function parseObligationData(data: any) {
     unclaimedMine,
   } as ObligationInfo;
 
-  const obligationInfoWrapper = new ObligationInfoWrapper(obligationInfo, depositCollaterals, borrowLoans);
+  const obligationInfoWrapper = new ObligationInfoWrapper(
+    obligationInfo,
+    depositCollaterals,
+    borrowLoans,
+  );
 
   return obligationInfoWrapper;
 }
@@ -474,10 +597,11 @@ export function parseCollateralData(data: any) {
   return collateral;
 }
 
-export function defaultObligation() {
+export function defaultObligation(obligationKey?: PublicKey) {
   const obligationInfo = {
     version: new BN(1),
     lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
+    obligationKey: obligationKey ? obligationKey : PublicKey.default,
     lendingMarket: PublicKey.default,
     owner: PublicKey.default,
     depositedValue: new BN(0),
@@ -493,32 +617,25 @@ export function defaultObligation() {
 export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
-  lendingMarket = LARIX_MARKET_ID_MAIN_POOL
+  lendingMarket = LARIX_MARKET_ID_MAIN_POOL,
 ) {
-  const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
-    filters: [
-      {
-        dataSize: OBLIGATION_LAYOUT.span,
-      },
-      {
-        memcmp: {
-          offset: u8("version").span + struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate").span + 32,
-          /** data to match, as base-58 encoded string and limited to less than 129 bytes */
-          bytes: wallet.toBase58(),
-        },
-      },
-    ],
-  });
-  for (const accountInfo of accountInfos) {
-    if (accountInfo.account.owner.equals(LARIX_PROGRAM_ID)) {
-      const obligationInfo = parseObligationData(accountInfo.account.data);
-      return obligationInfo;
-    }
-    return defaultObligation();
+  let defaultObligationAddress = await newObligationKey(wallet);
+  const accountInfo = await connection.getAccountInfo(defaultObligationAddress);
+  if (accountInfo?.data.length) {
+    const obligationInfo = parseObligationData(
+      accountInfo?.data,
+      defaultObligationAddress,
+    );
+    return obligationInfo;
   }
+
+  return defaultObligation(defaultObligationAddress);
 }
 
-export async function getAllObligation(connection: Connection, wallet: PublicKey) {
+export async function getAllObligations(
+  connection: Connection,
+  wallet: PublicKey,
+) {
   let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
   const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
     filters: [
@@ -527,7 +644,10 @@ export async function getAllObligation(connection: Connection, wallet: PublicKey
       },
       {
         memcmp: {
-          offset: u8("version").span + struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate").span + 32,
+          offset:
+            u8("version").span +
+            struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate").span +
+            32,
           /** data to match, as base-58 encoded string and limited to less than 129 bytes */
           bytes: wallet.toBase58(),
         },
@@ -537,7 +657,10 @@ export async function getAllObligation(connection: Connection, wallet: PublicKey
 
   accountInfos.map((accountInfo) => {
     if (accountInfo?.account.owner.equals(LARIX_PROGRAM_ID)) {
-      let obligationInfo = parseObligationData(accountInfo?.account.data);
+      let obligationInfo = parseObligationData(
+        accountInfo?.account.data,
+        accountInfo.pubkey,
+      );
       allObligationInfoWrapper.push(obligationInfo);
     }
   });

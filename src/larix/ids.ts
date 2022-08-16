@@ -10,6 +10,8 @@ export const LARIX_MINT = new PublicKey("Lrxqnh6ZHKbGy3dcrCED43nsoLkM1LTzU2jRfWe
 
 export const MINE_SUPPLY = new PublicKey("HCUZ8TiRfFcXAwCMEeTrirfrGCB1jB2KAocTi1jbfHrd");
 
+export const LARIX_ORACLE_PROGRAM_ID = new PublicKey("GMjBguH3ceg9wAHEMdY5iZnvzY6CgBACBDvkWmjR7upS");
+
 // Market Ids
 export const LARIX_MARKET_ID_MAIN_POOL = new PublicKey("5geyZJdffDBNoMqEbogbPvdgH9ue7NREobtW8M3C1qfe");
 export const LARIX_MARKET_ID_BONFIDA_POOL = new PublicKey("5enDUZdptakV39Sra9QQYBstJbLVZHHqT74CgeL2fMqV");
@@ -26,3 +28,6 @@ export const LARIX_LENDING_MARKET_ID_ALL = [
   LARIX_MARKET_ID_STEP_POOL,
   LARIX_MARKET_ID_XSOL_POOL,
 ];
+
+export const LARIX_MAIN_POOL_MINER_SEED = "Dappio";
+export const LARIX_MAIN_POOL_OBLIGATION_SEED = LARIX_MARKET_ID_MAIN_POOL.toString().slice(0, 32);

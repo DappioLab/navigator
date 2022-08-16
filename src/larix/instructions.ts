@@ -2,7 +2,8 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { PublicKey, SYSVAR_CLOCK_PUBKEY, Transaction, TransactionInstruction, SystemProgram } from "@solana/web3.js";
 import BN from "bn.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
-import { LARIX_MARKET_ID_MAIN_POOL, LARIX_PROGRAM_ID, MARKET_AUTHORITY, MINE_SUPPLY } from "./ids";
+import { LARIX_MAIN_POOL_MINER_SEED, LARIX_MARKET_ID_MAIN_POOL, LARIX_PROGRAM_ID, MARKET_AUTHORITY, MINE_SUPPLY } from "./ids";
+import { newMinerAccountPub } from "./infos";
 
 /// Deposit liquidity into a reserve in exchange for collateral, and deposit the collateral as well.
 
@@ -155,14 +156,14 @@ export const refreshReserveInstruction = (
 
 export async function createInitMinningIx(wallet: PublicKey) {
   let tx = new Transaction();
-  let newMiner = await PublicKey.createWithSeed(wallet, "Dappio", LARIX_PROGRAM_ID);
+  let newMiner = await newMinerAccountPub(wallet);
   let config = {
     basePubkey: wallet,
     fromPubkey: wallet,
     lamports: 5359200,
     newAccountPubkey: newMiner,
     programId: LARIX_PROGRAM_ID,
-    seed: "Dappio",
+    seed: LARIX_MAIN_POOL_MINER_SEED,
     space: 642,
   };
   let createAccountIx = SystemProgram.createAccountWithSeed(config);
