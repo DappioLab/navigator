@@ -26,6 +26,7 @@ export interface ReserveInfo extends IReserveInfo {
   farm: FarmInfo;
 }
 import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
+import { IServicesTokenInfo } from "../utils";
 
 interface ReserveConfig {
   optimalUtilizationRate: BN;
@@ -143,7 +144,6 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let miningRate = this.reserveInfo.farm.kinkUtilRate;
     let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    console.log("mint", this.supplyTokenMint().toString());
     let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
@@ -412,6 +412,17 @@ export class ObligationInfoWrapper {
     this.obligationInfo.borrowedValue = borrowedValue;
     this.obligationInfo.depositedValue = depositedValue;
     this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
+  }
+  getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
+    const limits = this.obligationCollaterals.map((deposit) => {
+      const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
+      const supplyToken = tokenList.find((t) => t.mint === reserve?.supplyTokenMint().toBase58());
+      if (!reserve || !supplyToken) return 0;
+      const depositAmount = reserve.convertReserveAmountToLiquidityAmount(deposit.depositedAmount);
+      const amt = Number(depositAmount) / 10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
+      return amt * supplyToken.price * (Number(reserve?.reserveInfo.config.loanToValueRatio) / 100);
+    });
+    return limits.length > 0 ? limits.reduce((a, b) => a + b) : 0;
   }
 }
 
