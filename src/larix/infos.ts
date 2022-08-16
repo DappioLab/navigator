@@ -389,10 +389,7 @@ export async function checkMinerCreated(
 ) {
   let minerPub = await newMinerAccountPub(wallet);
   let minerInfo = await connection.getAccountInfo(minerPub);
-  if ((minerInfo?.data.length as number) > 0) {
-    return true;
-  }
-  return false;
+  return (minerInfo?.data.length as number) > 0;
 }
 export async function checkObligationCreated(
   connection: Connection,
