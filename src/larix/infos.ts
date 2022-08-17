@@ -37,7 +37,7 @@ export interface ReserveInfo extends IReserveInfo {
   farm: FarmInfo;
 }
 import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
-import { IServicesTokenInfo } from "../utils";
+import { getTokenList, IServicesTokenInfo } from "../utils";
 
 interface ReserveConfig {
   optimalUtilizationRate: BN;
@@ -88,6 +88,12 @@ export interface FarmInfo {
   kinkUtilRate: BN;
 }
 
+interface IPartnerReward {
+  rewardToken: IServicesTokenInfo;
+  rate: number;
+  side: string;
+}
+
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
   let { version, lastUpdate, lendingMarket, liquidity, collateral, config, bonus } = decodedData;
@@ -135,9 +141,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return borrowedAmount.add(availableAmount);
   }
   borrowedAmount() {
-    return this.reserveInfo.liquidity.borrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`),
-    );
+    return this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
   }
   isMining() {
     this.reserveInfo.farm.kinkUtilRate.gt(new BN(0));
@@ -162,7 +166,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
-  borrowRewardApy(larix_price: number) {
+  calcBorrowMiningApy(larix_price: number) {
     let decimal = this.supplyTokenDecimal() as unknown as number;
     let poolTotalSupplyValue = this.borrowedAmount()
       .mul(this.reserveInfo.liquidity.marketPrice)
@@ -171,53 +175,52 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let miningRate = this.reserveInfo.farm.kinkUtilRate;
     let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    let apy =
-      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
-      poolTotalSupplyValue.toNumber() /
-      10 ** 7;
+    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
-  async partnerReward(connection: Connection): Promise<number> {
+  getPartnerReward(tokenList: IServicesTokenInfo[]): IPartnerReward | null {
     let rewardApy = 0;
+    let tokenInfo: IServicesTokenInfo | null = null;
+    let partnerReward: IPartnerReward | null = null;
+    let rewardValue = 0;
+    let supplyValue = 0;
     switch (this.reserveInfo.reserveId.toString()) {
       case LDO_REWARD_RESERVE.toString(): {
-        const sbv2 = await SwitchboardProgram.loadMainnet(connection);
         const LDO_PER_YEAR = 357 * 365;
-        let priceInfo = await sbv2.fetchAggregator(LDO_PRICE_ORACLE);
-        let price = (priceInfo.currentRound.result.mantissa as BN).toNumber();
-        let priceDecimal = priceInfo.currentRound.result.scale as number;
-        let totalRewardValue = (LDO_PER_YEAR * price) / 10 ** priceDecimal;
-        let supplyValue =
+        const ldoMint = "HZRCwxP2Vq9PCpPXooayhJ2bxTpo5xfpQrwB1svh332p";
+        tokenInfo = tokenList.find((t) => t.mint === ldoMint) ?? null;
+        if (!tokenInfo) return null;
+        rewardValue = LDO_PER_YEAR * tokenInfo.price * 100;
+        supplyValue =
           this.supplyAmount()
             .mul(this.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(9, "0")}`))
             .div(new BN(`1${"".padEnd(14, "0")}`))
             .toNumber() /
           10 ** 4;
-        return totalRewardValue / supplyValue;
+        rewardApy = rewardValue / supplyValue;
+        partnerReward = { side: "supply", rewardToken: tokenInfo, rate: rewardApy };
         break;
       }
       case MNDE_REWARD_RESERVE.toString(): {
-        const sbv2 = await SwitchboardProgram.loadMainnet(connection);
         const MNDE_PER_YEAR = 172.9999 * 365;
-        let priceInfo = await sbv2.fetchAggregator(MNDE_PRICE_ORACLE);
-        let price = priceInfo.currentRound.result.mantissa as BN;
-        let priceDecimal = priceInfo.currentRound.result.scale as number;
-        let totalRewardValue =
-          (MNDE_PER_YEAR * price.divn(10 ** 5).toNumber() * 10 ** 5) /
-          10 ** priceDecimal;
-        let supplyValue =
+        const mndeMint = "MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey";
+        tokenInfo = tokenList.find((t) => t.mint === mndeMint) ?? null;
+        if (!tokenInfo) return null;
+        rewardValue = MNDE_PER_YEAR * tokenInfo.price * 100;
+        supplyValue =
           this.supplyAmount()
             .mul(this.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(9, "0")}`))
             .div(new BN(`1${"".padEnd(14, "0")}`))
             .toNumber() /
           10 ** 4;
-        return totalRewardValue / supplyValue;
+        rewardApy = rewardValue / supplyValue;
+        partnerReward = { side: "supply", rewardToken: tokenInfo, rate: rewardApy };
         break;
       }
     }
-    return rewardApy;
+    return partnerReward;
   }
 
   calculateUtilizationRatio() {
