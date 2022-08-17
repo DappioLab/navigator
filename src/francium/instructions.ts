@@ -10,7 +10,7 @@ import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import BN from "bn.js";
 import { getAnchorInsByIdl } from "../utils";
 import {
-  getRaydiunPositionKey,
+  getRaydiumPositionKey,
   LendingInfo,
   RaydiumStrategyState,
 } from "./infos";
@@ -34,7 +34,7 @@ export async function initializeRaydiumPosition(
   wallet: PublicKey,
   strategy: RaydiumStrategyState
 ) {
-  let positionKey = await getRaydiunPositionKey(wallet, strategy.infoPubkey);
+  let positionKey = await getRaydiumPositionKey(wallet, strategy.infoPubkey);
   let data = Buffer.alloc(13);
   let hash = "6cde4a0b8f992803";
   const dataLayout = struct([u32("nonce"), u8("bump")]);

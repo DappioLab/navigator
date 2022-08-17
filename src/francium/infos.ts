@@ -562,7 +562,7 @@ export async function getAllRaydiumPositions(
   return allPositions;
 }
 
-export async function getRaydiunPositionKey(
+export async function getRaydiumPositionKey(
   wallet: PublicKey,
   strategyAccount: PublicKey
 ) {
