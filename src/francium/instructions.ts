@@ -3,84 +3,74 @@ import {
   TransactionInstruction,
   SYSVAR_CLOCK_PUBKEY,
   SystemProgram,
-  Transaction,
 } from "@solana/web3.js";
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-  i64,
-  u32,
-} from "@project-serum/borsh";
+import { struct, u64, u8, u32 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import BN from "bn.js";
-import { findUserInfoAccount, UserInfo } from "./UserInfo";
-import { StrategyState } from "./StrategyState";
-import { getAnchorInsByIdl } from "../../utils";
-import {
-  RAYDIUM_FARM_CONFIG,
-  LENDING_AUTHORITY,
-  LENDING_MARKET,
-  lendProgramId,
-  lyfRaydiumProgramId,
-} from "./info";
-import { LendInfo } from "../lending/lendingInfo";
+import { LendingInfo, RaydiumStrategyState } from "./infos";
 import { Market } from "@project-serum/serum";
 import {
   PoolInfo,
-  FarmInfo,
   AMM_AUTHORITY,
   POOL_PROGRAM_ID_V4,
   FarmInfoWrapper,
-} from "../../raydium";
+} from "../raydium";
+import {
+  FRANCIUM_LENDING_PROGRAM_ID,
+  LENDING_AUTHORITY,
+  LENDING_MARKET,
+  LFY_RAYDIUM_PROGRAM_ID,
+} from "./ids";
 
-export async function initializeUser(
+// Raydium-specific
+export function initializeRaydiumPosition(
   wallet: PublicKey,
-  strategy: StrategyState
-) {
-  let userInfoAccount = await findUserInfoAccount(wallet, strategy.infoPubkey);
-  let data = Buffer.alloc(13);
+  strategy: RaydiumStrategyState,
+  positionKeySet: { address: PublicKey; nonce: BN; bump: BN }
+): TransactionInstruction {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "6cde4a0b8f992803";
+  let data = Buffer.alloc(13);
   const dataLayout = struct([u32("nonce"), u8("bump")]);
   let seed = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
-      nonce: userInfoAccount.nonce,
-      bump: userInfoAccount.bump,
+      nonce: positionKeySet.nonce,
+      bump: positionKeySet.bump,
     },
     seed
   );
   let dataString = hash.concat(seed.toString("hex"));
   data = Buffer.from(dataString, "hex");
-  let keys = [
+
+  const keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
-    { pubkey: userInfoAccount.address, isSigner: false, isWritable: true },
+    { pubkey: positionKeySet.address, isSigner: false, isWritable: true },
     { pubkey: strategy.infoPubkey, isSigner: false, isWritable: false },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
-  let ix = new TransactionInstruction({
+
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return { instruction: ix, userKey: userInfoAccount.address };
 }
 
-export async function transfer(
+// Raydium-specific
+// TODO: Rename to supply?
+export function transfer(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   userAccount: PublicKey,
   stopLoss: BN,
   amount0: BN,
   amount1: BN,
   userTknAccount0: PublicKey,
   userTknAccount1: PublicKey
-) {
+): TransactionInstruction {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "a334c8e78c0345ba";
   const dataLayout = struct([u8("stopLoss"), u64("amount0"), u64("amount1")]);
   let data = Buffer.alloc(dataLayout.span + 8);
@@ -95,6 +85,7 @@ export async function transfer(
   );
   let dataString = hash.concat(seed.toString("hex"));
   data = Buffer.from(dataString, "hex");
+
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: userAccount, isSigner: false, isWritable: true },
@@ -107,24 +98,26 @@ export async function transfer(
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
-  let ix = new TransactionInstruction({
+
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
 
-export async function borrow(
+// Raydium-specific
+export function borrow(
   wallet: PublicKey,
-  strategy: StrategyState,
-  lendInfo0: LendInfo,
-  lendInfo1: LendInfo,
+  strategy: RaydiumStrategyState,
+  lendInfo0: LendingInfo,
+  lendInfo1: LendingInfo,
   ammInfo: PoolInfo,
   userAccount: PublicKey,
   amount0: BN,
   amount1: BN
-) {
+): TransactionInstruction {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "e4fd83cacf745912";
   const dataLayout = struct([u64("amount0"), u64("amount1")]);
   let data = Buffer.alloc(dataLayout.span + 8);
@@ -147,7 +140,7 @@ export async function borrow(
     { pubkey: strategy.tknAccount1, isSigner: false, isWritable: true },
     { pubkey: LENDING_MARKET, isSigner: false, isWritable: true },
     { pubkey: LENDING_AUTHORITY, isSigner: false, isWritable: false },
-    { pubkey: lendProgramId, isSigner: false, isWritable: false },
+    { pubkey: FRANCIUM_LENDING_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: strategy.lendingPool0, isSigner: false, isWritable: true },
     {
       pubkey: lendInfo0.lendingPoolTknAccount,
@@ -188,22 +181,24 @@ export async function borrow(
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
     { pubkey: ammInfo.lpMint, isSigner: false, isWritable: true },
   ];
-  let ix = new TransactionInstruction({
+
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
+
+// Raydium-specific
 export async function swap(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   serum: Market,
   userAccount: PublicKey
-) {
+): Promise<TransactionInstruction> {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "f8c69e91e17587c80001000000000000000000000000000000";
-
   let data = Buffer.from(hash, "hex");
   let serumVaultSigner = await PublicKey.createProgramAddress(
     [
@@ -259,21 +254,22 @@ export async function swap(
     { pubkey: serumVaultSigner, isSigner: false, isWritable: true },
   ];
 
-  let ix = new TransactionInstruction({
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
-export async function addLiquidity(
+
+// Raydium-specific
+export function addLiquidity(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   userAccount: PublicKey
-) {
+): TransactionInstruction {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "b59d59438fb63448";
-
   let data = Buffer.from(hash, "hex");
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
@@ -289,11 +285,8 @@ export async function addLiquidity(
       isSigner: false,
       isWritable: false,
     },
-
     { pubkey: strategy.ammId, isSigner: false, isWritable: true },
-
     { pubkey: AMM_AUTHORITY, isSigner: false, isWritable: true },
-
     { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolPcTokenAccount, isSigner: false, isWritable: true },
@@ -302,25 +295,24 @@ export async function addLiquidity(
     { pubkey: ammInfo.serumMarket, isSigner: false, isWritable: true },
     { pubkey: strategy.tknAccount0, isSigner: false, isWritable: true },
     { pubkey: strategy.tknAccount0, isSigner: false, isWritable: true },
-
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
 
-  let ix = new TransactionInstruction({
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
 
-export async function stakeLp(
-  strategy: StrategyState,
+// Raydium-specific
+export async function stake(
+  strategy: RaydiumStrategyState,
   stakeInfo: FarmInfoWrapper,
   strategyFarmInfo: PublicKey
-) {
+): Promise<TransactionInstruction> {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "01c472f20e00000000";
-
   let data = Buffer.from(hash, "hex");
   let keys = [
     { pubkey: strategy.infoPubkey, isSigner: false, isWritable: true },
@@ -329,7 +321,6 @@ export async function stakeLp(
     { pubkey: strategy.rewardAccount, isSigner: false, isWritable: true },
     { pubkey: strategy.rewardAccountB, isSigner: false, isWritable: true },
     { pubkey: strategyFarmInfo, isSigner: false, isWritable: true },
-
     { pubkey: strategy.stakeProgramId, isSigner: false, isWritable: false },
     { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
     //authority
@@ -357,23 +348,24 @@ export async function stakeLp(
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
 
-  let ix = new TransactionInstruction({
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
 
-export async function unstakeLp(
-  strategy: StrategyState,
+// Raydium-specific
+export async function unstake(
+  strategy: RaydiumStrategyState,
   stakeInfo: FarmInfoWrapper,
   wallet: PublicKey,
   strategyFarmInfo: PublicKey,
   userAccount: PublicKey,
   LPamount: BN,
   withdrawType: BN
-) {
+): Promise<TransactionInstruction> {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "0e177c3d3343a578";
   const dataLayout = struct([u8("type"), u64("LPamount")]);
   let data = Buffer.alloc(dataLayout.span + 8);
@@ -388,9 +380,11 @@ export async function unstakeLp(
   let dataString = hash.concat(seed.toString("hex"));
   data = Buffer.from(dataString, "hex");
 
-  const raydiumConfig = Object.values(RAYDIUM_FARM_CONFIG).find((config) =>
-    config.strategyAccount.equals(strategy.infoPubkey)
-  );
+  // TODO: Double-check if it's valid to remove Raydium config
+
+  // const raydiumConfig = Object.values(RAYDIUM_FARM_CONFIG).find((config) =>
+  //   config.strategyAccount.equals(strategy.infoPubkey)
+  // );
 
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
@@ -399,17 +393,18 @@ export async function unstakeLp(
     { pubkey: strategy.authority, isSigner: false, isWritable: true },
     { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
     { pubkey: strategy.rewardAccount, isSigner: false, isWritable: true },
+    // TODO: Need double-check
     {
-      pubkey: raydiumConfig?.strategyTknAccount1,
+      pubkey: strategy.tknAccount1,
       isSigner: false,
       isWritable: true,
     },
+    // TODO: Need double-check
     {
-      pubkey: raydiumConfig?.strategyFarmInfo,
+      pubkey: strategyFarmInfo,
       isSigner: false,
       isWritable: true,
     },
-
     { pubkey: strategy.stakeProgramId, isSigner: false, isWritable: false },
     { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
     {
@@ -417,7 +412,6 @@ export async function unstakeLp(
       isSigner: false,
       isWritable: true,
     },
-
     {
       pubkey: stakeInfo.farmInfo.poolLpTokenAccountPubkey,
       isSigner: false,
@@ -441,76 +435,23 @@ export async function unstakeLp(
     { pubkey: strategy.tknAccount0, isSigner: false, isWritable: true },
   ];
 
-  let ix = new TransactionInstruction({
-    // @ts-ignore
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
-export function updateLending(strategy: StrategyState) {
-  let keys0 = [
-    {
-      pubkey: LENDING_MARKET,
-      isSigner: false,
-      isWritable: true,
-    },
-    {
-      pubkey: strategy.lendingPool0,
-      isSigner: false,
-      isWritable: true,
-    },
-    {
-      pubkey: SYSVAR_CLOCK_PUBKEY,
-      isSigner: false,
-      isWritable: false,
-    },
-  ];
-  let keys1 = [
-    {
-      pubkey: LENDING_MARKET,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: strategy.lendingPool1,
-      isWritable: true,
-      isSigner: false,
-    },
-    {
-      pubkey: SYSVAR_CLOCK_PUBKEY,
-      isWritable: false,
-      isSigner: false,
-    },
-  ];
-  let data = Buffer.alloc(1, 12);
-  let tx = new Transaction();
-  tx.add(
-    new TransactionInstruction({
-      keys: keys0,
-      programId: lendProgramId,
-      data,
-    })
-  );
-  tx.add(
-    new TransactionInstruction({
-      keys: keys1,
-      programId: lendProgramId,
-      data,
-    })
-  );
-  return tx;
-}
+
+// Raydium-specific
 export async function removeLiquidity(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   serum: Market,
   userAccount: PublicKey
-) {
+): Promise<TransactionInstruction> {
+  // TODO: Discriminator should be derived from hashed string
   let hash = "5055d14818ceb16c";
-
   let data = Buffer.from(hash, "hex");
   let serumVaultSigner = await PublicKey.createProgramAddress(
     [
@@ -528,12 +469,9 @@ export async function removeLiquidity(
     { pubkey: strategy.tknAccount1, isSigner: false, isWritable: true },
     { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-
     { pubkey: strategy.ammProgramId, isSigner: false, isWritable: false },
     { pubkey: strategy.ammId, isSigner: false, isWritable: true },
-
     { pubkey: AMM_AUTHORITY, isSigner: false, isWritable: true },
-
     { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
@@ -545,7 +483,6 @@ export async function removeLiquidity(
       isSigner: false,
       isWritable: true,
     },
-
     { pubkey: ammInfo.serumProgramId, isSigner: false, isWritable: false },
     { pubkey: ammInfo.serumMarket, isSigner: false, isWritable: true },
     {
@@ -553,7 +490,6 @@ export async function removeLiquidity(
       isSigner: false,
       isWritable: true,
     },
-
     {
       pubkey: new PublicKey(serum.decoded.quoteVault),
       isSigner: false,
@@ -561,28 +497,28 @@ export async function removeLiquidity(
     },
     { pubkey: serumVaultSigner, isSigner: false, isWritable: true },
   ];
-  let ix = new TransactionInstruction({
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
+
+// Raydium-specific
 export async function swapAndWithdraw(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   serum: Market,
   userAccount: PublicKey,
   userTknAccount0: PublicKey,
   userTknAccount1: PublicKey,
   withdrawType: BN
-) {
+): Promise<TransactionInstruction> {
   let data = Buffer.alloc(9);
   let datahex = withdrawType.toString(16);
-  //console.log(datahex)
+  // TODO: Discriminator should be derived from hashed string
   let datastring = "6f607d39534edca00".concat(datahex);
-  //console.log(datastring)
   data = Buffer.from(datastring, "hex");
   let serumVaultSigner = await PublicKey.createProgramAddress(
     [
@@ -591,6 +527,7 @@ export async function swapAndWithdraw(
     ],
     serum.programId
   );
+
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: userAccount, isSigner: false, isWritable: true },
@@ -608,11 +545,8 @@ export async function swapAndWithdraw(
       isSigner: false,
       isWritable: false,
     },
-
     { pubkey: strategy.ammId, isSigner: false, isWritable: true },
-
     { pubkey: AMM_AUTHORITY, isSigner: false, isWritable: true },
-
     { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
@@ -639,23 +573,30 @@ export async function swapAndWithdraw(
     },
     { pubkey: serumVaultSigner, isSigner: false, isWritable: true },
   ];
-  let ix = new TransactionInstruction({
+
+  return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return ix;
 }
 
-export function closeAccount(userInfoPubkey: PublicKey, wallet: PublicKey) {
+// Raydium-specific
+export function closeRaydiumPosition(
+  userInfoPubkey: PublicKey,
+  wallet: PublicKey
+): TransactionInstruction {
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: userInfoPubkey, isSigner: false, isWritable: true },
   ];
+
+  // TODO: Discriminator should be derived from hashed string
   let data = Buffer.from("ca6f062b7a4edabb", "hex");
+
   return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
 }
