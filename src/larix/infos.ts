@@ -150,7 +150,11 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
     return borrowedAmount.add(availableAmount);
   }
-
+  borrowedAmount() {
+    return this.reserveInfo.liquidity.borrowedAmountWads.div(
+      new BN(`1${"".padEnd(18, "0")}`),
+    );
+  }
   isMining() {
     this.reserveInfo.farm.kinkUtilRate.gt(new BN(0));
   }
@@ -166,6 +170,21 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   miningApy(larix_price: number) {
     let decimal = this.supplyTokenDecimal() as unknown as number;
     let poolTotalSupplyValue = this.supplyAmount()
+      .mul(this.reserveInfo.liquidity.marketPrice)
+      .div(new BN(`1${"".padEnd(18, "0")}`))
+      .div(new BN(`1${"".padEnd(decimal, "0")}`));
+    let miningRate = this.reserveInfo.farm.kinkUtilRate;
+    let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
+    let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
+    let apy =
+      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
+      poolTotalSupplyValue.toNumber() /
+      10 ** 7;
+    return apy;
+  }
+  borrowRewardApy(larix_price: number) {
+    let decimal = this.supplyTokenDecimal() as unknown as number;
+    let poolTotalSupplyValue = this.borrowedAmount()
       .mul(this.reserveInfo.liquidity.marketPrice)
       .div(new BN(`1${"".padEnd(18, "0")}`))
       .div(new BN(`1${"".padEnd(decimal, "0")}`));
