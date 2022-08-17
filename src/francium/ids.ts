@@ -7,7 +7,7 @@ export const ADMIN = new PublicKey(
   "7MBLg6oV5phip11YBbJPuq7u38kdzSi9PM3BifKSpLaR"
 );
 
-// Raydium specific
+// Raydium-specific
 export const LFY_RAYDIUM_PROGRAM_ID = new PublicKey(
   "2nAAsYdXF3eTQzaeUQS3fr4o782dDg8L28mX39Wr5j8N"
 );
@@ -30,7 +30,7 @@ export const SERUM_PROGRAM_ID_V3 = new PublicKey(
   "9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
 );
 
-// Orca specific
+// Orca-specific
 export const LYF_ORCA_PROGRAM_ID = new PublicKey(
   "DmzAmomATKpNp2rCBfYLS7CSwQqeQTsgRYJA1oSSAJaP"
 );

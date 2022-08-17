@@ -32,6 +32,7 @@ export function parseLendingInfo(
 ): LendingInfo {
   let buffer = Buffer.from(data);
   let rawLending = LendingPoolLayout.decode(buffer);
+
   let {
     version,
     last_updateSlot,
@@ -121,6 +122,7 @@ export function parseRaydiumStrategyStateData(
 ): RaydiumStrategyState {
   let bufferedData = Buffer.from(data).slice(8);
   let rawState = RAYDIUM_STRATEGY_STATE_LAYOUT.decode(bufferedData);
+
   let {
     protocolVersion,
     protocolSubVersion,
@@ -276,6 +278,7 @@ export function parseOrcaStrategyStateData(
 ): OrcaStrategyState {
   let bufferedData = Buffer.from(data).slice(8);
   let rawState = ORCA_STRATEGY_STATE_LAYOUT.decode(bufferedData);
+
   let {
     protocolVersion,
     protocolSubVersion,
@@ -383,11 +386,12 @@ export async function getOrcaStrategyState(
   connection: Connection
 ) {
   let accountInfo = await connection.getAccountInfo(strategyStateKey);
-  let farm = parseOrcaStrategyStateData(accountInfo?.data, strategyStateKey);
-  return farm;
+  return parseOrcaStrategyStateData(accountInfo?.data, strategyStateKey);
 }
 
-export async function getAllOrcaStrategyStates(connection: Connection) {
+export async function getAllOrcaStrategyStates(
+  connection: Connection
+): Promise<OrcaStrategyState[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 125,
@@ -399,29 +403,28 @@ export async function getAllOrcaStrategyStates(connection: Connection) {
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allAccountInfo = await connection.getProgramAccounts(
+
+  const allAccountInfos = await connection.getProgramAccounts(
     LYF_ORCA_PROGRAM_ID,
     config
   );
-  let allStrategyStates: OrcaStrategyState[] = [];
-  for (let info of allAccountInfo) {
-    allStrategyStates.push(
-      parseOrcaStrategyStateData(info.account.data, info.pubkey)
-    );
-  }
-  return allStrategyStates;
+
+  return allAccountInfos.map((info) =>
+    parseOrcaStrategyStateData(info.account.data, info.pubkey)
+  );
 }
 
 export async function getRaydiumStrategyState(
   strategyStateKey: PublicKey,
   connection: Connection
-) {
+): Promise<RaydiumStrategyState> {
   let accountInfo = await connection.getAccountInfo(strategyStateKey);
-  let farm = parseRaydiumStrategyStateData(accountInfo?.data, strategyStateKey);
-  return farm;
+  return parseRaydiumStrategyStateData(accountInfo?.data, strategyStateKey);
 }
 
-export async function getAllRaydiumStrategyStates(connection: Connection) {
+export async function getAllRaydiumStrategyStates(
+  connection: Connection
+): Promise<RaydiumStrategyState[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 122,
@@ -433,17 +436,15 @@ export async function getAllRaydiumStrategyStates(connection: Connection) {
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allAccountInfo = await connection.getProgramAccounts(
+
+  const allAccountInfos = await connection.getProgramAccounts(
     LFY_RAYDIUM_PROGRAM_ID,
     config
   );
-  let allStrategyStates: RaydiumStrategyState[] = [];
-  for (let info of allAccountInfo) {
-    allStrategyStates.push(
-      parseRaydiumStrategyStateData(info.account.data, info.pubkey)
-    );
-  }
-  return allStrategyStates;
+
+  return allAccountInfos.map((info) =>
+    parseRaydiumStrategyStateData(info.account.data, info.pubkey)
+  );
 }
 
 export interface RaydiumPosition {
@@ -537,7 +538,7 @@ export function parseRaydiumPositionData(
 export async function getAllRaydiumPositions(
   wallet: PublicKey,
   connection: Connection
-) {
+): Promise<RaydiumPosition[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 49,
@@ -549,35 +550,28 @@ export async function getAllRaydiumPositions(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allPosition = await connection.getProgramAccounts(
+
+  const allPositionInfos = await connection.getProgramAccounts(
     LFY_RAYDIUM_PROGRAM_ID,
     config
   );
-  let allPositions: RaydiumPosition[] = [];
-  for (let Position of allPosition) {
-    allPositions.push(
-      parseRaydiumPositionData(Position.account.data, Position.pubkey)
-    );
-  }
-  return allPositions;
+
+  return allPositionInfos.map((info) =>
+    parseRaydiumPositionData(info.account.data, info.pubkey)
+  );
 }
 
-export async function getRaydiumPositionKey(
+export async function getRaydiumPositionKeySet(
   wallet: PublicKey,
   strategyAccount: PublicKey
-) {
+): Promise<{ address: PublicKey; nonce: BN; bump: BN }> {
   let seed = Buffer.from([97, 110, 99, 104, 111, 114]);
   let nonce = Math.trunc(Date.now() / 1000);
   const nonceLeBytes = Buffer.from([0, 0, 0, 0]);
   nonceLeBytes.writeUInt32LE(nonce);
 
   const [pda, bump] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from([97, 110, 99, 104, 111, 114]),
-      wallet.toBuffer(),
-      strategyAccount.toBuffer(),
-      nonceLeBytes,
-    ],
+    [seed, wallet.toBuffer(), strategyAccount.toBuffer(), nonceLeBytes],
     LFY_RAYDIUM_PROGRAM_ID
   );
 
@@ -684,7 +678,7 @@ export function parseOrcaPositionData(
 export async function getAllOrcaPositions(
   wallet: PublicKey,
   connection: Connection
-) {
+): Promise<OrcaPosition[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 49,
@@ -696,15 +690,13 @@ export async function getAllOrcaPositions(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allPosition = await connection.getProgramAccounts(
+
+  const allPositionInfos = await connection.getProgramAccounts(
     LYF_ORCA_PROGRAM_ID,
     config
   );
-  let allPositions: OrcaPosition[] = [];
-  for (let Position of allPosition) {
-    allPositions.push(
-      parseOrcaPositionData(Position.account.data, Position.pubkey)
-    );
-  }
-  return allPositions;
+
+  return allPositionInfos.map((info) =>
+    parseOrcaPositionData(info.account.data, info.pubkey)
+  );
 }

@@ -15,6 +15,8 @@ import {
   MemcmpFilter,
   DataSizeFilter,
   GetProgramAccountsConfig,
+  TransactionInstruction,
+  SYSVAR_CLOCK_PUBKEY,
 } from "@solana/web3.js";
 import {
   swap,
@@ -22,17 +24,21 @@ import {
   borrow,
   addLiquidity,
   removeLiquidity,
-  updateLending,
   swapAndWithdraw,
   unstake,
   initializeRaydiumPosition,
   closeRaydiumPosition,
 } from "./instructions";
-import { parseLendingInfo, RaydiumStrategyState } from "./infos";
+import {
+  getRaydiumPositionKeySet,
+  parseLendingInfo,
+  RaydiumStrategyState,
+} from "./infos";
 import { parseV4PoolInfo, parseFarmV45, FARM_PROGRAM_ID_V5 } from "../raydium";
 import { Market } from "@project-serum/serum";
+import { FRANCIUM_LENDING_PROGRAM_ID, LENDING_MARKET } from "./ids";
 
-// Raydium Specific
+// Raydium-specific
 export async function getDepositTx(
   strategy: RaydiumStrategyState,
   wallet: PublicKey,
@@ -42,12 +48,17 @@ export async function getDepositTx(
   borrow0: BN,
   borrow1: BN,
   connection: Connection
-) {
-  let swapTx = new Transaction();
-  let depositTx = new Transaction();
+): Promise<Transaction[]> {
   let preTx = new Transaction();
+  let moneyMarketTx = new Transaction();
+  let poolTx = new Transaction();
   let cleanUpTx = new Transaction();
-  let init = await initializeRaydiumPosition(wallet, strategy);
+
+  const positionKeySet = await getRaydiumPositionKeySet(
+    wallet,
+    strategy.infoPubkey
+  );
+  const initIx = initializeRaydiumPosition(wallet, strategy, positionKeySet);
   let pubkeys = [strategy.lendingPool0, strategy.lendingPool1, strategy.ammId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
   let lending0 = parseLendingInfo(accountsInfo[0]?.data, pubkeys[0]);
@@ -60,7 +71,7 @@ export async function getDepositTx(
     ammInfo.serumProgramId
   );
 
-  preTx.add(init.instruction);
+  preTx.add(initIx);
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenAMint));
 
@@ -76,11 +87,12 @@ export async function getDepositTx(
     cleanUpTx.add(createCloseAccountInstruction(usrATA1, wallet, wallet, []));
   }
 
-  depositTx.add(
-    await transfer(
+  moneyMarketTx.add(
+    // TODO: Rename to supply?
+    transfer(
       wallet,
       strategy,
-      init.userKey,
+      positionKeySet.address,
       stopLoss,
       amount0,
       amount1,
@@ -88,51 +100,58 @@ export async function getDepositTx(
       usrATA1
     )
   );
-  depositTx.add(
-    await borrow(
+
+  moneyMarketTx.add(
+    borrow(
       wallet,
       strategy,
       lending0,
       lending1,
       ammInfo,
-      init.userKey,
+      positionKeySet.address,
       new BN(0),
       borrow1
     )
   );
-  depositTx.add(
-    await borrow(
+
+  moneyMarketTx.add(
+    borrow(
       wallet,
       strategy,
       lending0,
       lending1,
       ammInfo,
-      init.userKey,
+      positionKeySet.address,
       borrow0,
       new BN(0)
     )
   );
-  swapTx.add(await swap(wallet, strategy, ammInfo, serumMarket, init.userKey));
-  swapTx.add(await addLiquidity(wallet, strategy, ammInfo, init.userKey));
 
-  // TODO: Missing stake ix?
+  poolTx.add(
+    await swap(wallet, strategy, ammInfo, serumMarket, positionKeySet.address)
+  );
+  poolTx.add(addLiquidity(wallet, strategy, ammInfo, positionKeySet.address));
 
-  return [preTx, depositTx, swapTx, cleanUpTx];
+  // TODO: Miss staking?
+
+  return [preTx, moneyMarketTx, poolTx, cleanUpTx];
 }
 
+// Raydium-specific
 export async function getWithdrawTx(
   strategy: RaydiumStrategyState,
   userInfoAccount: PublicKey,
   wallet: PublicKey,
-  LPamount: BN,
+  lpAmount: BN,
   withdrawType: number,
   //0,1,2 2 is without trading
   connection: Connection
-) {
-  let swapTx = new Transaction();
-  let withdrawTx = new Transaction();
+): Promise<Transaction[]> {
   let preTx = new Transaction();
+  let poolTx = new Transaction();
+  let withdrawTx = new Transaction();
   let cleanUpTx = new Transaction();
+
   let pubkeys = [strategy.ammId, strategy.stakePoolId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
   let ammInfo = parseV4PoolInfo(accountsInfo[0]?.data, pubkeys[0]).poolInfo;
@@ -184,11 +203,12 @@ export async function getWithdrawTx(
       wallet,
       strategyFarmInfo,
       userInfoAccount,
-      LPamount,
+      lpAmount,
       new BN(withdrawType)
     )
   );
-  withdrawTx.add(
+
+  poolTx.add(
     await removeLiquidity(
       wallet,
       strategy,
@@ -197,7 +217,8 @@ export async function getWithdrawTx(
       userInfoAccount
     )
   );
-  swapTx.add(
+
+  withdrawTx.add(
     await swapAndWithdraw(
       wallet,
       strategy,
@@ -209,16 +230,75 @@ export async function getWithdrawTx(
       new BN(withdrawType)
     )
   );
+
   cleanUpTx.add(closeRaydiumPosition(userInfoAccount, wallet));
 
-  return [preTx, withdrawTx, swapTx, cleanUpTx];
+  return [preTx, poolTx, withdrawTx, cleanUpTx];
 }
 
+// Raydium-specific
 export function getCloseRaydiumPositionTx(
   userInfoAccount: PublicKey,
   wallet: PublicKey
-) {
+): Transaction {
   let tx = new Transaction();
   tx.add(closeRaydiumPosition(userInfoAccount, wallet));
+  return tx;
+}
+
+// Raydium-specific
+export function updateLending(strategy: RaydiumStrategyState): Transaction {
+  let keys0 = [
+    {
+      pubkey: LENDING_MARKET,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: strategy.lendingPool0,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: SYSVAR_CLOCK_PUBKEY,
+      isSigner: false,
+      isWritable: false,
+    },
+  ];
+  let keys1 = [
+    {
+      pubkey: LENDING_MARKET,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: strategy.lendingPool1,
+      isWritable: true,
+      isSigner: false,
+    },
+    {
+      pubkey: SYSVAR_CLOCK_PUBKEY,
+      isWritable: false,
+      isSigner: false,
+    },
+  ];
+  let data = Buffer.alloc(1, 12);
+
+  let tx = new Transaction();
+  tx.add(
+    new TransactionInstruction({
+      keys: keys0,
+      programId: FRANCIUM_LENDING_PROGRAM_ID,
+      data,
+    })
+  );
+  tx.add(
+    new TransactionInstruction({
+      keys: keys1,
+      programId: FRANCIUM_LENDING_PROGRAM_ID,
+      data,
+    })
+  );
+
   return tx;
 }
