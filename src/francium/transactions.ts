@@ -1,13 +1,10 @@
 import {
-  checkTokenAccount,
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
-} from "../../utils";
+} from "../utils";
 import {
-  TOKEN_PROGRAM_ID,
   NATIVE_MINT,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   createCloseAccountInstruction,
 } from "@solana/spl-token-v2";
 import BN from "bn.js";
@@ -19,30 +16,25 @@ import {
   DataSizeFilter,
   GetProgramAccountsConfig,
 } from "@solana/web3.js";
-import { StrategyState } from "./StrategyState";
 import {
   swap,
   transfer,
   borrow,
-  initializeUser,
   addLiquidity,
   removeLiquidity,
-  stakeLp,
-  unstakeLp,
   updateLending,
   swapAndWithdraw,
-  closeAccount,
+  unstake,
+  initializeRaydiumPosition,
+  closeRaydiumPosition,
 } from "./instructions";
-import { parseLendingInfo } from "../lending/lendingInfo";
-import {
-  parseV4PoolInfo,
-  parseFarmV45,
-  FARM_PROGRAM_ID_V5,
-} from "../../raydium";
+import { parseLendingInfo, RaydiumStrategyState } from "./infos";
+import { parseV4PoolInfo, parseFarmV45, FARM_PROGRAM_ID_V5 } from "../raydium";
 import { Market } from "@project-serum/serum";
 
+// Raydium Specific
 export async function getDepositTx(
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   wallet: PublicKey,
   stopLoss: BN,
   amount0: BN,
@@ -55,7 +47,7 @@ export async function getDepositTx(
   let depositTx = new Transaction();
   let preTx = new Transaction();
   let cleanUpTx = new Transaction();
-  let init = await initializeUser(wallet, strategy);
+  let init = await initializeRaydiumPosition(wallet, strategy);
   let pubkeys = [strategy.lendingPool0, strategy.lendingPool1, strategy.ammId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
   let lending0 = parseLendingInfo(accountsInfo[0]?.data, pubkeys[0]);
@@ -123,10 +115,13 @@ export async function getDepositTx(
   swapTx.add(await swap(wallet, strategy, ammInfo, serumMarket, init.userKey));
   swapTx.add(await addLiquidity(wallet, strategy, ammInfo, init.userKey));
 
+  // TODO: Missing stake ix?
+
   return [preTx, depositTx, swapTx, cleanUpTx];
 }
+
 export async function getWithdrawTx(
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   userInfoAccount: PublicKey,
   wallet: PublicKey,
   LPamount: BN,
@@ -183,7 +178,7 @@ export async function getWithdrawTx(
 
   preTx.add(updateLending(strategy));
   preTx.add(
-    await unstakeLp(
+    await unstake(
       strategy,
       stakeInfo,
       wallet,
@@ -214,15 +209,16 @@ export async function getWithdrawTx(
       new BN(withdrawType)
     )
   );
-  cleanUpTx.add(await closeAccount(userInfoAccount, wallet));
+  cleanUpTx.add(closeRaydiumPosition(userInfoAccount, wallet));
 
   return [preTx, withdrawTx, swapTx, cleanUpTx];
 }
-export function getCloseAccountTx(
+
+export function getCloseRaydiumPositionTx(
   userInfoAccount: PublicKey,
   wallet: PublicKey
 ) {
   let tx = new Transaction();
-  tx.add(closeAccount(userInfoAccount, wallet));
+  tx.add(closeRaydiumPosition(userInfoAccount, wallet));
   return tx;
 }

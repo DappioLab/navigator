@@ -5,75 +5,70 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-  i64,
-  u32,
-} from "@project-serum/borsh";
+import { struct, u64, u8, u32 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import BN from "bn.js";
-import { findUserInfoAccount, UserInfo } from "./UserInfo";
-import { StrategyState } from "./StrategyState";
-import { getAnchorInsByIdl } from "../../utils";
+import { getAnchorInsByIdl } from "../utils";
 import {
-  RAYDIUM_FARM_CONFIG,
-  LENDING_AUTHORITY,
-  LENDING_MARKET,
-  lendProgramId,
-  lyfRaydiumProgramId,
-} from "./info";
-import { LendInfo } from "../lending/lendingInfo";
+  getRaydiunPositionKey,
+  LendingInfo,
+  RaydiumStrategyState,
+} from "./infos";
 import { Market } from "@project-serum/serum";
 import {
   PoolInfo,
-  FarmInfo,
   AMM_AUTHORITY,
   POOL_PROGRAM_ID_V4,
   FarmInfoWrapper,
-} from "../../raydium";
+} from "../raydium";
+import {
+  FRANCIUM_LENDING_PROGRAM_ID,
+  LENDING_AUTHORITY,
+  LENDING_MARKET,
+  LFY_RAYDIUM_PROGRAM_ID,
+} from "./ids";
 
-export async function initializeUser(
+// Raydium Specific
+
+export async function initializeRaydiumPosition(
   wallet: PublicKey,
-  strategy: StrategyState
+  strategy: RaydiumStrategyState
 ) {
-  let userInfoAccount = await findUserInfoAccount(wallet, strategy.infoPubkey);
+  let positionKey = await getRaydiunPositionKey(wallet, strategy.infoPubkey);
   let data = Buffer.alloc(13);
   let hash = "6cde4a0b8f992803";
   const dataLayout = struct([u32("nonce"), u8("bump")]);
   let seed = Buffer.alloc(dataLayout.span);
   dataLayout.encode(
     {
-      nonce: userInfoAccount.nonce,
-      bump: userInfoAccount.bump,
+      nonce: positionKey.nonce,
+      bump: positionKey.bump,
     },
     seed
   );
   let dataString = hash.concat(seed.toString("hex"));
   data = Buffer.from(dataString, "hex");
+
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
-    { pubkey: userInfoAccount.address, isSigner: false, isWritable: true },
+    { pubkey: positionKey.address, isSigner: false, isWritable: true },
     { pubkey: strategy.infoPubkey, isSigner: false, isWritable: false },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     { pubkey: SYSVAR_CLOCK_PUBKEY, isSigner: false, isWritable: false },
   ];
+
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
-  return { instruction: ix, userKey: userInfoAccount.address };
+
+  return { instruction: ix, userKey: positionKey.address };
 }
 
 export async function transfer(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   userAccount: PublicKey,
   stopLoss: BN,
   amount0: BN,
@@ -109,7 +104,7 @@ export async function transfer(
   ];
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
   return ix;
@@ -117,9 +112,9 @@ export async function transfer(
 
 export async function borrow(
   wallet: PublicKey,
-  strategy: StrategyState,
-  lendInfo0: LendInfo,
-  lendInfo1: LendInfo,
+  strategy: RaydiumStrategyState,
+  lendInfo0: LendingInfo,
+  lendInfo1: LendingInfo,
   ammInfo: PoolInfo,
   userAccount: PublicKey,
   amount0: BN,
@@ -147,7 +142,7 @@ export async function borrow(
     { pubkey: strategy.tknAccount1, isSigner: false, isWritable: true },
     { pubkey: LENDING_MARKET, isSigner: false, isWritable: true },
     { pubkey: LENDING_AUTHORITY, isSigner: false, isWritable: false },
-    { pubkey: lendProgramId, isSigner: false, isWritable: false },
+    { pubkey: FRANCIUM_LENDING_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: strategy.lendingPool0, isSigner: false, isWritable: true },
     {
       pubkey: lendInfo0.lendingPoolTknAccount,
@@ -190,14 +185,15 @@ export async function borrow(
   ];
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
   return ix;
 }
+
 export async function swap(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   serum: Market,
   userAccount: PublicKey
@@ -261,14 +257,15 @@ export async function swap(
 
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
   return ix;
 }
+
 export async function addLiquidity(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   userAccount: PublicKey
 ) {
@@ -308,14 +305,14 @@ export async function addLiquidity(
 
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
   return ix;
 }
 
-export async function stakeLp(
-  strategy: StrategyState,
+export async function stake(
+  strategy: RaydiumStrategyState,
   stakeInfo: FarmInfoWrapper,
   strategyFarmInfo: PublicKey
 ) {
@@ -359,14 +356,15 @@ export async function stakeLp(
 
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
+
   return ix;
 }
 
-export async function unstakeLp(
-  strategy: StrategyState,
+export async function unstake(
+  strategy: RaydiumStrategyState,
   stakeInfo: FarmInfoWrapper,
   wallet: PublicKey,
   strategyFarmInfo: PublicKey,
@@ -388,9 +386,11 @@ export async function unstakeLp(
   let dataString = hash.concat(seed.toString("hex"));
   data = Buffer.from(dataString, "hex");
 
-  const raydiumConfig = Object.values(RAYDIUM_FARM_CONFIG).find((config) =>
-    config.strategyAccount.equals(strategy.infoPubkey)
-  );
+  // TODO: Double-check if it's valid to remove Raydium config
+
+  // const raydiumConfig = Object.values(RAYDIUM_FARM_CONFIG).find((config) =>
+  //   config.strategyAccount.equals(strategy.infoPubkey)
+  // );
 
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
@@ -399,17 +399,18 @@ export async function unstakeLp(
     { pubkey: strategy.authority, isSigner: false, isWritable: true },
     { pubkey: strategy.lpAccount, isSigner: false, isWritable: true },
     { pubkey: strategy.rewardAccount, isSigner: false, isWritable: true },
+    // TODO: Need double-check
     {
-      pubkey: raydiumConfig?.strategyTknAccount1,
+      pubkey: strategy.tknAccount1,
       isSigner: false,
       isWritable: true,
     },
+    // TODO: Need double-check
     {
-      pubkey: raydiumConfig?.strategyFarmInfo,
+      pubkey: strategyFarmInfo,
       isSigner: false,
       isWritable: true,
     },
-
     { pubkey: strategy.stakeProgramId, isSigner: false, isWritable: false },
     { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
     {
@@ -417,7 +418,6 @@ export async function unstakeLp(
       isSigner: false,
       isWritable: true,
     },
-
     {
       pubkey: stakeInfo.farmInfo.poolLpTokenAccountPubkey,
       isSigner: false,
@@ -442,14 +442,15 @@ export async function unstakeLp(
   ];
 
   let ix = new TransactionInstruction({
-    // @ts-ignore
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
+
   return ix;
 }
-export function updateLending(strategy: StrategyState) {
+
+export function updateLending(strategy: RaydiumStrategyState) {
   let keys0 = [
     {
       pubkey: LENDING_MARKET,
@@ -489,14 +490,14 @@ export function updateLending(strategy: StrategyState) {
   tx.add(
     new TransactionInstruction({
       keys: keys0,
-      programId: lendProgramId,
+      programId: FRANCIUM_LENDING_PROGRAM_ID,
       data,
     })
   );
   tx.add(
     new TransactionInstruction({
       keys: keys1,
-      programId: lendProgramId,
+      programId: FRANCIUM_LENDING_PROGRAM_ID,
       data,
     })
   );
@@ -504,7 +505,7 @@ export function updateLending(strategy: StrategyState) {
 }
 export async function removeLiquidity(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   serum: Market,
   userAccount: PublicKey
@@ -563,14 +564,15 @@ export async function removeLiquidity(
   ];
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
   return ix;
 }
+
 export async function swapAndWithdraw(
   wallet: PublicKey,
-  strategy: StrategyState,
+  strategy: RaydiumStrategyState,
   ammInfo: PoolInfo,
   serum: Market,
   userAccount: PublicKey,
@@ -591,6 +593,7 @@ export async function swapAndWithdraw(
     ],
     serum.programId
   );
+
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: userAccount, isSigner: false, isWritable: true },
@@ -608,11 +611,8 @@ export async function swapAndWithdraw(
       isSigner: false,
       isWritable: false,
     },
-
     { pubkey: strategy.ammId, isSigner: false, isWritable: true },
-
     { pubkey: AMM_AUTHORITY, isSigner: false, isWritable: true },
-
     { pubkey: ammInfo.ammOpenOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.ammTargetOrders, isSigner: false, isWritable: true },
     { pubkey: ammInfo.poolCoinTokenAccount, isSigner: false, isWritable: true },
@@ -639,23 +639,30 @@ export async function swapAndWithdraw(
     },
     { pubkey: serumVaultSigner, isSigner: false, isWritable: true },
   ];
+
   let ix = new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
+
   return ix;
 }
 
-export function closeAccount(userInfoPubkey: PublicKey, wallet: PublicKey) {
+export function closeRaydiumPosition(
+  userInfoPubkey: PublicKey,
+  wallet: PublicKey
+) {
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: userInfoPubkey, isSigner: false, isWritable: true },
   ];
+
   let data = Buffer.from("ca6f062b7a4edabb", "hex");
+
   return new TransactionInstruction({
     keys,
-    programId: lyfRaydiumProgramId,
+    programId: LFY_RAYDIUM_PROGRAM_ID,
     data,
   });
 }
