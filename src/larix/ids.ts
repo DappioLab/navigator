@@ -31,3 +31,8 @@ export const LARIX_LENDING_MARKET_ID_ALL = [
 
 export const LARIX_MAIN_POOL_MINER_SEED = "Dappio";
 export const LARIX_MAIN_POOL_OBLIGATION_SEED = LARIX_MARKET_ID_MAIN_POOL.toString().slice(0, 32);
+
+export const LDO_REWARD_RESERVE = new PublicKey("FStv7oj29DghUcCRDRJN9sEkB4uuh4SqWBY9pvSQ4Rch");
+export const MNDE_REWARD_RESERVE = new PublicKey("GaX5diaQz7imMTeNYs5LPAHX6Hq1vKtxjBYzLkjXipMh");
+export const LDO_PRICE_ORACLE = new PublicKey("9dCoWrkPYwyUAmb62UwTyewsiRS6c9GTcEpJy8id6WCE");
+export const MNDE_PRICE_ORACLE = new PublicKey("4pDjBPCEHamdZwUab5hcqn4VYUmKx84CCCVT6NYXJGTv");

@@ -13,6 +13,10 @@ import {
   LARIX_MAIN_POOL_OBLIGATION_SEED,
   LARIX_MARKET_ID_MAIN_POOL,
   LARIX_PROGRAM_ID,
+  LDO_PRICE_ORACLE,
+  LDO_REWARD_RESERVE,
+  MNDE_PRICE_ORACLE,
+  MNDE_REWARD_RESERVE,
 } from "./ids";
 import {
   COLLATERAL_LAYOUT,
@@ -25,6 +29,7 @@ import {
 } from "./layouts";
 // @ts-ignore
 import { seq } from "buffer-layout";
+import SwitchboardProgram from "@switchboard-xyz/sbv2-lite";
 
 export const RESERVE_LAYOUT_SPAN = 873;
 
@@ -38,6 +43,7 @@ export interface ReserveInfo extends IReserveInfo {
   farm: FarmInfo;
 }
 import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
+import { IServicesTokenInfo } from "../utils";
 
 interface ReserveConfig {
   optimalUtilizationRate: BN;
@@ -144,7 +150,11 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
     return borrowedAmount.add(availableAmount);
   }
-
+  borrowedAmount() {
+    return this.reserveInfo.liquidity.borrowedAmountWads.div(
+      new BN(`1${"".padEnd(18, "0")}`),
+    );
+  }
   isMining() {
     this.reserveInfo.farm.kinkUtilRate.gt(new BN(0));
   }
@@ -171,6 +181,63 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       poolTotalSupplyValue.toNumber() /
       10 ** 7;
     return apy;
+  }
+  borrowRewardApy(larix_price: number) {
+    let decimal = this.supplyTokenDecimal() as unknown as number;
+    let poolTotalSupplyValue = this.borrowedAmount()
+      .mul(this.reserveInfo.liquidity.marketPrice)
+      .div(new BN(`1${"".padEnd(18, "0")}`))
+      .div(new BN(`1${"".padEnd(decimal, "0")}`));
+    let miningRate = this.reserveInfo.farm.kinkUtilRate;
+    let miningSpeed = this.reserveInfo.farm.totalMiningSpeed;
+    let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
+    let apy =
+      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
+      poolTotalSupplyValue.toNumber() /
+      10 ** 7;
+    return apy;
+  }
+  async partnerReward(connection: Connection): Promise<number> {
+    let rewardApy = 0;
+    switch (this.reserveInfo.reserveId.toString()) {
+      case LDO_REWARD_RESERVE.toString(): {
+        const sbv2 = await SwitchboardProgram.loadMainnet(connection);
+        const LDO_PER_YEAR = 357 * 365;
+        let priceInfo = await sbv2.fetchAggregator(LDO_PRICE_ORACLE);
+        let price = (priceInfo.currentRound.result.mantissa as BN).toNumber();
+        let priceDecimal = priceInfo.currentRound.result.scale as number;
+        let totalRewardValue = (LDO_PER_YEAR * price) / 10 ** priceDecimal;
+        let supplyValue =
+          this.supplyAmount()
+            .mul(this.reserveInfo.liquidity.marketPrice)
+            .div(new BN(`1${"".padEnd(9, "0")}`))
+            .div(new BN(`1${"".padEnd(14, "0")}`))
+            .toNumber() /
+          10 ** 4;
+        return totalRewardValue / supplyValue;
+        break;
+      }
+      case MNDE_REWARD_RESERVE.toString(): {
+        const sbv2 = await SwitchboardProgram.loadMainnet(connection);
+        const MNDE_PER_YEAR = 172.9999 * 365;
+        let priceInfo = await sbv2.fetchAggregator(MNDE_PRICE_ORACLE);
+        let price = priceInfo.currentRound.result.mantissa as BN;
+        let priceDecimal = priceInfo.currentRound.result.scale as number;
+        let totalRewardValue =
+          (MNDE_PER_YEAR * price.divn(10 ** 5).toNumber() * 10 ** 5) /
+          10 ** priceDecimal;
+        let supplyValue =
+          this.supplyAmount()
+            .mul(this.reserveInfo.liquidity.marketPrice)
+            .div(new BN(`1${"".padEnd(9, "0")}`))
+            .div(new BN(`1${"".padEnd(14, "0")}`))
+            .toNumber() /
+          10 ** 4;
+        return totalRewardValue / supplyValue;
+        break;
+      }
+    }
+    return rewardApy;
   }
 
   calculateUtilizationRatio() {
