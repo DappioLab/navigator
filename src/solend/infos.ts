@@ -175,7 +175,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return miningApy;
   }
 
-  async calcBorrowingApy(connection: Connection): Promise<number> {
+  async calcBorrowMiningApy(connection: Connection): Promise<number> {
     let borrowingApy = 0;
     let decimal = Number(new BN(this.reserveInfo.liquidity.mintDecimals));
     if (BORROWING_MULTIPLIER(this.reserveInfo.reserveId).eq(new BN(0))) {
@@ -183,12 +183,12 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     } else {
       let slndPrice = await getSlndPrice(connection);
       let slndPerYear = BORROWING_MULTIPLIER(this.reserveInfo.reserveId).div(new BN(`1${"".padEnd(3, "0")}`));
-      let supplyUSDValue = this.supplyAmount()
-        .sub(this.reserveInfo.liquidity.availableAmount)
+      let borrowUSDValue = this.supplyAmount()
+        .sub(this.reserveInfo.liquidity.availableAmount) // supplyAmt - avaiableAmt = borrowAmt
         .div(new BN(`1${"".padEnd(decimal, "0")}`))
         .mul(this.reserveInfo.liquidity.marketPrice)
         .div(new BN(`1${"".padEnd(18, "0")}`));
-      borrowingApy = Number(slndPerYear.mul(slndPrice)) / Number(supplyUSDValue);
+      borrowingApy = (Number(slndPerYear.mul(slndPrice)) * 0.9) / Number(borrowUSDValue);
     }
     return borrowingApy;
   }
