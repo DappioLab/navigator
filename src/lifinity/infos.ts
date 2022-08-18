@@ -10,6 +10,8 @@ import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
 import { MintLayout } from "@solana/spl-token-v2";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID, LIFINITY_PROGRAM_ID } from "./ids";
+import axios from "axios";
+import { getTokenList, IServicesTokenInfo } from "../utils";
 
 export interface PoolInfo extends IPoolInfo {
   index: BN; // discriminator
@@ -35,6 +37,8 @@ export interface PoolInfo extends IPoolInfo {
   hostFee: BN;
   curveType: BN;
   curveParameters: BN;
+  symbol: string | null;
+  apr: number | null;
 }
 
 interface PoolConfig {
@@ -66,7 +70,27 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 }
 
+function getPoolSymbol(
+  tokenAMint: string,
+  tokenBMint: string,
+  tokenList: IServicesTokenInfo[]
+) {
+  let symbol = null;
+  const tokenA = tokenList.find((token) => token.mint === tokenAMint)?.symbol;
+  const tokenB = tokenList.find((token) => token.mint === tokenBMint)?.symbol;
+
+  if (tokenA && tokenB) {
+    symbol = `${tokenA}-${tokenB}`;
+  }
+  return symbol;
+}
+
 export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
+  const allAPIPools: { symbol: string; aprIncPL: number }[] = await (
+    await axios.get("https://lifinity.io/api/poolinfo")
+  ).data;
+  const tokenList = await getTokenList();
+
   const allLifinityAccount = await connection.getMultipleAccountsInfo(
     LIFINITY_ALL_AMM_ID
   );
@@ -80,6 +104,23 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
       lifinityAccount?.data,
       LIFINITY_ALL_AMM_ID[index]
     );
+
+    let symbol = getPoolSymbol(
+      poolInfo.tokenAMint.toBase58(),
+      poolInfo.tokenBMint.toBase58(),
+      tokenList
+    );
+    poolInfo.symbol = symbol;
+
+    let apr = null;
+    let lifinityAPR = allAPIPools.find(
+      (pool) => pool.symbol === symbol
+    )?.aprIncPL;
+    if (lifinityAPR) {
+      apr = lifinityAPR;
+    }
+    poolInfo.apr = apr;
+
     poolInfoArray.push(poolInfo);
     poolConfigArray.push(poolInfo.poolConfig.key);
   }
@@ -195,6 +236,8 @@ export function parsePoolInfo(data: any, pubkey: PublicKey): PoolInfo {
     hostFee: new BN(hostFee),
     curveType: new BN(curveType),
     curveParameters: new BN(curveParameters),
+    symbol: null,
+    apr: null,
   };
 
   return poolInfo;
