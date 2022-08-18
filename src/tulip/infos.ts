@@ -89,6 +89,20 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 }
 
+export async function getAllReserveWrappers(
+  connection: Connection,
+  lendingMarket?: PublicKey
+): Promise<ReserveInfoWrapper[]> {
+  const allReserves = await getAllReserves(connection, lendingMarket);
+  const allReservesWrapper: ReserveInfoWrapper[] = [];
+
+  allReserves.map((reserveInfo) => {
+    allReservesWrapper.push(new ReserveInfoWrapper(reserveInfo));
+  });
+
+  return allReservesWrapper;
+}
+
 export async function getAllReserves(
   connection: Connection,
   lendingMarket?: PublicKey
