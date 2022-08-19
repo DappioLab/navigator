@@ -175,7 +175,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return miningApy;
   }
 
-  async calcBorrowMiningApy(connection: Connection): Promise<number> {
+  async calculateBorrowMiningApy(connection: Connection): Promise<number> {
     let borrowingApy = 0;
     let decimal = Number(new BN(this.reserveInfo.liquidity.mintDecimals));
     if (BORROWING_MULTIPLIER(this.reserveInfo.reserveId).eq(new BN(0))) {

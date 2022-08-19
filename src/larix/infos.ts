@@ -7,8 +7,10 @@ import {
   LARIX_MAIN_POOL_OBLIGATION_SEED,
   LARIX_MARKET_ID_MAIN_POOL,
   LARIX_PROGRAM_ID,
+  LDO_MINT,
   LDO_PRICE_ORACLE,
   LDO_REWARD_RESERVE,
+  MNDE_MINT,
   MNDE_PRICE_ORACLE,
   MNDE_REWARD_RESERVE,
 } from "./ids";
@@ -166,7 +168,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
-  calcBorrowMiningApy(larix_price: number) {
+  calculateBorrowMiningApy(larix_price: number) {
     let decimal = this.supplyTokenDecimal() as unknown as number;
     let poolTotalSupplyValue = this.borrowedAmount()
       .mul(this.reserveInfo.liquidity.marketPrice)
@@ -187,8 +189,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     switch (this.reserveInfo.reserveId.toString()) {
       case LDO_REWARD_RESERVE.toString(): {
         const LDO_PER_YEAR = 357 * 365;
-        const ldoMint = "HZRCwxP2Vq9PCpPXooayhJ2bxTpo5xfpQrwB1svh332p";
-        tokenInfo = tokenList.find((t) => t.mint === ldoMint) ?? null;
+        tokenInfo = tokenList.find((t) => t.mint === LDO_MINT.toBase58()) ?? null;
         if (!tokenInfo) return null;
         rewardValue = LDO_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
@@ -204,8 +205,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       }
       case MNDE_REWARD_RESERVE.toString(): {
         const MNDE_PER_YEAR = 172.9999 * 365;
-        const mndeMint = "MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey";
-        tokenInfo = tokenList.find((t) => t.mint === mndeMint) ?? null;
+        tokenInfo = tokenList.find((t) => t.mint === MNDE_MINT.toBase58()) ?? null;
         if (!tokenInfo) return null;
         rewardValue = MNDE_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
