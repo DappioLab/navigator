@@ -29,6 +29,20 @@ export function MINING_MULTIPLIER(reserve: PublicKey) {
   }
 }
 
+export function BORROWING_MULTIPLIER(reserve: PublicKey) {
+  // https://docs.solend.fi/protocol/liquidity-mining
+  switch (reserve.toString()) {
+    case "8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36": // SOL
+      return new BN(6).mul(SLND_PER_YEAR).divn(24);
+    case "BgxfHJDzm44T7XG68MYKx7YisTjZu73tVovyZSjJMpmw": // USDC
+      return new BN(9).mul(SLND_PER_YEAR).divn(24);
+    case "8K9WC8xoh2rtQNY7iEGXtPvfbDCi563SdWhCAhuMP2xE": // USDT
+      return new BN(4).mul(SLND_PER_YEAR).divn(24);
+    default:
+      return new BN(0);
+  }
+}
+
 //all from https://docs.solend.fi/protocol/addresses
 
 interface ReserveConfig {
@@ -69,6 +83,12 @@ interface ReserveFees {
   hostFeePercentage: BN;
 }
 
+interface IPartnerReward {
+  rewardToken: IServicesTokenInfo;
+  rate: number;
+  side: string;
+}
+
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: LastUpdate;
@@ -98,8 +118,9 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  partnerRewardData = {} as { token: IServicesTokenInfo; rate: number };
-
+  // TODO: will be empty partnerReward when init class directly (can only be got from getAllReserveWrapper). Needs refactor.
+  // CONCERN: Increasing Solend API querying (internet traffic)
+  partnerRewardData: IPartnerReward[] | null = null;
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -154,6 +175,24 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return miningApy;
   }
 
+  async calculateBorrowMiningApy(connection: Connection): Promise<number> {
+    let borrowingApy = 0;
+    let decimal = Number(new BN(this.reserveInfo.liquidity.mintDecimals));
+    if (BORROWING_MULTIPLIER(this.reserveInfo.reserveId).eq(new BN(0))) {
+      borrowingApy = 0;
+    } else {
+      let slndPrice = await getSlndPrice(connection);
+      let slndPerYear = BORROWING_MULTIPLIER(this.reserveInfo.reserveId).div(new BN(`1${"".padEnd(3, "0")}`));
+      let borrowUSDValue = this.supplyAmount()
+        .sub(this.reserveInfo.liquidity.availableAmount) // supplyAmt - avaiableAmt = borrowAmt
+        .div(new BN(`1${"".padEnd(decimal, "0")}`))
+        .mul(this.reserveInfo.liquidity.marketPrice)
+        .div(new BN(`1${"".padEnd(18, "0")}`));
+      borrowingApy = (Number(slndPerYear.mul(slndPrice)) * 0.9) / Number(borrowUSDValue);
+    }
+    return borrowingApy;
+  }
+
   calculateUtilizationRatio() {
     const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
     const totalAmount = this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
@@ -186,7 +225,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return UtilizationRatio * borrowAPY;
   }
 
-  getSupplyPartnerRewardData() {
+  getPartnerRewardData() {
     return this.partnerRewardData;
   }
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
@@ -223,38 +262,37 @@ export async function getAllReserveWrappers(connection: Connection) {
   for (let reservesMeta of allReserves) {
     const newInfo = new ReserveInfoWrapper(reservesMeta);
 
-    let supplyTokenRewardData = allPartnersRewardData.filter(
-      (item) =>
-        item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
-        newInfo.reserveInfo.reserveId.toBase58() === item.reserveID &&
-        item.side === "supply"
-    );
+    let partnerRewards =
+      allPartnersRewardData.filter(
+        (item) =>
+          item.tokenMint === newInfo.supplyTokenMint().toBase58() &&
+          newInfo.reserveInfo.reserveId.toBase58() === item.reserveID
+      ) ?? null;
 
     let price = tokenList.find((t) => t.mint === newInfo.supplyTokenMint().toBase58())?.price;
-    let partnerRewardRate = 0;
-    let partnerRewardToken: any = {};
-    let partnerRewardData: any = null;
+    let partnerRewardData: IPartnerReward[] | null = null;
+
     const poolTotalSupply = Number(newInfo.supplyAmount()) / 10 ** Number(newInfo.supplyTokenDecimal());
     const poolTotalSupplyValue = poolTotalSupply * price!;
 
-    if (supplyTokenRewardData.length !== 0) {
-      supplyTokenRewardData.map((supplyReward) => {
-        let rewardRate = supplyReward.rewardRates[supplyReward.rewardRates.length - 1].rewardRate;
-        partnerRewardToken = tokenList.find((token: any) => token.mint === supplyReward.rewardMint)!;
-        if (partnerRewardToken) {
-          let rewardTokenPrice = partnerRewardToken?.price!;
-          partnerRewardRate = Number(
-            (((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)
-          );
-
-          partnerRewardData = {
-            rewardToken: partnerRewardToken,
-            rate: partnerRewardRate,
-          };
-        }
-      });
+    if (partnerRewards.length > 0) {
+      partnerRewardData = partnerRewards
+        .map((r) => {
+          const rewardRate = r.rewardRates.slice(-1)[0].rewardRate;
+          const rewardToken = tokenList.find((t) => t.mint === r.rewardMint);
+          if (rewardToken) {
+            const rewardTokenPrice = rewardToken.price;
+            return {
+              rewardToken,
+              rate: Number((((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)),
+              side: r.side,
+            } as IPartnerReward;
+          }
+        })
+        .filter((p) => p) as IPartnerReward[];
+    } else {
+      partnerRewardData = null;
     }
-
     newInfo.partnerRewardData = partnerRewardData;
     reserveInfoWrappers.push(newInfo);
   }
@@ -417,6 +455,18 @@ export class ObligationInfoWrapper {
     this.obligationInfo.borrowedValue = borrowedValue;
     this.obligationInfo.depositedValue = depositedValue;
     this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
+  }
+
+  getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
+    const limits = this.obligationCollaterals.map((deposit) => {
+      const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
+      const supplyToken = tokenList.find((t) => t.mint === reserve?.supplyTokenMint().toBase58());
+      if (!reserve || !supplyToken) return 0;
+      const depositAmount = reserve.convertReserveAmountToLiquidityAmount(deposit.depositedAmount);
+      const amt = Number(depositAmount) / 10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
+      return amt * supplyToken.price * (Number(reserve?.reserveInfo.config.loanToValueRatio) / 100);
+    });
+    return limits.length > 0 ? limits.reduce((a, b) => a + b) : 0;
   }
 }
 

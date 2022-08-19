@@ -36,3 +36,5 @@ export const LDO_REWARD_RESERVE = new PublicKey("FStv7oj29DghUcCRDRJN9sEkB4uuh4S
 export const MNDE_REWARD_RESERVE = new PublicKey("GaX5diaQz7imMTeNYs5LPAHX6Hq1vKtxjBYzLkjXipMh");
 export const LDO_PRICE_ORACLE = new PublicKey("9dCoWrkPYwyUAmb62UwTyewsiRS6c9GTcEpJy8id6WCE");
 export const MNDE_PRICE_ORACLE = new PublicKey("4pDjBPCEHamdZwUab5hcqn4VYUmKx84CCCVT6NYXJGTv");
+export const LDO_MINT = new PublicKey("HZRCwxP2Vq9PCpPXooayhJ2bxTpo5xfpQrwB1svh332p");
+export const MNDE_MINT = new PublicKey("MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey");
