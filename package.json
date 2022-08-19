@@ -14,6 +14,7 @@
     "putSell": "ts-node ./putSell.ts",
     "larixTest": "ts-node ./test/larixTest.ts",
     "orcaTest": "ts-node ./test/orca.ts",
+    "franciumTest": "ts-node ./test/francium.ts",
     "start": "ts-node ./index.ts"
   },
   "keywords": [],
