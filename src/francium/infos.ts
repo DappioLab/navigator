@@ -324,7 +324,7 @@ export function parseUserRewardData(
 }
 
 export async function getAllReserveWrappers(connection: Connection) {
-  let reserves = await getAllReserve(connection);
+  let reserves = await getAllReserves(connection);
   let rewards = await getAllLendingRewards(connection);
   let wrappers = [];
   for (let reserve of reserves) {
@@ -336,7 +336,7 @@ export async function getAllReserveWrappers(connection: Connection) {
   return wrappers;
 }
 
-export async function getAllReserve(connection: Connection) {
+export async function getAllReserves(connection: Connection) {
   const programIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 10,
