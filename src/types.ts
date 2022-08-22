@@ -14,9 +14,9 @@ export interface IFarmInfo {
 
 export interface IFarmerInfo {
   farmerId: PublicKey;
-  farmId: PublicKey;
   userKey: PublicKey;
-  amount: number;
+  farmId?: PublicKey;
+  amount?: number;
 }
 
 // TODO

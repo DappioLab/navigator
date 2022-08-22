@@ -12,8 +12,8 @@ import {
   RAYDIUM_STRATEGY_STATE_LAYOUT,
   RAYDIUM_POSITION_LAYOUT,
   ORCA_POSITION_LAYOUT,
-  LENDING_REWARD_LAYOUT,
-  USER_LENDING_REWARD_LAYOUT,
+  FARM_LAYOUT,
+  FARMER_LAYOUT,
 } from "./layouts";
 import BN from "bn.js";
 import {
@@ -24,7 +24,12 @@ import {
   FRANCIUM_LENDING_PROGRAM_ID,
   FRANCIUM_LENDING_REWARD_PROGRAM_ID,
 } from "./ids";
-import { IReserveInfo, IReserveInfoWrapper } from "../types";
+import {
+  IFarmerInfo,
+  IFarmInfo,
+  IReserveInfo,
+  IReserveInfoWrapper,
+} from "../types";
 import { utils } from "..";
 
 export interface ReserveInfo extends IReserveInfo {
@@ -52,7 +57,6 @@ export interface ReserveInfo extends IReserveInfo {
   factor2: number;
   base3: number;
   factor3: number;
-  rewardInfo?: LendingReward;
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
@@ -207,10 +211,11 @@ export function parseReserveInfo(
   };
 }
 
-export interface LendingReward {
+export interface FarmInfo extends IFarmInfo {
+  // farmId
+
   version: BN;
   isDualRewards: BN;
-  infoPubkey: PublicKey;
   admin: PublicKey;
   tokenProgramId: PublicKey;
   poolAuthority: PublicKey;
@@ -234,12 +239,9 @@ export interface LendingReward {
   accumulatedRewardsPerShareB: BN;
 }
 
-export function parseLendingReward(
-  data: any,
-  infoPubkey: PublicKey
-): LendingReward {
+export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   let buffer = Buffer.from(data);
-  let rawReward = LENDING_REWARD_LAYOUT.decode(buffer);
+  let rawFarm = FARM_LAYOUT.decode(buffer);
   let {
     version,
     is_dual_rewards,
@@ -264,11 +266,12 @@ export function parseLendingReward(
     last_update_slot,
     accumulated_rewards_per_share,
     accumulated_rewards_per_share_b,
-  } = rawReward;
+  } = rawFarm;
+
   return {
+    farmId,
     version: new BN(version),
     isDualRewards: new BN(is_dual_rewards),
-    infoPubkey: infoPubkey,
     admin: admin,
     tokenProgramId: token_program_id,
     poolAuthority: pool_authority,
@@ -293,25 +296,23 @@ export function parseLendingReward(
   };
 }
 
-export interface UserLendingReward {
+export interface FarmerInfo extends IFarmerInfo {
+  // farmerId
+  // userKey
+  // farmerId
+  // amount
+
   version: BN;
-  infoPubkey: PublicKey;
-  stakedAmount: BN;
   rewardsDebt: BN;
   rewardsDebtB: BN;
-  farmingPool: PublicKey;
-  wallet: PublicKey;
   stakeTokenAccount: PublicKey;
   rewardsTokenAccount: PublicKey;
   rewardsTokenAccountB: PublicKey;
 }
 
-export function parseUserRewardData(
-  data: any,
-  infoPubkey: PublicKey
-): UserLendingReward {
+export function parseFarmerData(data: any, farmerId: PublicKey): FarmerInfo {
   let buffer = Buffer.from(data);
-  let rawReward = USER_LENDING_REWARD_LAYOUT.decode(buffer);
+  let rawFarm = FARMER_LAYOUT.decode(buffer);
   let {
     version,
     staked_amount,
@@ -322,36 +323,33 @@ export function parseUserRewardData(
     stake_token_account,
     rewards_token_account,
     rewards_token_account_b,
-  } = rawReward;
+  } = rawFarm;
 
   return {
+    farmerId,
+    userKey: user_main,
+    farmId: farming_pool,
+    amount: Number(new BN(staked_amount)),
     version: new BN(version),
-    infoPubkey: infoPubkey,
-    stakedAmount: new BN(staked_amount),
     rewardsDebt: new BN(rewards_debt),
     rewardsDebtB: new BN(rewards_debt_b),
-    farmingPool: farming_pool,
-    wallet: user_main,
     stakeTokenAccount: stake_token_account,
     rewardsTokenAccount: rewards_token_account,
     rewardsTokenAccountB: rewards_token_account_b,
   };
 }
 
-export async function getAllReserveWrappers(connection: Connection) {
+export async function getAllReserveWrappers(
+  connection: Connection
+): Promise<ReserveInfoWrapper[]> {
   let reserves = await getAllReserves(connection);
-  let rewards = await getAllLendingRewards(connection);
-  let wrappers = [];
-  for (let reserve of reserves) {
-    if (reserve.liquidityAvailableAmount.cmpn(100) > 0) {
-      reserve.rewardInfo = rewards.get(reserve.shareMint.toString());
-      wrappers.push(new ReserveInfoWrapper(reserve));
-    }
-  }
-  return wrappers;
+
+  return reserves.map((reserveInfo) => new ReserveInfoWrapper(reserveInfo));
 }
 
-export async function getAllReserves(connection: Connection) {
+export async function getAllReserves(
+  connection: Connection
+): Promise<ReserveInfo[]> {
   const programIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 10,
@@ -365,82 +363,90 @@ export async function getAllReserves(connection: Connection) {
 
   const filters = [programIdMemcmp, dataSizeFilters];
 
-  const config: GetProgramAccountsConfig = { filters: filters };
+  const config: GetProgramAccountsConfig = { filters };
   const reserveAccounts = await connection.getProgramAccounts(
     FRANCIUM_LENDING_PROGRAM_ID,
     config
   );
 
-  let reserves = [] as ReserveInfo[];
-  for (let account of reserveAccounts) {
-    let info = parseReserveInfo(account.account.data, account.pubkey);
-    reserves.push(info);
-  }
-
-  return reserves;
+  return reserveAccounts.map((account) =>
+    parseReserveInfo(account.account.data, account.pubkey)
+  );
 }
 
-export async function getReserve(connection: Connection, reserveId: PublicKey) {
+export async function getReserve(
+  connection: Connection,
+  reserveId: PublicKey
+): Promise<ReserveInfo> {
   let reserveAccount = (await connection.getAccountInfo(
     reserveId
   )) as AccountInfo<Buffer>;
-  let info = parseReserveInfo(reserveAccount.data, reserveId);
-  let rewards = await getAllLendingRewards(connection);
-  info.rewardInfo = rewards.get(info.shareMint.toString());
-  return info;
+
+  return parseReserveInfo(reserveAccount.data, reserveId);
 }
 
-export async function getAllLendingRewards(connection: Connection) {
+export async function getAllFarms(connection: Connection) {
   const dataSizeFilters: DataSizeFilter = {
-    dataSize: LENDING_REWARD_LAYOUT.span,
+    dataSize: FARM_LAYOUT.span,
   };
-
   const filters = [dataSizeFilters];
+  const config: GetProgramAccountsConfig = { filters };
 
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const reserveAccounts = await connection.getProgramAccounts(
+  const farmAccounts = await connection.getProgramAccounts(
     FRANCIUM_LENDING_REWARD_PROGRAM_ID,
     config
   );
+
   const currentSlot = new BN(await connection.getSlot());
-  let rewardsMap: Map<String, LendingReward> = new Map();
-  for (let account of reserveAccounts) {
-    let info = parseLendingReward(account.account.data, account.pubkey);
+
+  // TODO: Why use set instead of array?
+  let farmMap: Map<String, FarmInfo> = new Map();
+
+  for (let account of farmAccounts) {
+    let info = parseFarmData(account.account.data, account.pubkey);
     if (info.rewardsEndSlot.cmp(currentSlot)) {
-      rewardsMap.set(info.stakedTokenMint.toString(), info);
+      farmMap.set(info.stakedTokenMint.toString(), info);
     } else if (info.rewardsEndSlotB.cmp(currentSlot)) {
-      rewardsMap.set(info.stakedTokenMint.toString(), info);
+      farmMap.set(info.stakedTokenMint.toString(), info);
     }
   }
 
-  return rewardsMap;
+  return farmMap;
 }
 
-export async function getUserRewardPubkey(
-  wallet: PublicKey,
-  lendingReward: LendingReward
-) {
+export async function getFarm(
+  connection: Connection,
+  farmId: PublicKey
+): Promise<FarmInfo> {
+  let farmAccount = (await connection.getAccountInfo(
+    farmId
+  )) as AccountInfo<Buffer>;
+
+  return parseFarmData(farmAccount.data, farmId);
+}
+
+export async function getFarmerPubkey(wallet: PublicKey, farmInfo: FarmInfo) {
   const ata = await utils.findAssociatedTokenAddress(
     wallet,
-    lendingReward.stakedTokenMint
+    farmInfo.stakedTokenMint
   );
   const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
-    [wallet.toBuffer(), lendingReward.infoPubkey.toBuffer(), ata.toBuffer()],
+    [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
     FRANCIUM_LENDING_REWARD_PROGRAM_ID
   );
   return { pda: farmInfoPub, bump: nonce };
 }
 
-export async function checkUserRewardCreated(
+export async function checkFarmerCreated(
   wallet: PublicKey,
-  lendingReward: LendingReward,
+  farmInfo: FarmInfo,
   connection: Connection
 ) {
-  const { pda, bump } = await getUserRewardPubkey(wallet, lendingReward);
-  const userRewardAccount = (await connection.getAccountInfo(
+  const { pda, bump } = await getFarmerPubkey(wallet, farmInfo);
+  const farmerAccount = (await connection.getAccountInfo(
     pda
   )) as AccountInfo<Buffer>;
-  return userRewardAccount.data.length > 0;
+  return farmerAccount.data.length > 0;
 }
 
 export interface RaydiumStrategyState {
@@ -778,7 +784,7 @@ export async function getAllOrcaStrategyStates(
     dataSize: 967,
   };
   const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
+  const config: GetProgramAccountsConfig = { filters };
 
   const allAccountInfos = await connection.getProgramAccounts(
     LYF_ORCA_PROGRAM_ID,
@@ -811,7 +817,7 @@ export async function getAllRaydiumStrategyStates(
     dataSize: 903,
   };
   const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
+  const config: GetProgramAccountsConfig = { filters };
 
   const allAccountInfos = await connection.getProgramAccounts(
     LFY_RAYDIUM_PROGRAM_ID,
@@ -925,7 +931,7 @@ export async function getAllRaydiumPositions(
     dataSize: 285,
   };
   const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
+  const config: GetProgramAccountsConfig = { filters };
 
   const allPositionInfos = await connection.getProgramAccounts(
     LFY_RAYDIUM_PROGRAM_ID,
@@ -1065,7 +1071,7 @@ export async function getAllOrcaPositions(
     dataSize: 285,
   };
   const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
+  const config: GetProgramAccountsConfig = { filters };
 
   const allPositionInfos = await connection.getProgramAccounts(
     LYF_ORCA_PROGRAM_ID,

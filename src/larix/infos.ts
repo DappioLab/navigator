@@ -7,6 +7,7 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import {
+  IFarmerInfo,
   IFarmInfo,
   IFarmInfoWrapper,
   IReserveInfo,
@@ -385,10 +386,11 @@ export async function getFarm(
   return parseFarmData(farmAccountInfo?.data, farmId);
 }
 
-export interface FarmerInfo {
-  farmerId: PublicKey;
+export interface FarmerInfo extends IFarmerInfo {
+  // farmerId
+  // userKey
   version: BN;
-  owner: PublicKey;
+  // owner: PublicKey;
   lendingMarket: PublicKey;
   reservesLen: BN;
   unclaimedMine: BN;
@@ -420,7 +422,7 @@ export function parseFarmerInfo(data: any, farmerId: PublicKey): FarmerInfo {
   return {
     farmerId,
     version: new BN(version),
-    owner,
+    userKey: owner,
     lendingMarket,
     reservesLen: new BN(reservesLen),
     unclaimedMine: new BN(unclaimedMine),
