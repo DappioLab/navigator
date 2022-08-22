@@ -12,7 +12,7 @@ import {
 // @ts-ignore
 import { blob, nu64, seq } from "buffer-layout";
 
-export const LendingPoolLayout = struct([
+export const RESERVE_LAYOUT = struct([
   u8("version"),
   u64("last_updateSlot"),
   u8("last_updateStale"),

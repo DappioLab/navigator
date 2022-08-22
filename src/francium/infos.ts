@@ -7,7 +7,7 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import {
-  LendingPoolLayout,
+  RESERVE_LAYOUT,
   ORCA_STRATEGY_STATE_LAYOUT,
   RAYDIUM_STRATEGY_STATE_LAYOUT,
   RAYDIUM_POSITION_LAYOUT,
@@ -26,6 +26,7 @@ import {
 } from "./ids";
 import { IReserveInfo, IReserveInfoWrapper } from "../types";
 import { utils } from "..";
+
 export interface ReserveInfo extends IReserveInfo {
   market: PublicKey;
   tokenMint: PublicKey;
@@ -53,31 +54,40 @@ export interface ReserveInfo extends IReserveInfo {
   factor3: number;
   rewardInfo?: LendingReward;
 }
+
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
   constructor(public reserveInfo: ReserveInfo) {}
+
   supplyTokenMint() {
     return this.reserveInfo.tokenMint;
   }
+
   supplyTokenDecimal() {
     return this.reserveInfo.decimal;
   }
+
   reserveTokenMint() {
     return this.reserveInfo.shareMint;
   }
+
   reserveTokenDecimal() {
     return this.reserveInfo.decimal;
   }
+
   reserveTokenSupply() {
     return this.reserveInfo.shareMintTotalSupply;
   }
+
   supplyAmount() {
     return this.reserveInfo.liquidityAvailableAmount.add(
       this.reserveInfo.liquidityBorrowedAmount
     );
   }
+
   borrowedAmount() {
     return this.reserveInfo.liquidityBorrowedAmount;
   }
+
   supplyApy() {
     return this.rates().apy;
   }
@@ -115,6 +125,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       apy,
     };
   }
+
   calculateUtilizationRatio() {
     return (
       this.borrowedAmount()
@@ -131,7 +142,7 @@ export function parseReserveInfo(
   infoPubkey: PublicKey
 ): ReserveInfo {
   let buffer = Buffer.from(data);
-  let rawLending = LendingPoolLayout.decode(buffer);
+  let rawLending = RESERVE_LAYOUT.decode(buffer);
 
   let {
     version,
@@ -222,6 +233,7 @@ export interface LendingReward {
   accumulatedRewardsPerShare: BN;
   accumulatedRewardsPerShareB: BN;
 }
+
 export function parseLendingReward(
   data: any,
   infoPubkey: PublicKey
@@ -280,6 +292,7 @@ export function parseLendingReward(
     accumulatedRewardsPerShareB: new BN(accumulated_rewards_per_share_b),
   };
 }
+
 export interface UserLendingReward {
   version: BN;
   infoPubkey: PublicKey;
@@ -292,6 +305,7 @@ export interface UserLendingReward {
   rewardsTokenAccount: PublicKey;
   rewardsTokenAccountB: PublicKey;
 }
+
 export function parseUserRewardData(
   data: any,
   infoPubkey: PublicKey
@@ -309,6 +323,7 @@ export function parseUserRewardData(
     rewards_token_account,
     rewards_token_account_b,
   } = rawReward;
+
   return {
     version: new BN(version),
     infoPubkey: infoPubkey,
@@ -345,7 +360,7 @@ export async function getAllReserves(connection: Connection) {
     },
   };
   const dataSizeFilters: DataSizeFilter = {
-    dataSize: LendingPoolLayout.span,
+    dataSize: RESERVE_LAYOUT.span,
   };
 
   const filters = [programIdMemcmp, dataSizeFilters];
@@ -364,6 +379,7 @@ export async function getAllReserves(connection: Connection) {
 
   return reserves;
 }
+
 export async function getReserve(connection: Connection, reserveId: PublicKey) {
   let reserveAccount = (await connection.getAccountInfo(
     reserveId
@@ -373,6 +389,7 @@ export async function getReserve(connection: Connection, reserveId: PublicKey) {
   info.rewardInfo = rewards.get(info.shareMint.toString());
   return info;
 }
+
 export async function getAllLendingRewards(connection: Connection) {
   const dataSizeFilters: DataSizeFilter = {
     dataSize: LENDING_REWARD_LAYOUT.span,
@@ -398,6 +415,7 @@ export async function getAllLendingRewards(connection: Connection) {
 
   return rewardsMap;
 }
+
 export async function getUserRewardPubkey(
   wallet: PublicKey,
   lendingReward: LendingReward
@@ -424,6 +442,7 @@ export async function checkUserRewardCreated(
   )) as AccountInfo<Buffer>;
   return userRewardAccount.data.length > 0;
 }
+
 export interface RaydiumStrategyState {
   infoPubkey: PublicKey;
   protocolVersion: BN;

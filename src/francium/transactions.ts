@@ -31,7 +31,7 @@ import {
 } from "./instructions";
 import {
   getRaydiumPositionKeySet,
-  parseLendingInfo,
+  parseReserveInfo,
   RaydiumStrategyState,
 } from "./infos";
 import { parseV4PoolInfo, parseFarmV45, FARM_PROGRAM_ID_V5 } from "../raydium";
@@ -61,8 +61,8 @@ export async function getDepositTx(
   const initIx = initializeRaydiumPosition(wallet, strategy, positionKeySet);
   let pubkeys = [strategy.lendingPool0, strategy.lendingPool1, strategy.ammId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let lending0 = parseLendingInfo(accountsInfo[0]?.data, pubkeys[0]);
-  let lending1 = parseLendingInfo(accountsInfo[1]?.data, pubkeys[1]);
+  let lending0 = parseReserveInfo(accountsInfo[0]?.data, pubkeys[0]);
+  let lending1 = parseReserveInfo(accountsInfo[1]?.data, pubkeys[1]);
   let ammInfo = parseV4PoolInfo(accountsInfo[2]?.data, pubkeys[2]).poolInfo;
   let serumMarket = await Market.load(
     connection,

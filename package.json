@@ -15,7 +15,8 @@
     "larixTest": "ts-node ./test/larixTest.ts",
     "orcaTest": "ts-node ./test/orca.ts",
     "franciumTest": "ts-node ./test/francium.ts",
-    "start": "ts-node ./index.ts"
+    "start": "ts-node ./index.ts",
+    "test-larix": "mocha --require ts-node/register --timeout 10000000 ./test/larix.ts"
   },
   "keywords": [],
   "author": "",
