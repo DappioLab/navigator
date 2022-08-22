@@ -6,5 +6,6 @@ export * as lifinity from "./lifinity/index";
 export * as katana from "./katana/index";
 export * as francium from "./francium/index";
 export * as orca from "./orca/index";
+export * as tulip from "./tulip/index";
 export * as utils from "./utils";
 export * from "./types";
