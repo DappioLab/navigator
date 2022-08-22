@@ -7,7 +7,7 @@ import {
 import { struct, u64, u8, u32 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import BN from "bn.js";
-import { LendingInfo, RaydiumStrategyState } from "./infos";
+import { ReserveInfo, RaydiumStrategyState } from "./infos";
 import { Market } from "@project-serum/serum";
 import {
   PoolInfo,
@@ -110,8 +110,8 @@ export function transfer(
 export function borrow(
   wallet: PublicKey,
   strategy: RaydiumStrategyState,
-  lendInfo0: LendingInfo,
-  lendInfo1: LendingInfo,
+  lendInfo0: ReserveInfo,
+  lendInfo1: ReserveInfo,
   ammInfo: PoolInfo,
   userAccount: PublicKey,
   amount0: BN,
@@ -143,12 +143,12 @@ export function borrow(
     { pubkey: FRANCIUM_LENDING_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: strategy.lendingPool0, isSigner: false, isWritable: true },
     {
-      pubkey: lendInfo0.lendingPoolTknAccount,
+      pubkey: lendInfo0.tknAccount,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: lendInfo0.lendingPoolCreditAccount,
+      pubkey: lendInfo0.creditAccount,
       isSigner: false,
       isWritable: true,
     },
@@ -159,12 +159,12 @@ export function borrow(
     },
     { pubkey: strategy.lendingPool1, isSigner: false, isWritable: true },
     {
-      pubkey: lendInfo1.lendingPoolTknAccount,
+      pubkey: lendInfo1.tknAccount,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: lendInfo1.lendingPoolCreditAccount,
+      pubkey: lendInfo1.creditAccount,
       isSigner: false,
       isWritable: true,
     },

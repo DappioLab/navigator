@@ -1,7 +1,7 @@
 import { PublicKey, Connection } from "@solana/web3.js";
-import { francium } from "../src";
+import { larix } from "../src";
 
-describe("Francium", () => {
+describe("Larix", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
@@ -34,11 +34,9 @@ describe("Francium", () => {
 
   it("parses farm data", async () => {
     const farmId = new PublicKey(
-      "3EhxTvGjycQSKBY4EFz7MGA5Ke7rf39oUU2nM9qBP6Cj"
+      "FStv7oj29DghUcCRDRJN9sEkB4uuh4SqWBY9pvSQ4Rch"
     );
-
-    const farm = await francium.getFarm(connection, farmId);
-
+    const farm = await larix.getFarm(connection, farmId);
     console.log(farm);
   });
 });

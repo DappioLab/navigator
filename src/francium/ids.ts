@@ -20,7 +20,6 @@ export const LENDING_AUTHORITY = new PublicKey(
 export const LFY_RAYDIUM_PROGRAM_ID = new PublicKey(
   "2nAAsYdXF3eTQzaeUQS3fr4o782dDg8L28mX39Wr5j8N"
 );
-
 export const RAYDIUM_STAKE_PROGRAM_ID = new PublicKey(
   "EhhTKczWMGQt46ynNeRX1WfeagwwJd7ufHvCDjRxjo5Q"
 );

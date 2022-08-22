@@ -34,7 +34,14 @@ export const RESERVE_LAYOUT = struct([
     ],
     "liquidity"
   ),
-  struct([publicKey("reserveTokenMint"), u64("mintTotalSupply"), publicKey("supplyPubkey")], "collateral"),
+  struct(
+    [
+      publicKey("reserveTokenMint"),
+      u64("mintTotalSupply"),
+      publicKey("supplyPubkey"),
+    ],
+    "collateral"
+  ),
   struct(
     [
       u8("optimalUtilizationRate"),
@@ -45,7 +52,12 @@ export const RESERVE_LAYOUT = struct([
       u8("optimalBorrowRate"),
       u8("maxBorrowRate"),
       struct(
-        [u64("borrowFeeWad"), u64("borrowInterestFeeWad"), u64("flashLoanFeeWad"), u8("hostFeePercentage")],
+        [
+          u64("borrowFeeWad"),
+          u64("borrowInterestFeeWad"),
+          u64("flashLoanFeeWad"),
+          u8("hostFeePercentage"),
+        ],
         "fees"
       ),
     ],
@@ -59,7 +71,7 @@ export const RESERVE_LAYOUT = struct([
   blob(239, "padding"),
 ]);
 
-export const MINER_LAYOUT = struct([
+export const FARMER_LAYOUT = struct([
   u8("version"),
   publicKey("owner"),
   publicKey("lendingMarket"),
@@ -68,7 +80,11 @@ export const MINER_LAYOUT = struct([
   blob(56 * 10, "dataFlat"),
 ]);
 
-export const MINER_INDEX_LAYOUT = struct([publicKey("reserveId"), u64("unCollLTokenAmount"), u128("index")]);
+export const FARMER_INDEX_LAYOUT = struct([
+  publicKey("reserveId"),
+  u64("unCollLTokenAmount"),
+  u128("index"),
+]);
 
 export const OBLIGATION_LAYOUT = struct([
   u8("version"),

@@ -12,7 +12,7 @@ import {
 // @ts-ignore
 import { blob, nu64, seq } from "buffer-layout";
 
-export const LendingPoolLayout = struct([
+export const RESERVE_LAYOUT = struct([
   u8("version"),
   u64("last_updateSlot"),
   u8("last_updateStale"),
@@ -45,7 +45,7 @@ export const LendingPoolLayout = struct([
   blob(108, "padding"),
 ]);
 
-export const LENDING_REWARD_LAYOUT = struct([
+export const FARM_LAYOUT = struct([
   u8("version"),
   u8("is_dual_rewards"),
   publicKey("admin"),
@@ -72,7 +72,7 @@ export const LENDING_REWARD_LAYOUT = struct([
   blob(128, "padding"),
 ]);
 
-export const USER_LENDING_REWARD_LAYOUT = struct([
+export const FARMER_LAYOUT = struct([
   u8("version"),
   u64("staked_amount"),
   u64("rewards_debt"),
