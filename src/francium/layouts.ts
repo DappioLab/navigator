@@ -7,6 +7,7 @@ import {
   bool,
   u16,
   i64,
+  u32,
 } from "@project-serum/borsh";
 // @ts-ignore
 import { blob, nu64, seq } from "buffer-layout";
@@ -22,8 +23,8 @@ export const LendingPoolLayout = struct([
   publicKey("liquidityFeeReceiver"),
   blob(36, "oracle"),
   u64("liquidity_available_amount"),
-  blob(16, "liquidity_borrowed_amount_wads"),
-  blob(16, "liquidity_cumulative_borrowRate_wads"),
+  u128("liquidity_borrowed_amount_wads"),
+  u128("liquidity_cumulative_borrowRate_wads"),
   u64("liquidityMarketPrice"),
   publicKey("shareMintPubkey"),
   u64("shareMintTotalSupply"),
@@ -42,6 +43,46 @@ export const LendingPoolLayout = struct([
   u8("interestReverseRate"),
   u64("accumulated_interestReverse"),
   blob(108, "padding"),
+]);
+
+export const LENDING_REWARD_LAYOUT = struct([
+  u8("version"),
+  u8("is_dual_rewards"),
+  publicKey("admin"),
+  publicKey("pool_authority"),
+  publicKey("token_program_id"),
+  publicKey("staked_token_mint"),
+  publicKey("staked_token_account"),
+  publicKey("rewards_token_mint"),
+  publicKey("rewards_token_account"),
+  publicKey("rewards_token_mint_b"),
+  publicKey("rewards_token_account_b"),
+  u64("pool_stake_cap"),
+  u64("user_stake_cap"),
+  u64("rewards_start_slot"),
+  u64("rewards_end_slot"),
+  u64("rewards_per_day"),
+  u64("rewards_start_slot_b"),
+  u64("rewards_end_slot_b"),
+  u64("rewards_per_day_b"),
+  u64("total_staked_amount"),
+  u64("last_update_slot"),
+  u128("accumulated_rewards_per_share"),
+  u128("accumulated_rewards_per_share_b"),
+  blob(128, "padding"),
+]);
+
+export const USER_LENDING_REWARD_LAYOUT = struct([
+  u8("version"),
+  u64("staked_amount"),
+  u64("rewards_debt"),
+  u64("rewards_debt_b"),
+  publicKey("farming_pool"),
+  publicKey("user_main"),
+  publicKey("stake_token_account"),
+  publicKey("rewards_token_account"),
+  publicKey("rewards_token_account_b"),
+  blob(128, "padding"),
 ]);
 
 // Raydium
