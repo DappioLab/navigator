@@ -1,3 +1,4 @@
+import { getAccount } from "@solana/spl-token-v2";
 import {
   Connection,
   PublicKey,
@@ -11,6 +12,7 @@ import { TULIP_PROGRAM_ID } from "./ids";
 import { RESERVE_LAYOUT } from "./layout";
 
 const RESERVE_LAYOUT_SPAN = 622;
+const WAD = new BN(10).pow(new BN(18));
 
 interface ReserveConfig {
   optimalUtilizationRate: BN;
@@ -86,6 +88,29 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
   reserveTokenSupply() {
     return this.reserveInfo.collateral.mintTotalSupply;
+  }
+
+  async calculateCollateralAmount(
+    connection: Connection,
+    amount: BN
+  ): Promise<BN> {
+    const availableAmount = this.reserveInfo.liquidity.availableAmount;
+    const platformAmountWads = this.reserveInfo.liquidity.platformAmountWads;
+    const borrowedAmountWads = this.reserveInfo.liquidity.borrowedAmount;
+
+    const collateralMintInfo = await getAccount(
+      connection,
+      this.reserveInfo.collateral.reserveTokenMint
+    );
+    const supply = new BN(Number(collateralMintInfo.amount));
+
+    const borrowedAmount = borrowedAmountWads.div(WAD);
+    const platformAmount = platformAmountWads.div(WAD);
+
+    const totalSupply = availableAmount.add(borrowedAmount).sub(platformAmount);
+    const collateralAmount = amount.mul(supply).div(totalSupply);
+
+    return collateralAmount;
   }
 }
 
