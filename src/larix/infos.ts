@@ -339,7 +339,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       .mul(this.farmInfo.liquidityMarketPrice)
       .div(new BN(`1${"".padEnd(18, "0")}`))
       .div(new BN(`1${"".padEnd(decimal, "0")}`));
-    let miningRate = this.farmInfo.kinkUtilRate;
+    let miningRate = new BN(100).sub(this.farmInfo.kinkUtilRate);
     let miningSpeed = this.farmInfo.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
     let apy =
