@@ -1,4 +1,4 @@
-import { publicKey, struct, u64, u128, u8, bool } from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8,u16, bool } from "@project-serum/borsh";
 // @ts-ignore
 import { blob } from "buffer-layout";
 
@@ -115,3 +115,33 @@ export const LOAN_LAYOUT = struct([
   u128("marketValue"),
   u128("index"),
 ]);
+
+export const BRIDGE_ACCOUNT_LAYOUT = struct([
+  blob(8,"discriminator"),
+  u8("version"),
+  publicKey("base"),
+  publicKey("owner"),
+  publicKey("pendingOwner"),
+  publicKey("ammId"),
+  u8("ammVersion"),
+  publicKey("lpMint"),
+  publicKey("lpSupply"),
+  publicKey("coinSupply"),
+  publicKey("pcSupply"),
+  publicKey("addLpWithdrawAmountAuthority"),
+  publicKey("compoundAuthority"),
+  publicKey("coinMintPrice"),
+  u8("coinMintDecimal"),
+  publicKey("pcMintPrice"),
+  u8("pcMintDecimal"),
+  publicKey("ammOpenOrders"),
+  publicKey("ammCoinMintSupply"),
+  publicKey("ammPcMintSupply"),
+  u8("bump"),
+  publicKey("lpPriceAccount"),
+  u8("isFarm"),
+  publicKey("farmPoolId"),
+  u8("farmPoolVersion"),
+  publicKey("farmLedger"),
+  u16("rewardSupplyLen"),
+])
