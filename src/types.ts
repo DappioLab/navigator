@@ -19,6 +19,11 @@ export interface IFarmerInfo {
   amount?: number;
 }
 
+export interface IVaultInfo {
+  vaultId: PublicKey;
+  shareMint: PublicKey;
+}
+
 // TODO
 export interface IReserveInfo {
   reserveId: PublicKey;
