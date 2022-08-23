@@ -14,6 +14,7 @@ import {
   IReserveInfoWrapper,
 } from "../types";
 import {
+  LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
   LARIX_MAIN_POOL_OBLIGATION_SEED,
   LARIX_MARKET_ID_MAIN_POOL,
@@ -30,6 +31,7 @@ import {
   FARMER_LAYOUT,
   OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
+  BRIDGE_ACCOUNT_LAYOUT,
 } from "./layouts";
 // @ts-ignore
 import { seq } from "buffer-layout";
@@ -46,6 +48,8 @@ export interface ReserveInfo extends IReserveInfo {
   collateral: ReserveCollateral;
   config: ReserveConfig;
   farmInfo: FarmInfoWrapper;
+  isLP: boolean;
+  lpBridgeInfo?: BridgeInfo;
 }
 
 export interface FarmInfo extends IFarmInfo {
@@ -112,10 +116,44 @@ interface IPartnerReward {
   side: string;
 }
 
+export interface BridgeInfo {
+  bridgePubkey: PublicKey;
+  base: PublicKey;
+  ammId: PublicKey;
+  ammVersion: BN;
+  lpMint: PublicKey;
+  lpSupply: PublicKey;
+  coinSupply: PublicKey;
+  pcSupply: PublicKey;
+  addLpWithdrawAmountAuthority: PublicKey;
+  compoundAuthority: PublicKey;
+  coinMintPrice: PublicKey;
+  coinMintDecimal: BN;
+  pcMintPrice: PublicKey;
+  pcMintDecimal: BN;
+  ammOpenOrders: PublicKey;
+  ammCoinMintSupply: PublicKey;
+  ammPcMintSupply: PublicKey;
+  bump: BN;
+  lpPriceAccount: PublicKey;
+  isFarm: BN;
+  farmPoolId: PublicKey;
+  farmPoolVersion: BN;
+  farmLedger: PublicKey;
+}
+
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
-  let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
-    decodedData;
+  let {
+    version,
+    lastUpdate,
+    lendingMarket,
+    liquidity,
+    collateral,
+    config,
+    isLP,
+  } = decodedData;
+  let lp = new BN(isLP).eqn(1);
   let farmInfo = new FarmInfoWrapper(parseFarmData(data, pubkey));
   return {
     reserveId: pubkey,
@@ -125,7 +163,8 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     liquidity,
     collateral,
     config,
-    farmInfo
+    isLP: lp,
+    farmInfo,
   };
 }
 
@@ -150,8 +189,61 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   };
 }
 
+export function parceBridgeInfo(data: any, pubkey: PublicKey): BridgeInfo {
+  const decodedData = BRIDGE_ACCOUNT_LAYOUT.decode(data);
+  const {
+    base,
+    ammId,
+    ammVersion,
+    lpMint,
+    lpSupply,
+    coinSupply,
+    pcSupply,
+    addLpWithdrawAmountAuthority,
+    compoundAuthority,
+    coinMintPrice,
+    coinMintDecimal,
+    pcMintPrice,
+    pcMintDecimal,
+    ammOpenOrders,
+    ammCoinMintSupply,
+    ammPcMintSupply,
+    bump,
+    lpPriceAccount,
+    isFarm,
+    farmPoolId,
+    farmPoolVersion,
+    farmLedger,
+  } = decodedData;
+  return {
+    bridgePubkey: pubkey,
+    base,
+    ammId,
+    ammVersion,
+    lpMint,
+    lpSupply,
+    coinSupply,
+    pcSupply,
+    addLpWithdrawAmountAuthority,
+    compoundAuthority,
+    coinMintPrice,
+    coinMintDecimal,
+    pcMintPrice,
+    pcMintDecimal,
+    ammOpenOrders,
+    ammCoinMintSupply,
+    ammPcMintSupply,
+    bump,
+    lpPriceAccount,
+    isFarm,
+    farmPoolId,
+    farmPoolVersion,
+    farmLedger,
+  };
+}
+
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  constructor(public reserveInfo: ReserveInfo) { }
+  constructor(public reserveInfo: ReserveInfo) {}
 
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -297,7 +389,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
-  constructor(public farmInfo: FarmInfo) { }
+  constructor(public farmInfo: FarmInfo) {}
 
   borrowedAmount() {
     return this.farmInfo.liquidityBorrowedAmountWads.div(
@@ -355,8 +447,11 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
-
+  const allBridgeInfo = await getALLBridges(connection);
   for (let reservesMeta of allReserves) {
+    reservesMeta.lpBridgeInfo = allBridgeInfo.get(
+      reservesMeta.liquidity.OraclePubkey.toString()
+    );
     const newinfo = new ReserveInfoWrapper(reservesMeta);
     reserveInfoWrappers.push(newinfo);
   }
@@ -398,7 +493,18 @@ export async function getReserve(
   reserveId: PublicKey
 ): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
-  return parseReserveData(reserveAccountInfo?.data, reserveId);
+  let reserveInfo = parseReserveData(reserveAccountInfo?.data, reserveId);
+  if (reserveInfo.isLP) {
+    let bridgeAccountInfo = await connection.getAccountInfo(
+      reserveInfo.liquidity.OraclePubkey
+    );
+    let bridgeInfo = parceBridgeInfo(
+      bridgeAccountInfo?.data,
+      reserveInfo.liquidity.OraclePubkey
+    );
+    reserveInfo.lpBridgeInfo = bridgeInfo;
+  }
+  return reserveInfo;
 }
 
 // NOTICE: farmId == reserveId
@@ -410,6 +516,24 @@ export async function getFarm(
   return parseFarmData(farmAccountInfo?.data, farmId);
 }
 
+export async function getALLBridges(connection: Connection) {
+  const allBridgeAccounts = await connection.getProgramAccounts(
+    LARIX_BRIDGE_PROGRAM_ID
+  );
+  let allBridgeInfo: Map<string, BridgeInfo> = new Map();
+  for (let bridgeAccountInfo of allBridgeAccounts) {
+    if (bridgeAccountInfo.account.data.length > 80) {
+      let bridgeAccount = parceBridgeInfo(
+        bridgeAccountInfo.account.data,
+        bridgeAccountInfo.pubkey
+      );
+      allBridgeInfo.set(bridgeAccountInfo.pubkey.toString(), bridgeAccount);
+    }
+  }
+  return allBridgeInfo;
+}
+
+export async function getBridge(bridge: PublicKey, connection: Connection) {}
 export interface FarmerInfo extends IFarmerInfo {
   // farmerId
   // userKey
@@ -611,7 +735,7 @@ export class ObligationInfoWrapper {
     public obligationInfo: ObligationInfo,
     public obligationCollaterals: ObligationCollateral[],
     public obligationLoans: ObligationLoan[]
-  ) { }
+  ) {}
 
   update(reserveInfos: ReserveInfoWrapper[]) {
     let unhealthyBorrowValue = new BN(0);
