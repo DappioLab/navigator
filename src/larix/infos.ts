@@ -45,6 +45,7 @@ export interface ReserveInfo extends IReserveInfo {
   liquidity: ReserveLiquidity;
   collateral: ReserveCollateral;
   config: ReserveConfig;
+  farmInfo: FarmInfoWrapper;
 }
 
 export interface FarmInfo extends IFarmInfo {
@@ -115,7 +116,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
   let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
     decodedData;
-
+  let farmInfo = new FarmInfoWrapper(parseFarmData(data, pubkey));
   return {
     reserveId: pubkey,
     version,
@@ -124,6 +125,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     liquidity,
     collateral,
     config,
+    farmInfo
   };
 }
 
@@ -137,19 +139,19 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   return {
     farmId,
     unCollSupply: bonus.unCollSupply,
-    lTokenMiningIndex: bonus.lTokenMiningIndex,
-    borrowMiningIndex: bonus.borrowMiningIndex,
-    totalMiningSpeed: bonus.totalMiningSpeed,
-    kinkUtilRate: bonus.kinkUtilRate,
-    liquidityBorrowedAmountWads: liquidity.borrowedAmountWads,
-    liquidityAvailableAmount: liquidity.availableAmount,
-    liquidityMintDecimals: liquidity.mintDecimals,
-    liquidityMarketPrice: liquidity.marketPrice,
+    lTokenMiningIndex: new BN(bonus.lTokenMiningIndex),
+    borrowMiningIndex: new BN(bonus.borrowMiningIndex),
+    totalMiningSpeed: new BN(bonus.totalMiningSpeed),
+    kinkUtilRate: new BN(bonus.kinkUtilRate),
+    liquidityBorrowedAmountWads: new BN(liquidity.borrowedAmountWads),
+    liquidityAvailableAmount: new BN(liquidity.availableAmount),
+    liquidityMintDecimals: new BN(liquidity.mintDecimals),
+    liquidityMarketPrice: new BN(liquidity.marketPrice),
   };
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  constructor(public reserveInfo: ReserveInfo) {}
+  constructor(public reserveInfo: ReserveInfo) { }
 
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -295,7 +297,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
-  constructor(public farmInfo: FarmInfo) {}
+  constructor(public farmInfo: FarmInfo) { }
 
   borrowedAmount() {
     return this.farmInfo.liquidityBorrowedAmountWads.div(
@@ -609,7 +611,7 @@ export class ObligationInfoWrapper {
     public obligationInfo: ObligationInfo,
     public obligationCollaterals: ObligationCollateral[],
     public obligationLoans: ObligationLoan[]
-  ) {}
+  ) { }
 
   update(reserveInfos: ReserveInfoWrapper[]) {
     let unhealthyBorrowValue = new BN(0);
