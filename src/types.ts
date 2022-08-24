@@ -8,12 +8,12 @@ export interface IPoolInfo {
 }
 
 export interface INFTPoolInfo {
-  key: PublicKey;
+  poolId: PublicKey;
   proveTokenMint: PublicKey;
 }
 
 export interface INFTFarmInfo {
-  key: PublicKey;
+  farmId: PublicKey;
   farmTokenMint: PublicKey;
   rewardTokenMint: PublicKey;
 }
