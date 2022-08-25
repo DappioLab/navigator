@@ -116,8 +116,8 @@ export const LOAN_LAYOUT = struct([
   u128("index"),
 ]);
 
-export const BRIDGE_ACCOUNT_LAYOUT = struct([
-  blob(8,"discriminator"),
+export const ORACLE_BRIDGE_LAYOUT = struct([
+  blob(8, "discriminator"),
   u8("version"),
   publicKey("base"),
   publicKey("owner"),

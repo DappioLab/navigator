@@ -31,7 +31,7 @@ import {
   FARMER_LAYOUT,
   OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
-  BRIDGE_ACCOUNT_LAYOUT,
+  ORACLE_BRIDGE_LAYOUT,
 } from "./layouts";
 // @ts-ignore
 import { seq } from "buffer-layout";
@@ -49,7 +49,7 @@ export interface ReserveInfo extends IReserveInfo {
   config: ReserveConfig;
   farmInfo: FarmInfoWrapper;
   isLP: boolean;
-  lpBridgeInfo?: BridgeInfo;
+  oracleBridgeInfo?: OracleBridgeInfo;
 }
 
 export interface FarmInfo extends IFarmInfo {
@@ -116,7 +116,7 @@ interface IPartnerReward {
   side: string;
 }
 
-export interface BridgeInfo {
+export interface OracleBridgeInfo {
   bridgePubkey: PublicKey;
   base: PublicKey;
   ammId: PublicKey;
@@ -498,11 +498,11 @@ export async function getReserve(
     let bridgeAccountInfo = await connection.getAccountInfo(
       reserveInfo.liquidity.OraclePubkey
     );
-    let bridgeInfo = parceBridgeInfo(
+    let bridgeInfo = parseOracleBridgeInfo(
       bridgeAccountInfo?.data,
       reserveInfo.liquidity.OraclePubkey
     );
-    reserveInfo.lpBridgeInfo = bridgeInfo;
+    reserveInfo.oracleBridgeInfo = bridgeInfo;
   }
   return reserveInfo;
 }
@@ -516,14 +516,14 @@ export async function getFarm(
   return parseFarmData(farmAccountInfo?.data, farmId);
 }
 
-export async function getALLBridges(connection: Connection) {
+export async function getAllOracleBridges(connection: Connection) {
   const allBridgeAccounts = await connection.getProgramAccounts(
     LARIX_BRIDGE_PROGRAM_ID
   );
-  let allBridgeInfo: Map<string, BridgeInfo> = new Map();
+  let allBridgeInfo: Map<string, OracleBridgeInfo> = new Map();
   for (let bridgeAccountInfo of allBridgeAccounts) {
     if (bridgeAccountInfo.account.data.length > 80) {
-      let bridgeAccount = parceBridgeInfo(
+      let bridgeAccount = parseOracleBridgeInfo(
         bridgeAccountInfo.account.data,
         bridgeAccountInfo.pubkey
       );
