@@ -155,8 +155,6 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     config,
     isLP,
   } = decodedData;
-  let lp = new BN(isLP).eqn(1);
-  let farmInfo = new FarmInfoWrapper(parseFarmData(data, pubkey));
   return {
     reserveId: pubkey,
     version,
@@ -165,7 +163,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     liquidity,
     collateral,
     config,
-    isLP: lp,
+    isLP: new BN(isLP).eqn(1),
   };
 }
 
