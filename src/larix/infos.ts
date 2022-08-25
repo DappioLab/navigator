@@ -1,18 +1,6 @@
-import {
-  Connection,
-  DataSizeFilter,
-  GetProgramAccountsConfig,
-  MemcmpFilter,
-  PublicKey,
-} from "@solana/web3.js";
+import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import {
-  IFarmerInfo,
-  IFarmInfo,
-  IFarmInfoWrapper,
-  IReserveInfo,
-  IReserveInfoWrapper,
-} from "../types";
+import { IFarmerInfo, IFarmInfo, IFarmInfoWrapper, IReserveInfo, IReserveInfoWrapper } from "../types";
 import {
   LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
@@ -146,15 +134,7 @@ export interface OracleBridgeInfo {
 
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
-  let {
-    version,
-    lastUpdate,
-    lendingMarket,
-    liquidity,
-    collateral,
-    config,
-    isLP,
-  } = decodedData;
+  let { version, lastUpdate, lendingMarket, liquidity, collateral, config, isLP } = decodedData;
   return {
     reserveId: pubkey,
     version,
@@ -190,10 +170,7 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   };
 }
 
-export function parseOracleBridgeInfo(
-  data: any,
-  pubkey: PublicKey
-): OracleBridgeInfo {
+export function parseOracleBridgeInfo(data: any, pubkey: PublicKey): OracleBridgeInfo {
   const decodedData = ORACLE_BRIDGE_LAYOUT.decode(data);
   const {
     base,
@@ -270,9 +247,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   supplyAmount() {
-    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
-    );
+    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
 
     let availableAmount = this.reserveInfo.liquidity.availableAmount;
 
@@ -280,14 +255,11 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   borrowedAmount() {
-    return this.reserveInfo.liquidity.borrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
-    );
+    return this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
   }
 
   supplyApy() {
-    let UtilizationRatio =
-      Math.trunc(this.calculateUtilizationRatio() * 100) / 100;
+    let UtilizationRatio = Math.trunc(this.calculateUtilizationRatio() * 100) / 100;
     let borrowAPY = this.calculateBorrowAPY() as number;
     let apy = (UtilizationRatio * borrowAPY * 998) / 1000;
     return apy;
@@ -302,8 +274,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     switch (this.reserveInfo.reserveId.toString()) {
       case LDO_REWARD_RESERVE.toString(): {
         const LDO_PER_YEAR = 357 * 365;
-        tokenInfo =
-          tokenList.find((t) => t.mint === LDO_MINT.toBase58()) ?? null;
+        tokenInfo = tokenList.find((t) => t.mint === LDO_MINT.toBase58()) ?? null;
         if (!tokenInfo) return null;
         rewardValue = LDO_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
@@ -323,8 +294,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       }
       case MNDE_REWARD_RESERVE.toString(): {
         const MNDE_PER_YEAR = 172.9999 * 365;
-        tokenInfo =
-          tokenList.find((t) => t.mint === MNDE_MINT.toBase58()) ?? null;
+        tokenInfo = tokenList.find((t) => t.mint === MNDE_MINT.toBase58()) ?? null;
         if (!tokenInfo) return null;
         rewardValue = MNDE_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
@@ -348,47 +318,36 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
   calculateUtilizationRatio() {
     let decimal = new BN(this.reserveInfo.liquidity.mintDecimals);
-    const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
-    );
-    const totalAmount =
-      this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
+    const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
+    const totalAmount = this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
     const currentUtilization = Number(borrowedAmount) / Number(totalAmount);
     return currentUtilization;
   }
 
   calculateBorrowAPY() {
     const currentUtilization = this.calculateUtilizationRatio();
-    const optimalUtilization =
-      Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
+    const optimalUtilization = Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
     let borrowAPY;
     if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
       const normalizedFactor = currentUtilization / optimalUtilization;
-      const optimalBorrowRate =
-        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
-      const minBorrowRate =
-        Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
-      borrowAPY =
-        normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
+      const optimalBorrowRate = Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
+      const minBorrowRate = Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
+      borrowAPY = normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
     } else {
-      const normalizedFactor =
-        (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
-      const optimalBorrowRate =
-        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
-      const maxBorrowRate =
-        Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
-      borrowAPY =
-        normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
-        optimalBorrowRate;
+      const normalizedFactor = (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
+      const optimalBorrowRate = Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
+      const maxBorrowRate = Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
+      borrowAPY = normalizedFactor * (maxBorrowRate - optimalBorrowRate) + optimalBorrowRate;
     }
 
     return borrowAPY;
   }
 
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
-    return reserveAmount
-      .mul(this.supplyAmount())
-      .div(this.reserveTokenSupply());
+    return reserveAmount.mul(this.supplyAmount()).div(this.reserveTokenSupply());
+  }
+  convertLiquidityAmountToReserveAmount(liquidityAmount: BN) {
+    return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
   }
 }
 
@@ -396,15 +355,11 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
 
   borrowedAmount() {
-    return this.farmInfo.liquidityBorrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
-    );
+    return this.farmInfo.liquidityBorrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
   }
 
   supplyAmount() {
-    let borrowedAmount = this.farmInfo.liquidityBorrowedAmountWads.div(
-      new BN(`1${"".padEnd(18, "0")}`)
-    );
+    let borrowedAmount = this.farmInfo.liquidityBorrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
 
     let availableAmount = this.farmInfo.liquidityAvailableAmount;
 
@@ -424,10 +379,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     let miningRate = this.farmInfo.kinkUtilRate;
     let miningSpeed = this.farmInfo.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    let apy =
-      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
-      poolTotalSupplyValue.toNumber() /
-      10 ** 7;
+    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
 
@@ -440,10 +392,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     let miningRate = new BN(100).sub(this.farmInfo.kinkUtilRate);
     let miningSpeed = this.farmInfo.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    let apy =
-      miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() /
-      poolTotalSupplyValue.toNumber() /
-      10 ** 7;
+    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
     return apy;
   }
 }
@@ -475,10 +424,7 @@ export async function getAllFarmWrappers(connection: Connection) {
   const filters = [programIdMemcmp, dataSizeFilters];
 
   const config: GetProgramAccountsConfig = { filters: filters };
-  const farmAccounts = await connection.getProgramAccounts(
-    LARIX_PROGRAM_ID,
-    config
-  );
+  const farmAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
   let farms = [] as FarmInfoWrapper[];
   for (let farm of farmAccounts) {
     let info = parseFarmData(farm.account.data, farm.pubkey);
@@ -504,21 +450,13 @@ export async function getAllReservesAndFarms(
   const filters = [programIdMemcmp, dataSizeFilters];
 
   const config: GetProgramAccountsConfig = { filters: filters };
-  const reserveAccounts = await connection.getProgramAccounts(
-    LARIX_PROGRAM_ID,
-    config
-  );
+  const reserveAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
   const allBridgeInfo = await getAllOracleBridges(connection);
   const infos: { reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }[] = [];
   for (let accountInfo of reserveAccounts) {
     let farmInfo = parseFarmData(accountInfo.account.data, accountInfo.pubkey);
-    let reserveInfo = parseReserveData(
-      accountInfo.account.data,
-      accountInfo.pubkey
-    );
-    reserveInfo.oracleBridgeInfo = allBridgeInfo.get(
-      reserveInfo.liquidity.OraclePubkey.toString()
-    );
+    let reserveInfo = parseReserveData(accountInfo.account.data, accountInfo.pubkey);
+    reserveInfo.oracleBridgeInfo = allBridgeInfo.get(reserveInfo.liquidity.OraclePubkey.toString());
 
     infos.push({
       reserve: new ReserveInfoWrapper(reserveInfo),
@@ -542,62 +480,41 @@ async function getAllReserves(connection: Connection) {
   const filters = [programIdMemcmp, dataSizeFilters];
 
   const config: GetProgramAccountsConfig = { filters: filters };
-  const reserveAccounts = await connection.getProgramAccounts(
-    LARIX_PROGRAM_ID,
-    config
-  );
+  const reserveAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
   const allBridgeInfo = await getAllOracleBridges(connection);
   let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
     let info = parseReserveData(account.account.data, account.pubkey);
-    info.oracleBridgeInfo = allBridgeInfo.get(
-      info.liquidity.OraclePubkey.toString()
-    );
+    info.oracleBridgeInfo = allBridgeInfo.get(info.liquidity.OraclePubkey.toString());
     reserves.push(info);
   }
 
   return reserves;
 }
 
-export async function getReserve(
-  connection: Connection,
-  reserveId: PublicKey
-): Promise<ReserveInfo> {
+export async function getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
   let reserveInfo = parseReserveData(reserveAccountInfo?.data, reserveId);
   if (reserveInfo.isLP) {
-    let bridgeAccountInfo = await connection.getAccountInfo(
-      reserveInfo.liquidity.OraclePubkey
-    );
-    let bridgeInfo = parseOracleBridgeInfo(
-      bridgeAccountInfo?.data,
-      reserveInfo.liquidity.OraclePubkey
-    );
+    let bridgeAccountInfo = await connection.getAccountInfo(reserveInfo.liquidity.OraclePubkey);
+    let bridgeInfo = parseOracleBridgeInfo(bridgeAccountInfo?.data, reserveInfo.liquidity.OraclePubkey);
     reserveInfo.oracleBridgeInfo = bridgeInfo;
   }
   return reserveInfo;
 }
 
 // NOTICE: farmId == reserveId
-export async function getFarm(
-  connection: Connection,
-  farmId: PublicKey
-): Promise<FarmInfo> {
+export async function getFarm(connection: Connection, farmId: PublicKey): Promise<FarmInfo> {
   const farmAccountInfo = await connection.getAccountInfo(farmId);
   return parseFarmData(farmAccountInfo?.data, farmId);
 }
 
 export async function getAllOracleBridges(connection: Connection) {
-  const allBridgeAccounts = await connection.getProgramAccounts(
-    LARIX_BRIDGE_PROGRAM_ID
-  );
+  const allBridgeAccounts = await connection.getProgramAccounts(LARIX_BRIDGE_PROGRAM_ID);
   let allBridgeInfo: Map<string, OracleBridgeInfo> = new Map();
   for (let bridgeAccountInfo of allBridgeAccounts) {
     if (bridgeAccountInfo.account.data.length > 80) {
-      let bridgeAccount = parseOracleBridgeInfo(
-        bridgeAccountInfo.account.data,
-        bridgeAccountInfo.pubkey
-      );
+      let bridgeAccount = parseOracleBridgeInfo(bridgeAccountInfo.account.data, bridgeAccountInfo.pubkey);
       allBridgeInfo.set(bridgeAccountInfo.pubkey.toString(), bridgeAccount);
     }
   }
@@ -626,17 +543,11 @@ export function parseFarmerInfo(data: any, farmerId: PublicKey): FarmerInfo {
   let dataBuffer = data as Buffer;
   let infoData = dataBuffer;
   let newFarmerInfo = FARMER_LAYOUT.decode(infoData);
-  let { version, owner, lendingMarket, reservesLen, unclaimedMine, dataFlat } =
-    newFarmerInfo;
+  let { version, owner, lendingMarket, reservesLen, unclaimedMine, dataFlat } = newFarmerInfo;
 
-  const farmerIndicesBuffer = dataFlat.slice(
-    0,
-    reservesLen * FARMER_INDEX_LAYOUT.span
-  );
+  const farmerIndicesBuffer = dataFlat.slice(0, reservesLen * FARMER_INDEX_LAYOUT.span);
 
-  const farmerIndices = seq(FARMER_INDEX_LAYOUT, reservesLen).decode(
-    farmerIndicesBuffer
-  ) as FarmerIndex[];
+  const farmerIndices = seq(FARMER_INDEX_LAYOUT, reservesLen).decode(farmerIndicesBuffer) as FarmerIndex[];
 
   return {
     farmerId,
@@ -665,22 +576,15 @@ export async function getAllFarmers(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allFarmerAccounts = await connection.getProgramAccounts(
-    LARIX_PROGRAM_ID,
-    config
-  );
-  let allFarmerInfos = allFarmerAccounts.map((account) =>
-    parseFarmerInfo(account.account.data, account.pubkey)
-  );
+  const allFarmerAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
+  let allFarmerInfos = allFarmerAccounts.map((account) => parseFarmerInfo(account.account.data, account.pubkey));
 
   if (farmInfoWrapper) {
     for (let info of allFarmerInfos) {
       for (let indexData of info.indexs) {
         for (let wrapper of farmInfoWrapper) {
           if (indexData.reserveId.equals(wrapper.farmInfo.farmId)) {
-            let indexSub = wrapper.farmInfo.lTokenMiningIndex.sub(
-              indexData.index
-            );
+            let indexSub = wrapper.farmInfo.lTokenMiningIndex.sub(indexData.index);
 
             let reward = indexSub.mul(indexData.unCollLTokenAmount);
 
@@ -707,9 +611,7 @@ export async function getFarmer(
       for (let indexData of farmer.indexs) {
         for (let wrapper of farmInfoWrapper) {
           if (indexData.reserveId.equals(wrapper.farmInfo.farmId)) {
-            let indexSub = wrapper.farmInfo.lTokenMiningIndex.sub(
-              indexData.index
-            );
+            let indexSub = wrapper.farmInfo.lTokenMiningIndex.sub(indexData.index);
             let reward = indexSub.mul(indexData.unCollLTokenAmount);
             farmer.unclaimedMine = farmer.unclaimedMine.add(reward);
           }
@@ -722,19 +624,13 @@ export async function getFarmer(
   return null;
 }
 
-export async function checkFarmerCreated(
-  connection: Connection,
-  wallet: PublicKey
-) {
+export async function checkFarmerCreated(connection: Connection, wallet: PublicKey) {
   let farmerId = await newFarmerAccountPub(wallet);
   let farmerInfo = await connection.getAccountInfo(farmerId);
   return (farmerInfo?.data.length as number) > 0;
 }
 
-export async function checkObligationCreated(
-  connection: Connection,
-  wallet: PublicKey
-) {
+export async function checkObligationCreated(connection: Connection, wallet: PublicKey) {
   let obligationPub = await newObligationKey(wallet);
   let obligationInfo = await connection.getAccountInfo(obligationPub);
 
@@ -742,21 +638,13 @@ export async function checkObligationCreated(
 }
 
 export async function newFarmerAccountPub(wallet: PublicKey) {
-  let newFarmer = await PublicKey.createWithSeed(
-    wallet,
-    LARIX_MAIN_POOL_FARMER_SEED,
-    LARIX_PROGRAM_ID
-  );
+  let newFarmer = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_FARMER_SEED, LARIX_PROGRAM_ID);
 
   return newFarmer;
 }
 
 export async function newObligationKey(wallet: PublicKey) {
-  let newObligation = await PublicKey.createWithSeed(
-    wallet,
-    LARIX_MAIN_POOL_OBLIGATION_SEED,
-    LARIX_PROGRAM_ID
-  );
+  let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
   return newObligation;
 }
 
@@ -788,15 +676,8 @@ export interface ObligationInfo {
   unclaimedMine: BN;
 }
 
-export async function getLendingMarketAuthority(
-  lendingMarket: PublicKey
-): Promise<PublicKey> {
-  const authority = (
-    await PublicKey.findProgramAddress(
-      [lendingMarket.toBuffer()],
-      LARIX_PROGRAM_ID
-    )
-  )[0];
+export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
+  const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], LARIX_PROGRAM_ID))[0];
 
   return authority;
 }
@@ -814,14 +695,8 @@ export class ObligationInfoWrapper {
     let depositedValue = new BN(0);
     for (let depositedReserve of this.obligationCollaterals) {
       for (let reserveInfoWrapper of reserveInfos) {
-        if (
-          depositedReserve.reserveId.equals(
-            reserveInfoWrapper.reserveInfo.reserveId
-          )
-        ) {
-          let decimal = Number(
-            new BN(reserveInfoWrapper.reserveTokenDecimal())
-          );
+        if (depositedReserve.reserveId.equals(reserveInfoWrapper.reserveInfo.reserveId)) {
+          let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
           let thisDepositedValue = depositedReserve.depositedAmount
             .mul(reserveInfoWrapper.supplyAmount())
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
@@ -829,28 +704,18 @@ export class ObligationInfoWrapper {
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
           depositedValue = depositedValue.add(thisDepositedValue);
 
-          let thisUnhealthyBorrowValue = new BN(
-            reserveInfoWrapper.reserveInfo.config.liquidationThreshold
-          )
+          let thisUnhealthyBorrowValue = new BN(reserveInfoWrapper.reserveInfo.config.liquidationThreshold)
             .mul(thisDepositedValue)
             .div(new BN(`1${"".padEnd(2, "0")}`));
-          unhealthyBorrowValue = unhealthyBorrowValue.add(
-            thisUnhealthyBorrowValue
-          );
+          unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
         }
       }
     }
 
     for (let borrowedReserve of this.obligationLoans) {
       for (let reserveInfoWrapper of reserveInfos) {
-        if (
-          borrowedReserve.reserveId.equals(
-            reserveInfoWrapper.reserveInfo.reserveId
-          )
-        ) {
-          let decimal = Number(
-            new BN(reserveInfoWrapper.reserveTokenDecimal())
-          );
+        if (borrowedReserve.reserveId.equals(reserveInfoWrapper.reserveInfo.reserveId)) {
+          let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
           let thisborrowedValue = borrowedReserve.borrowedAmount
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
@@ -864,29 +729,14 @@ export class ObligationInfoWrapper {
     this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
   }
 
-  getRefreshedBorrowLimit(
-    reserves: ReserveInfoWrapper[],
-    tokenList: IServicesTokenInfo[]
-  ) {
+  getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
     const limits = this.obligationCollaterals.map((deposit) => {
-      const reserve = reserves.find((r) =>
-        r.reserveInfo.reserveId.equals(deposit.reserveId)
-      );
-      const supplyToken = tokenList.find(
-        (t) => t.mint === reserve?.supplyTokenMint().toBase58()
-      );
+      const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
+      const supplyToken = tokenList.find((t) => t.mint === reserve?.supplyTokenMint().toBase58());
       if (!reserve || !supplyToken) return 0;
-      const depositAmount = reserve.convertReserveAmountToLiquidityAmount(
-        deposit.depositedAmount
-      );
-      const amt =
-        Number(depositAmount) /
-        10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
-      return (
-        amt *
-        supplyToken.price *
-        (Number(reserve?.reserveInfo.config.loanToValueRatio) / 100)
-      );
+      const depositAmount = reserve.convertReserveAmountToLiquidityAmount(deposit.depositedAmount);
+      const amt = Number(depositAmount) / 10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
+      return amt * supplyToken.price * (Number(reserve?.reserveInfo.config.loanToValueRatio) / 100);
     });
     return limits.length > 0 ? limits.reduce((a, b) => a + b) : 0;
   }
@@ -915,21 +765,11 @@ export function parseObligationData(data: any, obligationKey: PublicKey) {
   //   throw new Error("lastUpdate.slot.isZero()");
   // }
 
-  const depositsBuffer = dataFlat.slice(
-    0,
-    depositsLen * COLLATERAL_LAYOUT.span
-  );
-  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
-    depositsBuffer
-  ) as ObligationCollateral[];
+  const depositsBuffer = dataFlat.slice(0, depositsLen * COLLATERAL_LAYOUT.span);
+  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(depositsBuffer) as ObligationCollateral[];
 
-  const borrowsBuffer = dataFlat.slice(
-    depositsBuffer.length,
-    depositsBuffer.length + borrowsLen * LOAN_LAYOUT.span
-  );
-  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(
-    borrowsBuffer
-  ) as ObligationLoan[];
+  const borrowsBuffer = dataFlat.slice(depositsBuffer.length, depositsBuffer.length + borrowsLen * LOAN_LAYOUT.span);
+  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as ObligationLoan[];
 
   const obligationInfo = {
     version,
@@ -944,11 +784,7 @@ export function parseObligationData(data: any, obligationKey: PublicKey) {
     unclaimedMine,
   } as ObligationInfo;
 
-  const obligationInfoWrapper = new ObligationInfoWrapper(
-    obligationInfo,
-    depositCollaterals,
-    borrowLoans
-  );
+  const obligationInfoWrapper = new ObligationInfoWrapper(obligationInfo, depositCollaterals, borrowLoans);
 
   return obligationInfoWrapper;
 }
@@ -998,20 +834,14 @@ export async function getObligation(
   let defaultObligationAddress = await newObligationKey(wallet);
   const accountInfo = await connection.getAccountInfo(defaultObligationAddress);
   if (accountInfo?.data.length) {
-    const obligationInfo = parseObligationData(
-      accountInfo?.data,
-      defaultObligationAddress
-    );
+    const obligationInfo = parseObligationData(accountInfo?.data, defaultObligationAddress);
     return obligationInfo;
   }
 
   return defaultObligation(defaultObligationAddress);
 }
 
-export async function getAllObligations(
-  connection: Connection,
-  wallet: PublicKey
-) {
+export async function getAllObligations(connection: Connection, wallet: PublicKey) {
   let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
   const accountInfos = await connection.getProgramAccounts(LARIX_PROGRAM_ID, {
     filters: [
@@ -1020,10 +850,7 @@ export async function getAllObligations(
       },
       {
         memcmp: {
-          offset:
-            u8("version").span +
-            struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate").span +
-            32,
+          offset: u8("version").span + struct([u64("lastUpdatedSlot"), bool("stale")], "lastUpdate").span + 32,
           /** data to match, as base-58 encoded string and limited to less than 129 bytes */
           bytes: wallet.toBase58(),
         },
@@ -1033,10 +860,7 @@ export async function getAllObligations(
 
   accountInfos.map((accountInfo) => {
     if (accountInfo?.account.owner.equals(LARIX_PROGRAM_ID)) {
-      let obligationInfo = parseObligationData(
-        accountInfo?.account.data,
-        accountInfo.pubkey
-      );
+      let obligationInfo = parseObligationData(accountInfo?.account.data, accountInfo.pubkey);
       allObligationInfoWrapper.push(obligationInfo);
     }
   });

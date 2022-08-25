@@ -231,6 +231,10 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
     return reserveAmount.mul(this.supplyAmount()).div(this.reserveTokenSupply());
   }
+
+  convertLiquidityAmountToReserveAmount(liquidityAmount: BN) {
+    return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
+  }
 }
 
 interface ISolendAPIPartnerReward {
