@@ -1,4 +1,12 @@
-import { publicKey, struct, u64, u128, u8,u16, bool } from "@project-serum/borsh";
+import {
+  publicKey,
+  struct,
+  u64,
+  u128,
+  u8,
+  u16,
+  bool,
+} from "@project-serum/borsh";
 // @ts-ignore
 import { blob } from "buffer-layout";
 
@@ -144,4 +152,4 @@ export const ORACLE_BRIDGE_LAYOUT = struct([
   u8("farmPoolVersion"),
   publicKey("farmLedger"),
   u16("rewardSupplyLen"),
-])
+]);

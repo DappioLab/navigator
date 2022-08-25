@@ -47,7 +47,6 @@ export interface ReserveInfo extends IReserveInfo {
   liquidity: ReserveLiquidity;
   collateral: ReserveCollateral;
   config: ReserveConfig;
-  farmInfo: FarmInfoWrapper;
   isLP: boolean;
   oracleBridgeInfo?: OracleBridgeInfo;
 }
@@ -61,6 +60,9 @@ export interface FarmInfo extends IFarmInfo {
   totalMiningSpeed: BN;
   kinkUtilRate: BN;
 
+  // from Reserve
+  reserveTokenMint: PublicKey;
+  oraclePublickey: PublicKey;
   // from ReserveLiquidity
   liquidityBorrowedAmountWads: BN;
   liquidityAvailableAmount: BN;
@@ -164,7 +166,6 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     collateral,
     config,
     isLP: lp,
-    farmInfo,
   };
 }
 
@@ -173,7 +174,7 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   // Farm is part of Reserve
   const decodedData = RESERVE_LAYOUT.decode(data);
 
-  const { liquidity, bonus } = decodedData;
+  const { liquidity, bonus, collateral } = decodedData;
 
   return {
     farmId,
@@ -186,11 +187,16 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
     liquidityAvailableAmount: new BN(liquidity.availableAmount),
     liquidityMintDecimals: new BN(liquidity.mintDecimals),
     liquidityMarketPrice: new BN(liquidity.marketPrice),
+    reserveTokenMint: collateral.reserveTokenMint,
+    oraclePublickey: liquidity.larixOraclePubkey,
   };
 }
 
-export function parceBridgeInfo(data: any, pubkey: PublicKey): BridgeInfo {
-  const decodedData = BRIDGE_ACCOUNT_LAYOUT.decode(data);
+export function parseOracleBridgeInfo(
+  data: any,
+  pubkey: PublicKey
+): OracleBridgeInfo {
+  const decodedData = ORACLE_BRIDGE_LAYOUT.decode(data);
   const {
     base,
     ammId,
@@ -447,11 +453,8 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
   let reserveInfoWrappers = [] as ReserveInfoWrapper[];
-  const allBridgeInfo = await getALLBridges(connection);
+
   for (let reservesMeta of allReserves) {
-    reservesMeta.lpBridgeInfo = allBridgeInfo.get(
-      reservesMeta.liquidity.OraclePubkey.toString()
-    );
     const newinfo = new ReserveInfoWrapper(reservesMeta);
     reserveInfoWrappers.push(newinfo);
   }
@@ -459,6 +462,73 @@ export async function getAllReserveWrappers(connection: Connection) {
   return reserveInfoWrappers;
 }
 
+export async function getAllFarmWrappers(connection: Connection) {
+  const programIdMemcmp: MemcmpFilter = {
+    memcmp: {
+      offset: 10,
+      //offset 10byte
+      bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
+    },
+  };
+  const dataSizeFilters: DataSizeFilter = {
+    dataSize: RESERVE_LAYOUT_SPAN,
+  };
+
+  const filters = [programIdMemcmp, dataSizeFilters];
+
+  const config: GetProgramAccountsConfig = { filters: filters };
+  const farmAccounts = await connection.getProgramAccounts(
+    LARIX_PROGRAM_ID,
+    config
+  );
+  let farms = [] as FarmInfoWrapper[];
+  for (let farm of farmAccounts) {
+    let info = parseFarmData(farm.account.data, farm.pubkey);
+    farms.push(new FarmInfoWrapper(info));
+  }
+
+  return farms;
+}
+export async function getAllReservesAndFarms(
+  connection: Connection
+): Promise<{ reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }[]> {
+  const programIdMemcmp: MemcmpFilter = {
+    memcmp: {
+      offset: 10,
+      //offset 10byte
+      bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
+    },
+  };
+  const dataSizeFilters: DataSizeFilter = {
+    dataSize: RESERVE_LAYOUT_SPAN,
+  };
+
+  const filters = [programIdMemcmp, dataSizeFilters];
+
+  const config: GetProgramAccountsConfig = { filters: filters };
+  const reserveAccounts = await connection.getProgramAccounts(
+    LARIX_PROGRAM_ID,
+    config
+  );
+  const allBridgeInfo = await getAllOracleBridges(connection);
+  const infos: { reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }[] = [];
+  for (let accountInfo of reserveAccounts) {
+    let farmInfo = parseFarmData(accountInfo.account.data, accountInfo.pubkey);
+    let reserveInfo = parseReserveData(
+      accountInfo.account.data,
+      accountInfo.pubkey
+    );
+    reserveInfo.oracleBridgeInfo = allBridgeInfo.get(
+      reserveInfo.liquidity.OraclePubkey.toString()
+    );
+
+    infos.push({
+      reserve: new ReserveInfoWrapper(reserveInfo),
+      farm: new FarmInfoWrapper(farmInfo),
+    });
+  }
+  return infos;
+}
 async function getAllReserves(connection: Connection) {
   const programIdMemcmp: MemcmpFilter = {
     memcmp: {
@@ -478,10 +548,13 @@ async function getAllReserves(connection: Connection) {
     LARIX_PROGRAM_ID,
     config
   );
-
+  const allBridgeInfo = await getAllOracleBridges(connection);
   let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
     let info = parseReserveData(account.account.data, account.pubkey);
+    info.oracleBridgeInfo = allBridgeInfo.get(
+      info.liquidity.OraclePubkey.toString()
+    );
     reserves.push(info);
   }
 
@@ -915,8 +988,15 @@ export function defaultObligation(obligationKey?: PublicKey) {
 export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
+  obligationKey?: PublicKey,
   lendingMarket = LARIX_MARKET_ID_MAIN_POOL
 ) {
+  if (obligationKey) {
+    let obligationInfo = await connection.getAccountInfo(obligationKey);
+    if (obligationInfo?.data.length) {
+      return parseObligationData(obligationInfo.data, obligationKey);
+    }
+  }
   let defaultObligationAddress = await newObligationKey(wallet);
   const accountInfo = await connection.getAccountInfo(defaultObligationAddress);
   if (accountInfo?.data.length) {
