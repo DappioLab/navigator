@@ -704,7 +704,7 @@ export async function getFarmer(
   farmInfoWrapper?: FarmInfoWrapper[],
   farmerId?: PublicKey
 ): Promise<FarmerInfo | null> {
-  farmerId = farmerId ? farmerId : await newFarmerAccountPub(wallet);
+  farmerId ||= await newFarmerAccountPub(wallet);
   let farmerInfo = await connection.getAccountInfo(farmerId);
   if ((farmerInfo?.data.length as number) > 0) {
     let farmer = parseFarmerInfo(farmerInfo?.data, farmerId);
