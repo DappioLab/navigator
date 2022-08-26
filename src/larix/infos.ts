@@ -609,7 +609,6 @@ export async function getAllOracleBridges(connection: Connection) {
   return allBridgeInfo;
 }
 
-export async function getBridge(bridge: PublicKey, connection: Connection) {}
 export interface FarmerInfo extends IFarmerInfo {
   // farmerId
   // userKey
