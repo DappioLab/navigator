@@ -7,6 +7,17 @@ export interface IPoolInfo {
   lpMint: PublicKey;
 }
 
+export interface INFTPoolInfo {
+  poolId: PublicKey;
+  proveTokenMint: PublicKey;
+}
+
+export interface INFTFarmInfo {
+  farmId: PublicKey;
+  farmTokenMint: PublicKey;
+  rewardTokenMint: PublicKey;
+}
+
 // TODO
 export interface IFarmInfo {
   farmId: PublicKey;
