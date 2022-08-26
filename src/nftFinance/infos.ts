@@ -12,9 +12,7 @@ import { NFT_STAKING_PROGRAM_ID, NFT_MINING_PROGRAM_ID } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT } from "./layout";
 
 export interface NFTPoolInfo extends INFTPoolInfo {
-  poolId: PublicKey;
   admin: PublicKey;
-  proveTokenMint: PublicKey;
   rarityInfo: PublicKey;
   proveTokenAuthority: PublicKey;
   proveTokenVault: PublicKey;
@@ -22,12 +20,9 @@ export interface NFTPoolInfo extends INFTPoolInfo {
 }
 
 export interface NFTFarmInfo extends INFTFarmInfo {
-  farmId: PublicKey;
   admin: PublicKey;
   proveTokenMint: PublicKey;
-  rewardTokenMint: PublicKey;
   rewardTokenPerSlot: BN;
-  farmTokenMint: PublicKey;
   rewardVault: PublicKey;
   farmAuthority: PublicKey;
   farmAuthorityBump: BN;
