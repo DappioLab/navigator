@@ -77,3 +77,5 @@ export const LDO_MINT = new PublicKey(
 export const MNDE_MINT = new PublicKey(
   "MNDEFzGvMt87ueuHvVU9VcTqsAP5b3fTGPsHuuPA5ey"
 );
+
+export const LARIX_BRIDGE_PROGRAM_ID = new PublicKey("66TSa2MG2MMzYSesUAwKdf5SZ72wteTY1En1bzVNC9r1");

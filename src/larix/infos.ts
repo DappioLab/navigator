@@ -14,6 +14,7 @@ import {
   IReserveInfoWrapper,
 } from "../types";
 import {
+  LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
   LARIX_MAIN_POOL_OBLIGATION_SEED,
   LARIX_MARKET_ID_MAIN_POOL,
@@ -30,6 +31,7 @@ import {
   FARMER_LAYOUT,
   OBLIGATION_LAYOUT,
   RESERVE_LAYOUT,
+  ORACLE_BRIDGE_LAYOUT,
 } from "./layouts";
 // @ts-ignore
 import { seq } from "buffer-layout";
@@ -45,6 +47,8 @@ export interface ReserveInfo extends IReserveInfo {
   liquidity: ReserveLiquidity;
   collateral: ReserveCollateral;
   config: ReserveConfig;
+  isLP: boolean;
+  oracleBridgeInfo?: OracleBridgeInfo;
 }
 
 export interface FarmInfo extends IFarmInfo {
@@ -56,6 +60,9 @@ export interface FarmInfo extends IFarmInfo {
   totalMiningSpeed: BN;
   kinkUtilRate: BN;
 
+  // from Reserve
+  reserveTokenMint: PublicKey;
+  oraclePublickey: PublicKey;
   // from ReserveLiquidity
   liquidityBorrowedAmountWads: BN;
   liquidityAvailableAmount: BN;
@@ -111,11 +118,43 @@ interface IPartnerReward {
   side: string;
 }
 
+export interface OracleBridgeInfo {
+  bridgePubkey: PublicKey;
+  base: PublicKey;
+  ammId: PublicKey;
+  ammVersion: BN;
+  lpMint: PublicKey;
+  lpSupply: PublicKey;
+  coinSupply: PublicKey;
+  pcSupply: PublicKey;
+  addLpWithdrawAmountAuthority: PublicKey;
+  compoundAuthority: PublicKey;
+  coinMintPrice: PublicKey;
+  coinMintDecimal: BN;
+  pcMintPrice: PublicKey;
+  pcMintDecimal: BN;
+  ammOpenOrders: PublicKey;
+  ammCoinMintSupply: PublicKey;
+  ammPcMintSupply: PublicKey;
+  bump: BN;
+  lpPriceAccount: PublicKey;
+  isFarm: BN;
+  farmPoolId: PublicKey;
+  farmPoolVersion: BN;
+  farmLedger: PublicKey;
+}
+
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
-  let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
-    decodedData;
-
+  let {
+    version,
+    lastUpdate,
+    lendingMarket,
+    liquidity,
+    collateral,
+    config,
+    isLP,
+  } = decodedData;
   return {
     reserveId: pubkey,
     version,
@@ -124,6 +163,7 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     liquidity,
     collateral,
     config,
+    isLP: new BN(isLP).eqn(1),
   };
 }
 
@@ -132,19 +172,77 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   // Farm is part of Reserve
   const decodedData = RESERVE_LAYOUT.decode(data);
 
-  const { liquidity, bonus } = decodedData;
+  const { liquidity, bonus, collateral } = decodedData;
 
   return {
     farmId,
     unCollSupply: bonus.unCollSupply,
-    lTokenMiningIndex: bonus.lTokenMiningIndex,
-    borrowMiningIndex: bonus.borrowMiningIndex,
-    totalMiningSpeed: bonus.totalMiningSpeed,
-    kinkUtilRate: bonus.kinkUtilRate,
-    liquidityBorrowedAmountWads: liquidity.borrowedAmountWads,
-    liquidityAvailableAmount: liquidity.availableAmount,
-    liquidityMintDecimals: liquidity.mintDecimals,
-    liquidityMarketPrice: liquidity.marketPrice,
+    lTokenMiningIndex: new BN(bonus.lTokenMiningIndex),
+    borrowMiningIndex: new BN(bonus.borrowMiningIndex),
+    totalMiningSpeed: new BN(bonus.totalMiningSpeed),
+    kinkUtilRate: new BN(bonus.kinkUtilRate),
+    liquidityBorrowedAmountWads: new BN(liquidity.borrowedAmountWads),
+    liquidityAvailableAmount: new BN(liquidity.availableAmount),
+    liquidityMintDecimals: new BN(liquidity.mintDecimals),
+    liquidityMarketPrice: new BN(liquidity.marketPrice),
+    reserveTokenMint: collateral.reserveTokenMint,
+    oraclePublickey: liquidity.larixOraclePubkey,
+  };
+}
+
+export function parseOracleBridgeInfo(
+  data: any,
+  pubkey: PublicKey
+): OracleBridgeInfo {
+  const decodedData = ORACLE_BRIDGE_LAYOUT.decode(data);
+  const {
+    base,
+    ammId,
+    ammVersion,
+    lpMint,
+    lpSupply,
+    coinSupply,
+    pcSupply,
+    addLpWithdrawAmountAuthority,
+    compoundAuthority,
+    coinMintPrice,
+    coinMintDecimal,
+    pcMintPrice,
+    pcMintDecimal,
+    ammOpenOrders,
+    ammCoinMintSupply,
+    ammPcMintSupply,
+    bump,
+    lpPriceAccount,
+    isFarm,
+    farmPoolId,
+    farmPoolVersion,
+    farmLedger,
+  } = decodedData;
+  return {
+    bridgePubkey: pubkey,
+    base,
+    ammId,
+    ammVersion,
+    lpMint,
+    lpSupply,
+    coinSupply,
+    pcSupply,
+    addLpWithdrawAmountAuthority,
+    compoundAuthority,
+    coinMintPrice,
+    coinMintDecimal,
+    pcMintPrice,
+    pcMintDecimal,
+    ammOpenOrders,
+    ammCoinMintSupply,
+    ammPcMintSupply,
+    bump,
+    lpPriceAccount,
+    isFarm,
+    farmPoolId,
+    farmPoolVersion,
+    farmLedger,
   };
 }
 
@@ -292,6 +390,11 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       .mul(this.supplyAmount())
       .div(this.reserveTokenSupply());
   }
+  convertLiquidityAmountToReserveAmount(liquidityAmount: BN) {
+    return liquidityAmount
+      .mul(this.reserveTokenSupply())
+      .div(this.supplyAmount());
+  }
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
@@ -339,7 +442,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       .mul(this.farmInfo.liquidityMarketPrice)
       .div(new BN(`1${"".padEnd(18, "0")}`))
       .div(new BN(`1${"".padEnd(decimal, "0")}`));
-    let miningRate = this.farmInfo.kinkUtilRate;
+    let miningRate = new BN(100).sub(this.farmInfo.kinkUtilRate);
     let miningSpeed = this.farmInfo.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
     let apy =
@@ -362,6 +465,73 @@ export async function getAllReserveWrappers(connection: Connection) {
   return reserveInfoWrappers;
 }
 
+export async function getAllFarmWrappers(connection: Connection) {
+  const programIdMemcmp: MemcmpFilter = {
+    memcmp: {
+      offset: 10,
+      //offset 10byte
+      bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
+    },
+  };
+  const dataSizeFilters: DataSizeFilter = {
+    dataSize: RESERVE_LAYOUT_SPAN,
+  };
+
+  const filters = [programIdMemcmp, dataSizeFilters];
+
+  const config: GetProgramAccountsConfig = { filters: filters };
+  const farmAccounts = await connection.getProgramAccounts(
+    LARIX_PROGRAM_ID,
+    config
+  );
+  let farms = [] as FarmInfoWrapper[];
+  for (let farm of farmAccounts) {
+    let info = parseFarmData(farm.account.data, farm.pubkey);
+    farms.push(new FarmInfoWrapper(info));
+  }
+
+  return farms;
+}
+export async function getAllReservesAndFarms(
+  connection: Connection
+): Promise<{ reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }[]> {
+  const programIdMemcmp: MemcmpFilter = {
+    memcmp: {
+      offset: 10,
+      //offset 10byte
+      bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
+    },
+  };
+  const dataSizeFilters: DataSizeFilter = {
+    dataSize: RESERVE_LAYOUT_SPAN,
+  };
+
+  const filters = [programIdMemcmp, dataSizeFilters];
+
+  const config: GetProgramAccountsConfig = { filters: filters };
+  const reserveAccounts = await connection.getProgramAccounts(
+    LARIX_PROGRAM_ID,
+    config
+  );
+  const allBridgeInfo = await getAllOracleBridges(connection);
+  const infos: { reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }[] = [];
+  for (let accountInfo of reserveAccounts) {
+    let farmInfo = parseFarmData(accountInfo.account.data, accountInfo.pubkey);
+    let reserveInfo = parseReserveData(
+      accountInfo.account.data,
+      accountInfo.pubkey
+    );
+    reserveInfo.oracleBridgeInfo = allBridgeInfo.get(
+      reserveInfo.liquidity.OraclePubkey.toString()
+    );
+
+    infos.push({
+      reserve: new ReserveInfoWrapper(reserveInfo),
+      farm: new FarmInfoWrapper(farmInfo),
+    });
+  }
+  return infos;
+}
 async function getAllReserves(connection: Connection) {
   const programIdMemcmp: MemcmpFilter = {
     memcmp: {
@@ -381,10 +551,13 @@ async function getAllReserves(connection: Connection) {
     LARIX_PROGRAM_ID,
     config
   );
-
+  const allBridgeInfo = await getAllOracleBridges(connection);
   let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
     let info = parseReserveData(account.account.data, account.pubkey);
+    info.oracleBridgeInfo = allBridgeInfo.get(
+      info.liquidity.OraclePubkey.toString()
+    );
     reserves.push(info);
   }
 
@@ -396,7 +569,18 @@ export async function getReserve(
   reserveId: PublicKey
 ): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
-  return parseReserveData(reserveAccountInfo?.data, reserveId);
+  let reserveInfo = parseReserveData(reserveAccountInfo?.data, reserveId);
+  if (reserveInfo.isLP) {
+    let bridgeAccountInfo = await connection.getAccountInfo(
+      reserveInfo.liquidity.OraclePubkey
+    );
+    let bridgeInfo = parseOracleBridgeInfo(
+      bridgeAccountInfo?.data,
+      reserveInfo.liquidity.OraclePubkey
+    );
+    reserveInfo.oracleBridgeInfo = bridgeInfo;
+  }
+  return reserveInfo;
 }
 
 // NOTICE: farmId == reserveId
@@ -406,6 +590,23 @@ export async function getFarm(
 ): Promise<FarmInfo> {
   const farmAccountInfo = await connection.getAccountInfo(farmId);
   return parseFarmData(farmAccountInfo?.data, farmId);
+}
+
+export async function getAllOracleBridges(connection: Connection) {
+  const allBridgeAccounts = await connection.getProgramAccounts(
+    LARIX_BRIDGE_PROGRAM_ID
+  );
+  let allBridgeInfo: Map<string, OracleBridgeInfo> = new Map();
+  for (let bridgeAccountInfo of allBridgeAccounts) {
+    if (bridgeAccountInfo.account.data.length > 80) {
+      let bridgeAccount = parseOracleBridgeInfo(
+        bridgeAccountInfo.account.data,
+        bridgeAccountInfo.pubkey
+      );
+      allBridgeInfo.set(bridgeAccountInfo.pubkey.toString(), bridgeAccount);
+    }
+  }
+  return allBridgeInfo;
 }
 
 export interface FarmerInfo extends IFarmerInfo {
@@ -500,9 +701,10 @@ export async function getAllFarmers(
 export async function getFarmer(
   connection: Connection,
   wallet: PublicKey,
-  farmInfoWrapper?: FarmInfoWrapper[]
+  farmInfoWrapper?: FarmInfoWrapper[],
+  farmerId?: PublicKey
 ): Promise<FarmerInfo | null> {
-  let farmerId = await newFarmerAccountPub(wallet);
+  farmerId ||= await newFarmerAccountPub(wallet);
   let farmerInfo = await connection.getAccountInfo(farmerId);
   if ((farmerInfo?.data.length as number) > 0) {
     let farmer = parseFarmerInfo(farmerInfo?.data, farmerId);
@@ -789,8 +991,15 @@ export function defaultObligation(obligationKey?: PublicKey) {
 export async function getObligation(
   connection: Connection,
   wallet: PublicKey,
+  obligationKey?: PublicKey,
   lendingMarket = LARIX_MARKET_ID_MAIN_POOL
 ) {
+  if (obligationKey) {
+    let obligationInfo = await connection.getAccountInfo(obligationKey);
+    if (obligationInfo?.data.length) {
+      return parseObligationData(obligationInfo.data, obligationKey);
+    }
+  }
   let defaultObligationAddress = await newObligationKey(wallet);
   const accountInfo = await connection.getAccountInfo(defaultObligationAddress);
   if (accountInfo?.data.length) {
