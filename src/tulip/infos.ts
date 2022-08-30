@@ -1,4 +1,4 @@
-import { getAccount } from "@solana/spl-token-v2";
+import { getMint } from "@solana/spl-token-v2";
 import {
   Connection,
   PublicKey,
@@ -98,11 +98,11 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     const platformAmountWads = this.reserveInfo.liquidity.platformAmountWads;
     const borrowedAmountWads = this.reserveInfo.liquidity.borrowedAmount;
 
-    const collateralMintInfo = await getAccount(
+    const collateralMintInfo = await getMint(
       connection,
       this.reserveInfo.collateral.reserveTokenMint
     );
-    const supply = new BN(Number(collateralMintInfo.amount));
+    const supply = new BN(Number(collateralMintInfo.supply));
 
     const borrowedAmount = borrowedAmountWads.div(WAD);
     const platformAmount = platformAmountWads.div(WAD);
