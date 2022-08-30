@@ -1,57 +1,59 @@
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
-
 import {
   PublicKey,
-  SYSVAR_CLOCK_PUBKEY,
-  Transaction,
   TransactionInstruction,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-} from "@project-serum/borsh";
-import { getUserVaultAddress } from ".";
-import { KATANA_PROGRAM_ID } from "./info";
-import { Vault } from "./vaultInfo";
+import { struct, u64, u8 } from "@project-serum/borsh";
+import { getUserVaultAddress, VaultInfoWrapper } from "./infos";
 
-export async function createUserVaultIx(vault: Vault, wallet: PublicKey) {
-  let userVault = await getUserVaultAddress(wallet, vault.infoPubkey);
+export async function createUserVaultIx(
+  vault: VaultInfoWrapper,
+  wallet: PublicKey,
+  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
+) {
+  let userVault = await getUserVaultAddress(
+    wallet,
+    vault.vaultInfo.infoPubkey,
+    programId
+  );
   const dataLayout = struct([u8("bump")]);
   let data = Buffer.alloc(9);
   let datahex = userVault[1].toString(16);
+  // TODO: derive discriminator from hash
   let datastring = "924464453f2eb6c7".concat(datahex);
   data = Buffer.from(datastring, "hex");
 
   let keys = [
     { pubkey: userVault[0], isSigner: false, isWritable: true },
-    { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
     { pubkey: wallet, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
   ];
+
   return new TransactionInstruction({
     keys,
-    programId: KATANA_PROGRAM_ID,
+    programId,
     data,
   });
 }
 
 export async function depositIx(
-  vault: Vault,
+  vault: VaultInfoWrapper,
   wallet: PublicKey,
   tokenAccount: PublicKey,
-  amount: BN
+  amount: BN, // NOTICE: Need to be BN.Endianness?
+  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(wallet, vault.infoPubkey);
+  let userVault = await getUserVaultAddress(
+    wallet,
+    vault.vaultInfo.infoPubkey,
+    programId
+  );
   const dataLayout = struct([u64("amount")]);
   let data = Buffer.alloc(dataLayout.span + 8);
   dataLayout.encode(
@@ -64,7 +66,7 @@ export async function depositIx(
   let datastring = "f223c68952e1f2b6".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
     {
       pubkey: await vault.getPricePerPage(),
       isSigner: false,
@@ -73,56 +75,94 @@ export async function depositIx(
     { pubkey: userVault[0], isSigner: false, isWritable: true },
     { pubkey: tokenAccount, isSigner: false, isWritable: true },
     { pubkey: tokenAccount, isSigner: false, isWritable: true },
-    { pubkey: vault.underlyingTokenVault, isSigner: false, isWritable: true },
-    { pubkey: vault.underlyingTokenMint, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenVault,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenMint,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
+
   return new TransactionInstruction({
     keys,
-    programId: KATANA_PROGRAM_ID,
+    programId,
     data,
   });
 }
+
 export async function claimShareIx(
-  vault: Vault,
+  vault: VaultInfoWrapper,
   wallet: PublicKey,
-  tokenAccount: PublicKey
+  tokenAccount: PublicKey,
+  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(wallet, vault.infoPubkey);
+  let userVault = await getUserVaultAddress(
+    wallet,
+    vault.vaultInfo.infoPubkey,
+    programId
+  );
   let data = Buffer.alloc(8);
+  // TODO: derive discriminator from hash
   let datastring = "82831ded86146ef5";
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
     {
       pubkey: await vault.getPricePerPage(),
       isSigner: false,
       isWritable: false,
     },
     { pubkey: userVault[0], isSigner: false, isWritable: true },
-    { pubkey: vault.underlyingTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.derivativeTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.derivativeTokenVault, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.derivativeTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.derivativeTokenVault,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: tokenAccount, isSigner: false, isWritable: true },
-    { pubkey: vault.vaultAuthority, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.vaultAuthority,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
+
   return new TransactionInstruction({
     keys,
-    programId: KATANA_PROGRAM_ID,
+    programId,
     data,
   });
 }
 
 export async function initiateWithdrawIx(
-  vault: Vault,
+  vault: VaultInfoWrapper,
   wallet: PublicKey,
   tokenAccount: PublicKey,
-  amount: BN
+  amount: BN,
+  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(wallet, vault.infoPubkey);
+  let userVault = await getUserVaultAddress(
+    wallet,
+    vault.vaultInfo.infoPubkey,
+    programId
+  );
   const dataLayout = struct([u64("amount")]);
   let data = Buffer.alloc(dataLayout.span + 8);
   dataLayout.encode(
@@ -132,65 +172,116 @@ export async function initiateWithdrawIx(
     data
   );
   let datahex = data.toString("hex");
+  // TODO: derive discriminator from hash
   let datastring = "9cac8cf5b6faefa0".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
     { pubkey: userVault[0], isSigner: false, isWritable: true },
-    { pubkey: vault.underlyingTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.derivativeTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.derivativeTokenVault, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.derivativeTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.derivativeTokenVault,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: tokenAccount, isSigner: false, isWritable: true },
-    { pubkey: vault.vaultAuthority, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.vaultAuthority,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
+
   return new TransactionInstruction({
     keys,
-    programId: KATANA_PROGRAM_ID,
+    programId,
     data,
   });
 }
+
 export async function completeWithdrawIx(
-  vault: Vault,
+  vault: VaultInfoWrapper,
   wallet: PublicKey,
-  tokenAccount: PublicKey
+  tokenAccount: PublicKey,
+  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(wallet, vault.infoPubkey);
+  let userVault = await getUserVaultAddress(
+    wallet,
+    vault.vaultInfo.infoPubkey,
+    programId
+  );
   let data = Buffer.alloc(8);
+  // TODO: derive discriminator from hash
   let datastring = "ac818d115ffdfb62";
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
     {
       pubkey: await vault.getPricePerPage(),
       isSigner: false,
       isWritable: false,
     },
     { pubkey: userVault[0], isSigner: false, isWritable: true },
-    { pubkey: vault.underlyingTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.derivativeTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.underlyingTokenVault, isSigner: false, isWritable: true },
-    { pubkey: vault.derivativeTokenVault, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.derivativeTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenVault,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: vault.vaultInfo.derivativeTokenVault,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: tokenAccount, isSigner: false, isWritable: true },
-    { pubkey: vault.vaultAuthority, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.vaultAuthority,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
+
   return new TransactionInstruction({
     keys,
-    programId: KATANA_PROGRAM_ID,
+    programId,
     data,
   });
 }
 
 export async function instantWithdrawIx(
-  vault: Vault,
+  vault: VaultInfoWrapper,
   wallet: PublicKey,
   tokenAccount: PublicKey,
-  amount: BN
+  amount: BN,
+  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(wallet, vault.infoPubkey);
+  let userVault = await getUserVaultAddress(
+    wallet,
+    vault.vaultInfo.infoPubkey,
+    programId
+  );
   const dataLayout = struct([u64("amount")]);
   let data = Buffer.alloc(dataLayout.span + 8);
   dataLayout.encode(
@@ -200,21 +291,35 @@ export async function instantWithdrawIx(
     data
   );
   let datahex = data.toString("hex");
+  // TODO: derive discriminator from hash
   let datastring = "ab3191b0306570a2".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
     { pubkey: userVault[0], isSigner: false, isWritable: true },
-    { pubkey: vault.underlyingTokenMint, isSigner: false, isWritable: false },
-    { pubkey: vault.underlyingTokenVault, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenMint,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vault.vaultInfo.underlyingTokenVault,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: tokenAccount, isSigner: false, isWritable: true },
-    { pubkey: vault.vaultAuthority, isSigner: false, isWritable: true },
+    {
+      pubkey: vault.vaultInfo.vaultAuthority,
+      isSigner: false,
+      isWritable: true,
+    },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   ];
+
   return new TransactionInstruction({
     keys,
-    programId: KATANA_PROGRAM_ID,
+    programId,
     data,
   });
 }
