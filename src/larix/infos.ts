@@ -676,7 +676,7 @@ export async function getAllFarmers(
   let allFarmerInfos = allFarmerAccounts.map((account) =>
     parseFarmerInfo(account.account.data, account.pubkey)
   );
-
+  let updatedInfos = [];
   if (farmInfoWrapper) {
     for (let info of allFarmerInfos) {
       for (let indexData of info.indexs) {
@@ -692,10 +692,11 @@ export async function getAllFarmers(
           }
         }
       }
+      updatedInfos.push(info);
     }
   }
 
-  return allFarmerInfos;
+  return updatedInfos;
 }
 
 export async function getFarmer(
@@ -813,60 +814,77 @@ export class ObligationInfoWrapper {
     public obligationLoans: ObligationLoan[]
   ) {}
 
-  update(reserveInfos: ReserveInfoWrapper[]) {
+  update(
+    reserveAndFarmInfo: {
+      reserve: ReserveInfoWrapper;
+      farm: FarmInfoWrapper;
+    }[]
+  ) {
     let unhealthyBorrowValue = new BN(0);
     let borrowedValue = new BN(0);
     let depositedValue = new BN(0);
-    for (let depositedReserve of this.obligationCollaterals) {
-      for (let reserveInfoWrapper of reserveInfos) {
-        if (
-          depositedReserve.reserveId.equals(
-            reserveInfoWrapper.reserveInfo.reserveId
-          )
-        ) {
-          let decimal = Number(
-            new BN(reserveInfoWrapper.reserveTokenDecimal())
-          );
-          let thisDepositedValue = depositedReserve.depositedAmount
-            .mul(reserveInfoWrapper.supplyAmount())
-            .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
-            .div(reserveInfoWrapper.reserveInfo.collateral.mintTotalSupply)
-            .div(new BN(`1${"".padEnd(decimal, "0")}`));
-          depositedValue = depositedValue.add(thisDepositedValue);
+    let reserveMap: Map<
+      string,
+      { reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }
+    > = new Map();
 
-          let thisUnhealthyBorrowValue = new BN(
-            reserveInfoWrapper.reserveInfo.config.liquidationThreshold
-          )
-            .mul(thisDepositedValue)
-            .div(new BN(`1${"".padEnd(2, "0")}`));
-          unhealthyBorrowValue = unhealthyBorrowValue.add(
-            thisUnhealthyBorrowValue
-          );
-        }
+    for (let reserveInfoWrapper of reserveAndFarmInfo) {
+      reserveMap.set(
+        reserveInfoWrapper.reserve.reserveInfo.reserveId.toString(),
+        reserveInfoWrapper
+      );
+    }
+    let unclaimedAmount = this.obligationInfo.unclaimedMine;
+
+    for (let depositedReserve of this.obligationCollaterals) {
+      let infoWrapper = reserveMap.get(depositedReserve.reserveId.toString());
+      if (infoWrapper) {
+        let reserveInfoWrapper = infoWrapper.reserve;
+        let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
+        let thisDepositedValue = depositedReserve.depositedAmount
+          .mul(reserveInfoWrapper.supplyAmount())
+          .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
+          .div(reserveInfoWrapper.reserveInfo.collateral.mintTotalSupply)
+          .div(new BN(`1${"".padEnd(decimal, "0")}`));
+        depositedValue = depositedValue.add(thisDepositedValue);
+
+        let thisUnhealthyBorrowValue = new BN(
+          reserveInfoWrapper.reserveInfo.config.liquidationThreshold
+        )
+          .mul(thisDepositedValue)
+          .div(new BN(`1${"".padEnd(2, "0")}`));
+        unhealthyBorrowValue = unhealthyBorrowValue.add(
+          thisUnhealthyBorrowValue
+        );
+        let indexSub = infoWrapper.farm.farmInfo.lTokenMiningIndex.sub(
+          depositedReserve.index
+        );
+        let reward = indexSub.mul(depositedReserve.depositedAmount);
+        unclaimedAmount = unclaimedAmount.add(reward);
       }
     }
 
     for (let borrowedReserve of this.obligationLoans) {
-      for (let reserveInfoWrapper of reserveInfos) {
-        if (
-          borrowedReserve.reserveId.equals(
-            reserveInfoWrapper.reserveInfo.reserveId
-          )
-        ) {
-          let decimal = Number(
-            new BN(reserveInfoWrapper.reserveTokenDecimal())
-          );
-          let thisborrowedValue = borrowedReserve.borrowedAmount
-            .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
-            .div(new BN(`1${"".padEnd(decimal, "0")}`));
-          borrowedValue = borrowedValue.add(thisborrowedValue);
-        }
+      let infoWrapper = reserveMap.get(borrowedReserve.reserveId.toString());
+      if (infoWrapper) {
+        let reserveInfoWrapper = infoWrapper.reserve;
+        let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
+        let thisborrowedValue = borrowedReserve.borrowedAmount
+          .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
+          .div(new BN(`1${"".padEnd(decimal, "0")}`));
+        borrowedValue = borrowedValue.add(thisborrowedValue);
+        let indexSub = infoWrapper.farm.farmInfo.borrowMiningIndex.sub(
+          borrowedReserve.index
+        );
+        let reward = indexSub.mul(borrowedReserve.borrowedAmount);
+        unclaimedAmount = unclaimedAmount.add(reward);
       }
     }
 
     this.obligationInfo.borrowedValue = borrowedValue;
     this.obligationInfo.depositedValue = depositedValue;
     this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
+    this.obligationInfo.unclaimedMine = unclaimedAmount;
   }
 
   getRefreshedBorrowLimit(
