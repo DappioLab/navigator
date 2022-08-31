@@ -13,278 +13,553 @@ import {
   FARM_PROGRAM_ID_V5,
 } from "./ids";
 import {
-  FARM_LEDGER_LAYOUT_V3_1,
-  FARM_LEDGER_LAYOUT_V3_2,
-  FARM_LEDGER_LAYOUT_V5_1,
-  FARM_LEDGER_LAYOUT_V5_2,
-  STAKE_INFO_LAYOUT,
-  STAKE_INFO_LAYOUT_V4,
+  POOL_LAYOUT_V4,
+  FARMER_LAYOUT_V3_2,
+  FARMER_LAYOUT_V5_2,
+  FARM_LAYOUT_V3,
+  FARM_LAYOUT_V5,
 } from "./layouts";
 import { OpenOrders } from "@project-serum/serum";
 import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
 import { parseTokenAccount } from "../utils";
-import { AMM_INFO_LAYOUT_V4 } from "./layouts";
 import {
   IFarmInfo,
   IPoolInfo,
   IFarmerInfo,
   IPoolInfoWrapper,
   IFarmInfoWrapper,
+  IInstancePool,
+  IInstanceFarm,
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
-export interface LedgerInfo extends IFarmerInfo {
-  farmVersion: number;
-  rewardDebts: number[];
-  mints: { stakedTokenMint: string; rewardAMint: string; rewardBMint?: string };
-}
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
-// Get all ledgers for certain user wallet.
-export async function getAllLedgers(
-  connection: Connection,
-  ownerPubkey: PublicKey
-): Promise<LedgerInfo[]> {
-  let memcmpFilter: MemcmpFilter = {
-    memcmp: {
-      offset: 8 + 32,
-      bytes: ownerPubkey.toString(),
-    },
-  };
-  let dataSizeFilter = (datasize: any): DataSizeFilter => {
-    return { dataSize: datasize };
-  };
-  // let filters_v3_1 = [
-  //   memcmpFilter,
-  //   dataSizeFilter(FARM_LEDGER_LAYOUT_V3_1.span),
-  // ];
-  let filters_v3_2 = [
-    memcmpFilter,
-    dataSizeFilter(FARM_LEDGER_LAYOUT_V3_2.span),
-  ];
-  // let filters_v5_1 = [
-  //   memcmpFilter,
-  //   dataSizeFilter(FARM_LEDGER_LAYOUT_V5_1.span),
-  // ];
-  let filters_v5_2 = [
-    memcmpFilter,
-    dataSizeFilter(FARM_LEDGER_LAYOUT_V5_2.span),
-  ];
+let infos: IInstancePool & IInstanceFarm;
 
-  // let allLedgersInV3_1 = await connection.getProgramAccounts(FARM_PROGRAM_ID_V3, {
-  //   filters: filters_v3_1,
-  // });
-  let allLedgersInV3_2 = await connection.getProgramAccounts(
-    FARM_PROGRAM_ID_V3,
-    {
-      filters: filters_v3_2,
+infos = class InstanceRaydium {
+  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
+    let allPool: PoolInfo[] = [];
+    //V4 pools
+    const v4SizeFilter: DataSizeFilter = {
+      dataSize: 752,
+    };
+    const v4Filters = [v4SizeFilter];
+    const v4config: GetProgramAccountsConfig = { filters: v4Filters };
+    const allV4AMMAccount = await connection.getProgramAccounts(
+      POOL_PROGRAM_ID_V4,
+      v4config
+    );
+    for (let v4Account of allV4AMMAccount) {
+      let poolInfo = this.parsePool(
+        v4Account.account.data,
+        v4Account.pubkey
+      ) as PoolInfo;
+      if (
+        !(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) &&
+        poolInfo.status.toNumber() != 4
+      ) {
+        allPool.push(poolInfo);
+      }
     }
-  );
-  // let allLedgersInV5_1 = await connection.getProgramAccounts(
-  //   FARM_PROGRAM_ID_V5,
-  //   { filters: filters_v5_1 }
-  // );
-  let allLedgersInV5_2 = await connection.getProgramAccounts(
-    FARM_PROGRAM_ID_V5,
-    { filters: filters_v5_2 }
-  );
 
-  // let ledgerInfoV3_1 = await getLegerInfos(
-  //   connection,
-  //   allLedgersInV3_1,
-  //   FARM_LEDGER_LAYOUT_V3_1,
-  //   3
-  // );
-  let ledgerInfoV3_2 = await getLedgerInfos(
-    connection,
-    allLedgersInV3_2,
-    FARM_LEDGER_LAYOUT_V3_2,
-    3
-  );
-  // let ledgerInfoV5_1 = await getLegerInfos(
-  //   connection,
-  //   allLedgersInV5_1,
-  //   FARM_LEDGER_LAYOUT_V5_1,
-  //   5
-  // );
-  let ledgerInfoV5_2 = await getLedgerInfos(
-    connection,
-    allLedgersInV5_2,
-    FARM_LEDGER_LAYOUT_V5_2,
-    5
-  );
-  // console.log(
-  //   // ledgerInfoV3_1.length,
-  //   ledgerInfoV3_2.length,
-  //   // ledgerInfoV5_1.length,
-  //   ledgerInfoV5_2.length
-  // );
+    return allPool;
+  }
 
-  return [
-    // ...ledgerInfoV3_1,
-    ...ledgerInfoV3_2,
-    // ...ledgerInfoV5_1,
-    ...ledgerInfoV5_2,
-  ];
-}
+  static async getPool(
+    connection: Connection,
+    poolId: PublicKey
+  ): Promise<IPoolInfo> {
+    let pool = null as unknown as PoolInfo;
+    const poolInfoAccount = await connection.getAccountInfo(poolId);
 
-export async function getLedgerInfos(
-  connection: Connection,
-  ledgers: {
-    pubkey: PublicKey;
-    account: AccountInfo<Buffer>;
-  }[],
-  layout: any,
-  farmVersion: 3 | 5
-): Promise<LedgerInfo[]> {
-  return await Promise.all(
-    ledgers.map(async (ledger) => {
-      let decoded = layout.decode(ledger.account.data);
-      let relatedMints = await getFarmRelatedMints(
-        connection,
-        decoded,
-        farmVersion
-      );
+    let poolInfo = this.parsePool(
+      poolInfoAccount?.data as Buffer,
+      poolId
+    ) as PoolInfo;
 
-      return {
-        farmerId: ledger.pubkey,
-        farmId: new PublicKey(decoded.id),
-        userKey: new PublicKey(decoded.owner),
-        amount: decoded.deposited.toNumber(),
-        farmVersion: farmVersion,
-        mints: relatedMints,
-        rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
-          rewardDebt.toNumber()
-        ),
-      } as LedgerInfo;
-    })
-  );
-}
+    if (
+      !(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) &&
+      poolInfo.status.toNumber() != 4
+    ) {
+      pool = poolInfo;
+    }
 
-export async function getLedgerKey({
-  farm,
-  userKey,
-}: {
-  farm: FarmInfo;
-  userKey: PublicKey;
-}): Promise<PublicKey> {
-  const programId =
-    farm.version === 3 ? FARM_PROGRAM_ID_V3 : FARM_PROGRAM_ID_V5;
+    return pool;
+  }
 
-  const [key, _] = await PublicKey.findProgramAddress(
-    [
-      farm.farmId.toBuffer(),
-      userKey.toBuffer(),
-      Buffer.from("staker_info_v2_associated_seed", "utf-8"),
-    ],
-    programId
-  );
-  return key;
-}
+  static parsePool(data: Buffer, infoPubkey: PublicKey): IPoolInfo {
+    let poolData = Buffer.from(data);
+    let rawPoolData = POOL_LAYOUT_V4.decode(poolData);
+    let {
+      status,
+      nonce,
+      orderNum,
+      depth,
+      coinDecimals,
+      pcDecimals,
+      state,
+      resetFlag,
+      minSize,
+      volMaxCutRatio,
+      amountWaveRatio,
+      coinLotSize,
+      pcLotSize,
+      minPriceMultiplier,
+      maxPriceMultiplier,
+      systemDecimalsValue,
+      minSeparateNumerator,
+      minSeparateDenominator,
+      tradeFeeNumerator,
+      tradeFeeDenominator,
+      pnlNumerator,
+      pnlDenominator,
+      swapFeeNumerator,
+      swapFeeDenominator,
+      needTakePnlCoin,
+      needTakePnlPc,
+      totalPnlPc,
+      totalPnlCoin,
+      poolTotalDepositPc,
+      poolTotalDepositCoin,
+      swapCoinInAmount,
+      swapPcOutAmount,
+      swapCoin2PcFee,
+      swapPcInAmount,
+      swapCoinOutAmount,
+      swapPc2CoinFee,
+      poolCoinTokenAccount,
+      poolPcTokenAccount,
+      coinMintAddress,
+      pcMintAddress,
+      lpMintAddress,
+      ammOpenOrders,
+      serumMarket,
+      serumProgramId,
+      ammTargetOrders,
+      poolWithdrawQueue,
+      poolTempLpTokenAccount,
+      ammOwner,
+      pnlOwner,
+    } = rawPoolData;
 
-export async function getLedger({
-  connection,
-  farm,
-  ledgerKey,
-}: {
-  connection: Connection;
-  farm: FarmInfo;
-  ledgerKey: PublicKey;
-}): Promise<LedgerInfo> {
-  const ledgerAcccountInfo = (await connection.getAccountInfo(
-    ledgerKey
-  )) as AccountInfo<Buffer>;
-  const info =
-    ledgerAcccountInfo &&
-    (await _getLedger(
+    return {
+      poolId: infoPubkey,
+      version: 4,
+      status,
+      nonce,
+      orderNum,
+      depth,
+      coinDecimals,
+      pcDecimals,
+      state,
+      resetFlag,
+      minSize,
+      volMaxCutRatio,
+      amountWaveRatio,
+      coinLotSize,
+      pcLotSize,
+      minPriceMultiplier,
+      maxPriceMultiplier,
+      needTakePnlCoin,
+      needTakePnlPc,
+      totalPnlPc,
+      totalPnlCoin,
+      poolTotalDepositPc,
+      poolTotalDepositCoin,
+      systemDecimalsValue,
+      poolCoinTokenAccount,
+      poolPcTokenAccount,
+      tokenAMint: coinMintAddress,
+      tokenBMint: pcMintAddress,
+      lpMint: lpMintAddress,
+      ammOpenOrders,
+      serumMarket,
+      serumProgramId,
+      ammTargetOrders,
+      poolWithdrawQueue,
+      poolTempLpTokenAccount,
+      ammOwner,
+      pnlOwner,
+    } as IPoolInfo;
+  }
+
+  static async getAllFarms(connection: Connection): Promise<IFarmInfo[]> {
+    let allFarm: FarmInfo[] = [];
+    const v1SizeFilter: DataSizeFilter = {
+      dataSize: 200,
+    };
+    const v1Filters = [v1SizeFilter];
+    const v1Config: GetProgramAccountsConfig = { filters: v1Filters };
+    const allV1FarmAccount = await connection.getProgramAccounts(
+      FARM_PROGRAM_ID_V3,
+      v1Config
+    );
+    for (let v1Account of allV1FarmAccount) {
+      let farm = this._parseFarmV3(v1Account.account.data, v1Account.pubkey);
+      if (farm.state.toNumber() == 1) {
+        allFarm.push(farm);
+      }
+    }
+    const v5SizeFilter: DataSizeFilter = {
+      dataSize: 224,
+    };
+    const v5Filters = [v5SizeFilter];
+    const v5Config: GetProgramAccountsConfig = { filters: v5Filters };
+    const allV5FarmAccount = await connection.getProgramAccounts(
+      FARM_PROGRAM_ID_V5,
+      v5Config
+    );
+    for (let v5Account of allV5FarmAccount) {
+      let farm = this._parseFarmV5(v5Account.account.data, v5Account.pubkey, 5);
+      if (farm.state.toNumber() == 1) {
+        allFarm.push(farm);
+      }
+    }
+
+    allFarm = await this._updateAllFarmToken(allFarm, connection);
+    for (let index = 0; index < allFarm.length; index++) {
+      if (allFarm[index].poolLpTokenAccount?.amount.isZero()) {
+        allFarm.splice(index, 1);
+        index--;
+      }
+    }
+    return allFarm;
+  }
+
+  static async getFarm(
+    connection: Connection,
+    farmId: PublicKey
+  ): Promise<FarmInfo> {
+    const farmInfoAccount = await connection.getAccountInfo(farmId);
+    const farm = this.parseFarm(
+      farmInfoAccount?.data as Buffer,
+      farmId
+    ) as FarmInfo;
+
+    return farm;
+  }
+
+  static parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo {
+    // v3 size = 200
+    // v5 size = 224
+    const version = data.length == 200 ? 3 : 5;
+    const parsedFarm =
+      version == 3
+        ? this._parseFarmV3(data, farmId)
+        : this._parseFarmV5(data, farmId, version);
+
+    let farm = null as unknown as FarmInfo;
+    if (parsedFarm.state.toNumber() == 1) {
+      farm = parsedFarm;
+    }
+
+    return farm;
+  }
+
+  static async getAllFarmers(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IFarmerInfo[]> {
+    let memcmpFilter: MemcmpFilter = {
+      memcmp: {
+        offset: 8 + 32,
+        bytes: userKey.toString(),
+      },
+    };
+    let dataSizeFilter = (datasize: any): DataSizeFilter => {
+      return { dataSize: datasize };
+    };
+
+    let filters_v3_2 = [memcmpFilter, dataSizeFilter(FARMER_LAYOUT_V3_2.span)];
+
+    let filters_v5_2 = [memcmpFilter, dataSizeFilter(FARMER_LAYOUT_V5_2.span)];
+
+    let allFarmersInV3_2 = await connection.getProgramAccounts(
+      FARM_PROGRAM_ID_V3,
+      {
+        filters: filters_v3_2,
+      }
+    );
+
+    let allFarmersInV5_2 = await connection.getProgramAccounts(
+      FARM_PROGRAM_ID_V5,
+      { filters: filters_v5_2 }
+    );
+
+    let farmerInfoV3_2 = await this._getFarmerInfos(
       connection,
-      { pubkey: ledgerKey, account: ledgerAcccountInfo },
-      farm.version === 3 ? FARM_LEDGER_LAYOUT_V3_1 : FARM_LEDGER_LAYOUT_V5_1,
-      farm.version as 3 | 5
-    ));
-  return info;
-}
+      allFarmersInV3_2,
+      FARMER_LAYOUT_V3_2,
+      3
+    );
 
-async function _getLedger(
-  connection: Connection,
-  ledger: {
-    pubkey: PublicKey;
-    account: AccountInfo<Buffer>;
-  },
-  layout: any,
-  farmVersion: 3 | 5
-): Promise<LedgerInfo> {
-  let decoded = layout.decode(ledger.account.data);
-  let relatedMints = await getFarmRelatedMints(
-    connection,
-    decoded,
-    farmVersion
-  );
+    let farmerInfoV5_2 = await this._getFarmerInfos(
+      connection,
+      allFarmersInV5_2,
+      FARMER_LAYOUT_V5_2,
+      5
+    );
 
-  return {
-    farmerId: ledger.pubkey,
-    farmId: new PublicKey(decoded.id),
-    userKey: new PublicKey(decoded.owner),
-    amount: decoded.deposited.toNumber(),
-    farmVersion: farmVersion,
-    mints: relatedMints,
-    rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
-      rewardDebt.toNumber()
-    ),
-  };
-}
+    return [...farmerInfoV3_2, ...farmerInfoV5_2];
+  }
 
-// Inner fucntions used by getLedgerInfos
-async function getFarmRelatedMints(
-  connection: Connection,
-  decoded: any,
-  farmVersion: 3 | 5
-) {
-  let farmIdPubkey = new PublicKey(decoded.id.toBase58());
-  let farmAccInfo = await connection.getAccountInfo(farmIdPubkey);
-  let farmInfo: FarmInfo =
-    farmVersion === 3
-      ? parseFarmV1(farmAccInfo?.data, farmIdPubkey).farmInfo
-      : parseFarmV45(farmAccInfo?.data, farmIdPubkey, farmVersion).farmInfo;
-  let stakedTokenMint = (
-    await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)
-  ).mint.toBase58();
+  static async getFarmerId(
+    farmId: PublicKey,
+    userKey: PublicKey,
+    version: number
+  ): Promise<PublicKey> {
+    const programId = version === 3 ? FARM_PROGRAM_ID_V3 : FARM_PROGRAM_ID_V5;
 
-  let rewardAMint = (
-    await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkey)
-  ).mint.toBase58();
-  let rewardBMint =
-    farmVersion !== 3
-      ? await (
-          await getTokenAccount(
-            connection,
-            farmInfo.poolRewardTokenAccountPubkeyB!
-          )
-        ).mint.toBase58()
-      : undefined;
-  return { stakedTokenMint, rewardAMint, rewardBMint };
-}
+    const [farmerId, _] = await PublicKey.findProgramAddress(
+      [
+        farmId.toBuffer(),
+        userKey.toBuffer(),
+        Buffer.from("staker_info_v2_associated_seed", "utf-8"),
+      ],
+      programId
+    );
 
-export async function getAssociatedLedgerAccount({
-  programId,
-  poolId,
-  owner,
-}: {
-  programId: PublicKey;
-  poolId: PublicKey;
-  owner: PublicKey;
-}) {
-  const [publicKey] = await PublicKey.findProgramAddress(
-    [
-      poolId.toBuffer(),
-      owner.toBuffer(),
-      Buffer.from("staker_info_v2_associated_seed", "utf-8"),
-    ],
-    programId
-  );
-  return publicKey;
-}
+    return farmerId;
+  }
+
+  static async getFarmer(
+    connection: Connection,
+    farmerId: PublicKey,
+    version: number
+  ): Promise<IFarmerInfo> {
+    const farmerAcccountInfo = (await connection.getAccountInfo(
+      farmerId
+    )) as AccountInfo<Buffer>;
+    const info =
+      farmerAcccountInfo &&
+      (await this._getFarmer(
+        connection,
+        { pubkey: farmerId, account: farmerAcccountInfo },
+        version === 3 ? FARMER_LAYOUT_V3_2 : FARMER_LAYOUT_V5_2,
+        version as 3 | 5
+      ));
+    return info;
+  }
+
+  ////// Private methods
+
+  private static _parseFarmV3(data: any, farmId: PublicKey): FarmInfo {
+    let farmData = Buffer.from(data);
+    let rawFarmData = FARM_LAYOUT_V3.decode(farmData);
+    let {
+      state,
+      nonce,
+      lpVault,
+      rewardVaults,
+      owner,
+      feeOwner,
+      feeY,
+      feeX,
+      totalRewards,
+      perShareRewards,
+      lastSlot,
+      perSlotRewards,
+    } = rawFarmData;
+
+    return {
+      farmId,
+      version: 3,
+      state,
+      nonce,
+      poolLpTokenAccountPubkey: lpVault,
+      poolRewardTokenAccountPubkey: rewardVaults[0],
+      owner,
+      totalReward: totalRewards[0],
+      perShare: perShareRewards[0],
+      perBlock: perSlotRewards[0],
+      lastBlock: lastSlot,
+    };
+  }
+
+  private static _parseFarmV5(
+    data: any,
+    farmId: PublicKey,
+    version: number
+  ): FarmInfo {
+    let farmData = Buffer.from(data);
+    let rawFarmData = FARM_LAYOUT_V5.decode(farmData);
+    let {
+      state,
+      nonce,
+      lpVault,
+      rewardVaultA,
+      totalRewardA,
+      perShareRewardA,
+      perSlotRewardA,
+      option,
+      rewardVaultB,
+      totalRewardB,
+      perShareRewardB,
+      perSlotRewardB,
+      lastSlot,
+      owner,
+    } = rawFarmData;
+
+    return {
+      farmId,
+      version,
+      state,
+      nonce,
+      poolLpTokenAccountPubkey: lpVault,
+      poolRewardTokenAccountPubkey: rewardVaultA,
+      owner,
+      totalReward: totalRewardA,
+      perShare: perShareRewardA,
+      perBlock: perSlotRewardA,
+      lastBlock: lastSlot,
+      totalRewardB,
+      perShareB: perShareRewardB,
+      perBlockB: perSlotRewardB,
+      poolRewardTokenAccountPubkeyB: rewardVaultB,
+    };
+  }
+
+  private static async _updateAllFarmToken(
+    farms: FarmInfo[],
+    connection: Connection
+  ) {
+    let allLPPubkey: PublicKey[] = [];
+    let allAccountInfo: AccountInfo<Buffer>[] = [];
+    for (let index = 0; index < farms.length; index++) {
+      allLPPubkey.push(farms[index].poolLpTokenAccountPubkey);
+
+      if (index % 99 == 98) {
+        let accounts = (await connection.getMultipleAccountsInfo(
+          allLPPubkey
+        )) as AccountInfo<Buffer>[];
+        allAccountInfo = allAccountInfo.concat(accounts);
+        allLPPubkey = [];
+      }
+    }
+
+    allAccountInfo = allAccountInfo.concat(
+      (await connection.getMultipleAccountsInfo(
+        allLPPubkey
+      )) as AccountInfo<Buffer>[]
+    );
+
+    for (let index = 0; index < farms.length; index++) {
+      if (allAccountInfo[index]?.data) {
+        farms[index].poolLpTokenAccount = parseTokenAccount(
+          allAccountInfo[index]?.data,
+          farms[index].poolLpTokenAccountPubkey
+        );
+      }
+    }
+
+    return farms;
+  }
+
+  // Inner fucntions used by getFarmerInfos
+  private static async _getFarmRelatedMints(
+    connection: Connection,
+    decoded: any,
+    farmVersion: 3 | 5
+  ) {
+    let farmIdPubkey = new PublicKey(decoded.id.toBase58());
+    let farmAccInfo = await connection.getAccountInfo(farmIdPubkey);
+    let farmInfo: FarmInfo =
+      farmVersion === 3
+        ? this._parseFarmV3(farmAccInfo?.data, farmIdPubkey)
+        : this._parseFarmV5(farmAccInfo?.data, farmIdPubkey, farmVersion);
+    let stakedTokenMint = (
+      await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)
+    ).mint.toBase58();
+
+    let rewardAMint = (
+      await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkey)
+    ).mint.toBase58();
+    let rewardBMint =
+      farmVersion !== 3
+        ? (
+            await getTokenAccount(
+              connection,
+              farmInfo.poolRewardTokenAccountPubkeyB!
+            )
+          ).mint.toBase58()
+        : undefined;
+    return { stakedTokenMint, rewardAMint, rewardBMint };
+  }
+
+  private static async _getFarmer(
+    connection: Connection,
+    farmer: {
+      pubkey: PublicKey;
+      account: AccountInfo<Buffer>;
+    },
+    layout: any,
+    farmVersion: 3 | 5
+  ): Promise<FarmerInfo> {
+    let decoded = layout.decode(farmer.account.data);
+    let relatedMints = await this._getFarmRelatedMints(
+      connection,
+      decoded,
+      farmVersion
+    );
+
+    return {
+      farmerId: farmer.pubkey,
+      farmId: new PublicKey(decoded.id),
+      userKey: new PublicKey(decoded.owner),
+      amount: decoded.deposited.toNumber(),
+      farmVersion: farmVersion,
+      mints: relatedMints,
+      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
+        rewardDebt.toNumber()
+      ),
+    };
+  }
+
+  // Get all farmers for certain user wallet.
+  private static async _getFarmerInfos(
+    connection: Connection,
+    farmers: {
+      pubkey: PublicKey;
+      account: AccountInfo<Buffer>;
+    }[],
+    layout: any,
+    farmVersion: 3 | 5
+  ): Promise<FarmerInfo[]> {
+    return await Promise.all(
+      farmers.map(async (farmer) => {
+        let decoded = layout.decode(farmer.account.data);
+        let relatedMints = await this._getFarmRelatedMints(
+          connection,
+          decoded,
+          farmVersion
+        );
+
+        return {
+          farmerId: farmer.pubkey,
+          farmId: new PublicKey(decoded.id),
+          userKey: new PublicKey(decoded.owner),
+          amount: decoded.deposited.toNumber(),
+          farmVersion: farmVersion,
+          mints: relatedMints,
+          rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
+            rewardDebt.toNumber()
+          ),
+        } as FarmerInfo;
+      })
+    );
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export interface PoolInfo extends IPoolInfo {
   version: number;
@@ -330,6 +605,10 @@ export interface PoolInfo extends IPoolInfo {
 
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
+
+  // TODO:
+  // - Make all functinos pure (which means the function will not mutate the poolInfo)
+  // - use "get" as prefix instead of "calculate" or "update"
 
   async calculateSwapOutAmount(
     fromSide: string,
@@ -391,10 +670,55 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return this;
   }
 
+  // TODO: Remove this function (duplicate with updatePoolAmount?)
+  // export async function updateAllTokenAmount(
+  //   pools: PoolInfo[],
+  //   connection: Connection
+  // ) {
+  //   let accounts: PublicKey[] = [];
+  //   let allAccountInfo: AccountInfo<Buffer>[] = [];
+  //   for (let pool of pools) {
+  //     accounts.push(pool.poolPcTokenAccount);
+  //     accounts.push(pool.poolCoinTokenAccount);
+  //     accounts.push(pool.ammOpenOrders);
+  //     if (accounts.length > 96) {
+  //       let infos = (await connection.getMultipleAccountsInfo(
+  //         accounts
+  //       )) as AccountInfo<Buffer>[];
+  //       allAccountInfo = allAccountInfo.concat(infos);
+  //       accounts = [];
+  //     }
+  //   }
+  //   let infos = (await connection.getMultipleAccountsInfo(
+  //     accounts
+  //   )) as AccountInfo<Buffer>[];
+  //   allAccountInfo = allAccountInfo.concat(infos);
+  //   for (let index = 0; index < pools.length; index++) {
+  //     let pc = parseTokenAccount(
+  //       allAccountInfo[index * 3].data,
+  //       pools[index].poolPcTokenAccount
+  //     );
+  //     pools[index].pcAccountAmount = pc.amount;
+  //     let coin = parseTokenAccount(
+  //       allAccountInfo[index * 3 + 1].data,
+  //       pools[index].poolCoinTokenAccount
+  //     );
+  //     pools[index].coinAccountAmount = coin.amount;
+  //     let ammOrder = OpenOrders.fromAccountInfo(
+  //       pools[index].ammOpenOrders,
+  //       allAccountInfo[index * 3 + 2],
+  //       pools[index].serumProgramId
+  //     );
+  //     pools[index].ammOrderquoteTokenTotal = ammOrder.quoteTokenTotal;
+  //     pools[index].ammOrderbaseTokenTotal = ammOrder.baseTokenTotal;
+  //   }
+  //   return pools;
+  // }
+
   async getPoolBalances(conn: Connection) {
     const parsedAmmId = await conn
       .getAccountInfo(this.poolInfo.poolId)
-      .then((accountInfo) => AMM_INFO_LAYOUT_V4.decode(accountInfo?.data));
+      .then((accountInfo) => POOL_LAYOUT_V4.decode(accountInfo?.data));
     const parsedAmmOpenOrders = await conn
       .getAccountInfo(this.poolInfo.ammOpenOrders)
       .then((accountInfo) => _OPEN_ORDERS_LAYOUT_V2.decode(accountInfo?.data));
@@ -558,146 +882,6 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 }
 
-export function parseV4PoolInfo(data: any, infoPubkey: PublicKey) {
-  let poolData = Buffer.from(data);
-  let rawPoolData = AMM_INFO_LAYOUT_V4.decode(poolData);
-  let {
-    status,
-    nonce,
-    orderNum,
-    depth,
-    coinDecimals,
-    pcDecimals,
-    state,
-    resetFlag,
-    minSize,
-    volMaxCutRatio,
-    amountWaveRatio,
-    coinLotSize,
-    pcLotSize,
-    minPriceMultiplier,
-    maxPriceMultiplier,
-    systemDecimalsValue,
-    minSeparateNumerator,
-    minSeparateDenominator,
-    tradeFeeNumerator,
-    tradeFeeDenominator,
-    pnlNumerator,
-    pnlDenominator,
-    swapFeeNumerator,
-    swapFeeDenominator,
-    needTakePnlCoin,
-    needTakePnlPc,
-    totalPnlPc,
-    totalPnlCoin,
-    poolTotalDepositPc,
-    poolTotalDepositCoin,
-    swapCoinInAmount,
-    swapPcOutAmount,
-    swapCoin2PcFee,
-    swapPcInAmount,
-    swapCoinOutAmount,
-    swapPc2CoinFee,
-    poolCoinTokenAccount,
-    poolPcTokenAccount,
-    coinMintAddress,
-    pcMintAddress,
-    lpMintAddress,
-    ammOpenOrders,
-    serumMarket,
-    serumProgramId,
-    ammTargetOrders,
-    poolWithdrawQueue,
-    poolTempLpTokenAccount,
-    ammOwner,
-    pnlOwner,
-  } = rawPoolData;
-
-  return new PoolInfoWrapper({
-    poolId: infoPubkey,
-    version: 4,
-    status,
-    nonce,
-    orderNum,
-    depth,
-    coinDecimals,
-    pcDecimals,
-    state,
-    resetFlag,
-    minSize,
-    volMaxCutRatio,
-    amountWaveRatio,
-    coinLotSize,
-    pcLotSize,
-    minPriceMultiplier,
-    maxPriceMultiplier,
-    needTakePnlCoin,
-    needTakePnlPc,
-    totalPnlPc,
-    totalPnlCoin,
-    poolTotalDepositPc,
-    poolTotalDepositCoin,
-    systemDecimalsValue,
-    poolCoinTokenAccount,
-    poolPcTokenAccount,
-    tokenAMint: coinMintAddress,
-    tokenBMint: pcMintAddress,
-    lpMint: lpMintAddress,
-    ammOpenOrders,
-    serumMarket,
-    serumProgramId,
-    ammTargetOrders,
-    poolWithdrawQueue,
-    poolTempLpTokenAccount,
-    ammOwner,
-    pnlOwner,
-  });
-}
-
-export async function updateAllTokenAmount(
-  pools: PoolInfo[],
-  connection: Connection
-) {
-  let accounts: PublicKey[] = [];
-  let allAccountInfo: AccountInfo<Buffer>[] = [];
-  for (let pool of pools) {
-    accounts.push(pool.poolPcTokenAccount);
-    accounts.push(pool.poolCoinTokenAccount);
-    accounts.push(pool.ammOpenOrders);
-    if (accounts.length > 96) {
-      let infos = (await connection.getMultipleAccountsInfo(
-        accounts
-      )) as AccountInfo<Buffer>[];
-      allAccountInfo = allAccountInfo.concat(infos);
-      accounts = [];
-    }
-  }
-  let infos = (await connection.getMultipleAccountsInfo(
-    accounts
-  )) as AccountInfo<Buffer>[];
-  allAccountInfo = allAccountInfo.concat(infos);
-  for (let index = 0; index < pools.length; index++) {
-    let pc = parseTokenAccount(
-      allAccountInfo[index * 3].data,
-      pools[index].poolPcTokenAccount
-    );
-    pools[index].pcAccountAmount = pc.amount;
-    let coin = parseTokenAccount(
-      allAccountInfo[index * 3 + 1].data,
-      pools[index].poolCoinTokenAccount
-    );
-    pools[index].coinAccountAmount = coin.amount;
-    let ammOrder = OpenOrders.fromAccountInfo(
-      pools[index].ammOpenOrders,
-      allAccountInfo[index * 3 + 2],
-      pools[index].serumProgramId
-    );
-    pools[index].ammOrderquoteTokenTotal = ammOrder.quoteTokenTotal;
-    pools[index].ammOrderbaseTokenTotal = ammOrder.baseTokenTotal;
-  }
-  return pools;
-}
-
 export interface FarmInfo extends IFarmInfo {
   version: number;
   state: BN;
@@ -823,231 +1007,8 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
   }
 }
 
-export function parseFarmV1(data: any, infoPubkey: PublicKey): FarmInfoWrapper {
-  let farmData = Buffer.from(data);
-  let rawFarmData = STAKE_INFO_LAYOUT.decode(farmData);
-  let {
-    state,
-    nonce,
-    poolLpTokenAccountPubkey,
-    poolRewardTokenAccountPubkey,
-    owner,
-    feeOwner,
-    feeY,
-    feeX,
-    totalReward,
-    rewardPerShareNet,
-    lastBlock,
-    rewardPerBlock,
-  } = rawFarmData;
-
-  return new FarmInfoWrapper({
-    farmId: infoPubkey,
-    version: 3,
-    state,
-    nonce,
-    poolLpTokenAccountPubkey,
-    poolRewardTokenAccountPubkey,
-    owner,
-    totalReward,
-    perShare: rewardPerShareNet,
-    perBlock: rewardPerBlock,
-    lastBlock,
-  });
-}
-
-export function parseFarmV45(
-  data: any,
-  infoPubkey: PublicKey,
-  version: number
-): FarmInfoWrapper {
-  let farmData = Buffer.from(data);
-  let rawFarmData = STAKE_INFO_LAYOUT_V4.decode(farmData);
-  let {
-    state,
-    nonce,
-    poolLpTokenAccountPubkey,
-    poolRewardTokenAccountPubkey,
-    totalReward,
-    perShare,
-    perBlock,
-    option,
-    poolRewardTokenAccountPubkeyB,
-    totalRewardB,
-    perShareB,
-    perBlockB,
-    lastBlock,
-    owner,
-  } = rawFarmData;
-
-  return new FarmInfoWrapper({
-    farmId: infoPubkey,
-    version,
-    state,
-    nonce,
-    poolLpTokenAccountPubkey,
-    poolRewardTokenAccountPubkey,
-    owner,
-    totalReward,
-    perShare,
-    perBlock,
-    lastBlock,
-    totalRewardB,
-    perShareB,
-    perBlockB,
-    poolRewardTokenAccountPubkeyB,
-  });
-}
-
-export async function updateAllFarmToken(
-  farms: FarmInfo[],
-  connection: Connection
-) {
-  let allLPPubkey: PublicKey[] = [];
-  let allAccountInfo: AccountInfo<Buffer>[] = [];
-  for (let index = 0; index < farms.length; index++) {
-    allLPPubkey.push(farms[index].poolLpTokenAccountPubkey);
-    //console.log(allLPPubkey.length)
-    if (index % 99 == 98) {
-      let accounts = (await connection.getMultipleAccountsInfo(
-        allLPPubkey
-      )) as AccountInfo<Buffer>[];
-      //console.log(accounts)
-      allAccountInfo = allAccountInfo.concat(accounts);
-      //console.log(allAccountInfo)
-      allLPPubkey = [];
-    }
-  }
-  allAccountInfo = allAccountInfo.concat(
-    (await connection.getMultipleAccountsInfo(
-      allLPPubkey
-    )) as AccountInfo<Buffer>[]
-  );
-
-  for (let index = 0; index < farms.length; index++) {
-    //console.log(allAccountInfo[index]?.owner.toString())
-    if (allAccountInfo[index]?.data) {
-      farms[index].poolLpTokenAccount = parseTokenAccount(
-        allAccountInfo[index]?.data,
-        farms[index].poolLpTokenAccountPubkey
-      );
-    }
-  }
-  return farms;
-}
-
-export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
-  let allPool: PoolInfo[] = [];
-  //V4 pools
-  const v4SizeFilter: DataSizeFilter = {
-    dataSize: 752,
-  };
-  const v4Filters = [v4SizeFilter];
-  const v4config: GetProgramAccountsConfig = { filters: v4Filters };
-  const allV4AMMAccount = await connection.getProgramAccounts(
-    POOL_PROGRAM_ID_V4,
-    v4config
-  );
-  for (let v4Account of allV4AMMAccount) {
-    let poolInfoWrapper = parseV4PoolInfo(
-      v4Account.account.data,
-      v4Account.pubkey
-    );
-    if (
-      !(
-        poolInfoWrapper.poolInfo.totalPnlCoin.isZero() ||
-        poolInfoWrapper.poolInfo.totalPnlPc.isZero()
-      ) &&
-      poolInfoWrapper.poolInfo.status.toNumber() != 4
-    ) {
-      allPool.push(poolInfoWrapper.poolInfo);
-    }
-  }
-  //allPool = await updateAllTokenAmount(allPool,connection)
-  return allPool;
-}
-
-export async function getPool(
-  connection: Connection,
-  poolInfoKey: PublicKey
-): Promise<PoolInfo> {
-  let pool = null as unknown as PoolInfo;
-  const poolInfoAccount = await connection.getAccountInfo(poolInfoKey);
-  let poolInfoWrapper = parseV4PoolInfo(poolInfoAccount?.data, poolInfoKey);
-  if (
-    !(
-      poolInfoWrapper.poolInfo.totalPnlCoin.isZero() ||
-      poolInfoWrapper.poolInfo.totalPnlPc.isZero()
-    ) &&
-    poolInfoWrapper.poolInfo.status.toNumber() != 4
-  ) {
-    pool = poolInfoWrapper.poolInfo;
-  }
-  return pool;
-}
-
-export async function getAllFarms(connection: Connection) {
-  let allFarm: FarmInfo[] = [];
-  const v1SizeFilter: DataSizeFilter = {
-    dataSize: 200,
-  };
-  const v1Filters = [v1SizeFilter];
-  const v1Config: GetProgramAccountsConfig = { filters: v1Filters };
-  const allV1FarmAccount = await connection.getProgramAccounts(
-    FARM_PROGRAM_ID_V3,
-    v1Config
-  );
-  for (let v1Account of allV1FarmAccount) {
-    let farm = parseFarmV1(v1Account.account.data, v1Account.pubkey);
-    if (farm.farmInfo.state.toNumber() == 1) {
-      //await farm.updateAllTokenAccount(connection);
-      allFarm.push(farm.farmInfo);
-    }
-  }
-  const v5SizeFilter: DataSizeFilter = {
-    dataSize: 224,
-  };
-  const v5Filters = [v5SizeFilter];
-  const v5Config: GetProgramAccountsConfig = { filters: v5Filters };
-  const allV5FarmAccount = await connection.getProgramAccounts(
-    FARM_PROGRAM_ID_V5,
-    v5Config
-  );
-  for (let v5Account of allV5FarmAccount) {
-    let farm = parseFarmV45(v5Account.account.data, v5Account.pubkey, 5);
-    if (farm.farmInfo.state.toNumber() == 1) {
-      //await farm.updateAllTokenAccount(connection);
-      allFarm.push(farm.farmInfo);
-    }
-  }
-  allFarm = await updateAllFarmToken(allFarm, connection);
-  for (let index = 0; index < allFarm.length; index++) {
-    if (allFarm[index].poolLpTokenAccount?.amount.isZero()) {
-      allFarm.splice(index, 1);
-      index--;
-    }
-    //console.log(allFarm.length)
-  }
-  return allFarm;
-}
-
-export async function getFarm(
-  connection: Connection,
-  farmInfoKey: PublicKey
-): Promise<FarmInfo> {
-  let farm = null as unknown as FarmInfo;
-  const farmInfoAccount = await connection.getAccountInfo(farmInfoKey);
-  // v3 size = 200
-  // v5 size = 224
-  const version = farmInfoAccount?.data.length == 200 ? 3 : 5;
-  let parsedFarm: FarmInfoWrapper;
-  if (version == 3) {
-    parsedFarm = parseFarmV1(farmInfoAccount?.data, farmInfoKey);
-  } else {
-    parsedFarm = parseFarmV45(farmInfoAccount?.data, farmInfoKey, version);
-  }
-  if (parsedFarm.farmInfo.state.toNumber() == 1) {
-    farm = parsedFarm.farmInfo;
-  }
-  return farm;
+export interface FarmerInfo extends IFarmerInfo {
+  farmVersion: number;
+  rewardDebts: number[];
+  mints: { stakedTokenMint: string; rewardAMint: string; rewardBMint?: string };
 }
