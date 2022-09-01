@@ -63,7 +63,10 @@ export interface IInstancePool {
 }
 
 export interface IInstanceFarm {
-  getAllFarms(connection: Connection): Promise<IFarmInfo[]>;
+  getAllFarms(
+    connection: Connection,
+    rewardMint?: PublicKey
+  ): Promise<IFarmInfo[]>;
   getFarm(connection: Connection, farmId: PublicKey): Promise<IFarmInfo>;
   parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo;
   getAllFarmers(

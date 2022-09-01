@@ -1,7 +1,7 @@
-import { PublicKey, Connection } from "@solana/web3.js";
-import { larix } from "../src";
+import { Connection } from "@solana/web3.js";
+import { lifinity } from "../src";
 
-describe("Larix", () => {
+describe("Lifinity", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
@@ -24,19 +24,12 @@ describe("Larix", () => {
     wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   });
 
-  // const options = anchor.AnchorProvider.defaultOptions();
-  // const wallet = NodeWallet.local();
-  // const provider = new anchor.AnchorProvider(connection, wallet, options);
+  it("fetches pool data", async () => {
+    const pools = await lifinity.infos.getAllPools(connection);
+    const poolId = pools[0].poolId;
+    console.log(poolId.toString());
 
-  // anchor.setProvider(provider);
-
-  // const supplyAmount = 20000;
-
-  it("fetches farm data", async () => {
-    const farmId = new PublicKey(
-      "FStv7oj29DghUcCRDRJN9sEkB4uuh4SqWBY9pvSQ4Rch"
-    );
-    const farm = await larix.getFarm(connection, farmId);
-    console.log(farm);
+    const pool = await lifinity.infos.getPool(connection, poolId);
+    console.log(pool);
   });
 });

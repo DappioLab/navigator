@@ -6,11 +6,18 @@ import {
   PublicKey,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
+import {
+  IFarmerInfo,
+  IFarmInfo,
+  IFarmInfoWrapper,
+  IInstanceFarm,
+  IInstancePool,
+  IPoolInfo,
+  IPoolInfoWrapper,
+} from "../types";
 import {
   computeD,
   getTokenAccountAmount,
-  getTokenSupply,
   normalizedTradeFee,
   N_COINS,
   ZERO,
@@ -18,385 +25,469 @@ import {
 import {
   ADMIN_KEY,
   QURARRY_MINE_PROGRAM_ID,
-  QUARRY_REWARDER,
   WRAP_PROGRAM_ID,
   POOL_PROGRAM_ID,
+  QUARRY_REWARDER,
 } from "./ids";
 import {
+  POOL_LAYOUT,
   FARM_LAYOUT,
-  MINER_LAYOUT,
-  SWAPINFO_LAYOUT,
-  WRAPINFO_LAYOUT,
+  FARMER_LAYOUT,
+  WRAP_LAYOUT,
 } from "./layouts";
 import { MintLayout } from "@solana/spl-token-v2";
 
-export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 75,
-      bytes: ADMIN_KEY.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 395,
-  };
-  const filters = [sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allSaberAccount = await connection.getProgramAccounts(
-    POOL_PROGRAM_ID,
-    config
-  );
-  let infoArray: PoolInfoWrapper[] = [];
-  let wrapInfoArray = await getAllWraps(connection);
+/**
+ * tradingFee and withdrawFee are in units of 6 decimals
+ */
 
-  // Dead Pools
-  for (let account of allSaberAccount) {
-    if (
-      account.pubkey.toString() ==
-        "LeekqF2NMKiFNtYD6qXJHZaHx4hUdj4UiPu4t8sz7uK" ||
-      account.pubkey.toString() ==
-        "2jQoGQRixdcfuRPt9Zui7pk6ivnrQv79mf8h13Tyoa9K" ||
-      account.pubkey.toString() ==
-        "SPaiZAYyJBQHaSjtxFBKtLtQiCuG328r1mTfmvvydR5" ||
-      account.pubkey.toString() ==
-        "HoNG9Z4jsA1qtkZhDRYBc67LF2cbusZahjyxXtXdKZgR" ||
-      account.pubkey.toString() ==
-        "4Fss9Dy3vAUBuQ4SyEZz4vcLxeQqoFLZjdXhEUr3wqz3"
-    ) {
-      continue;
-    }
-    let saberAccountInfo = await parseSwapInfoData(
-      account.account.data,
-      account.pubkey
+const DIGIT = new BN(10000000000);
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+let infos: IInstancePool & IInstanceFarm;
+
+infos = class InstanceSaber {
+  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
+    const adminIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 75,
+        bytes: ADMIN_KEY.toString(),
+      },
+    };
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 395,
+    };
+    const filters = [sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const allSaberAccount = await connection.getProgramAccounts(
+      POOL_PROGRAM_ID,
+      config
     );
-    if (saberAccountInfo.poolInfo.isPaused) {
-      continue;
+    let infoArray: PoolInfo[] = [];
+    let wrapInfoArray = await this._getAllWraps(connection);
+
+    // Dead Pools
+    for (let account of allSaberAccount) {
+      const poolId = account.pubkey;
+
+      if (
+        poolId.toString() == "LeekqF2NMKiFNtYD6qXJHZaHx4hUdj4UiPu4t8sz7uK" ||
+        poolId.toString() == "2jQoGQRixdcfuRPt9Zui7pk6ivnrQv79mf8h13Tyoa9K" ||
+        poolId.toString() == "SPaiZAYyJBQHaSjtxFBKtLtQiCuG328r1mTfmvvydR5" ||
+        poolId.toString() == "HoNG9Z4jsA1qtkZhDRYBc67LF2cbusZahjyxXtXdKZgR" ||
+        poolId.toString() == "4Fss9Dy3vAUBuQ4SyEZz4vcLxeQqoFLZjdXhEUr3wqz3"
+      ) {
+        continue;
+      }
+
+      const poolAuthority = await this._getPoolAuthority(poolId);
+      let saberAccountInfo = (await this.parsePool(
+        account.account.data,
+        poolId,
+        poolAuthority
+      )) as PoolInfo;
+      if (saberAccountInfo.isPaused) {
+        continue;
+      }
+      let mintAwrapped = await this._checkWrapped(
+        saberAccountInfo.tokenAMint,
+        wrapInfoArray
+      );
+      saberAccountInfo.mintAWrapped = mintAwrapped[0];
+      if (mintAwrapped[0]) {
+        saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
+      }
+      let mintBwrapped = await this._checkWrapped(
+        saberAccountInfo.tokenBMint,
+        wrapInfoArray
+      );
+      saberAccountInfo.mintBWrapped = mintBwrapped[0];
+      if (mintBwrapped[0]) {
+        saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
+      }
+
+      infoArray.push(saberAccountInfo);
     }
-    let mintAwrapped = await checkWrapped(
-      saberAccountInfo.poolInfo.tokenAMint,
+
+    return infoArray;
+  }
+
+  static async getPool(
+    connection: Connection,
+    poolId: PublicKey
+  ): Promise<IPoolInfo> {
+    // const adminIdMemcmp: MemcmpFilter = {
+    //   memcmp: {
+    //     offset: 75,
+    //     bytes: ADMIN_KEY.toString(),
+    //   },
+    // };
+    // const sizeFilter: DataSizeFilter = {
+    //   dataSize: 395,
+    // };
+    // const filters = [adminIdMemcmp, sizeFilter];
+    // const allFarmInfo = await this.getAllFarms(connection, QUARRY_REWARDER);
+
+    const wrapInfoArray = await this._getAllWraps(connection);
+    const saberAccount: any = await connection.getAccountInfo(poolId);
+    const poolAuthority = await this._getPoolAuthority(poolId);
+    const saberAccountInfo = this.parsePool(
+      saberAccount.data,
+      poolId,
+      poolAuthority
+    ) as PoolInfo;
+    const mintAwrapped = await this._checkWrapped(
+      saberAccountInfo.tokenAMint,
       wrapInfoArray
     );
-    saberAccountInfo.poolInfo.mintAWrapped = mintAwrapped[0];
+
+    saberAccountInfo.mintAWrapped = mintAwrapped[0];
     if (mintAwrapped[0]) {
-      saberAccountInfo.poolInfo.mintAWrapInfo = mintAwrapped[1];
+      saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
     }
-    let mintBwrapped = await checkWrapped(
-      saberAccountInfo.poolInfo.tokenBMint,
+    let mintBwrapped = await this._checkWrapped(
+      saberAccountInfo.tokenBMint,
       wrapInfoArray
     );
-    saberAccountInfo.poolInfo.mintBWrapped = mintBwrapped[0];
+    saberAccountInfo.mintBWrapped = mintBwrapped[0];
     if (mintBwrapped[0]) {
-      saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
+      saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
     }
-    // let farmStarted = getFarm(connection, saberAccountInfo.poolInfo.lpMint);
-    // if (farmStarted) {
-    //   saberAccountInfo.poolInfo.isFarming = true;
-    //   saberAccountInfo.poolInfo.farmingInfo = farmStarted[1];
-    // }
-    infoArray.push(saberAccountInfo);
+    saberAccountInfo.poolId = poolId;
+
+    return saberAccountInfo;
   }
 
-  return infoArray.map((poolInfoWapper) => poolInfoWapper.poolInfo);
-}
+  static parsePool(
+    data: Buffer,
+    poolId: PublicKey,
+    poolAuthority?: PublicKey
+  ): IPoolInfo {
+    const decodedData = POOL_LAYOUT.decode(data);
 
-export async function getPool(
-  connection: Connection,
-  poolInfoKey: PublicKey
-): Promise<PoolInfo> {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 75,
-      bytes: ADMIN_KEY.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 395,
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
+    let {
+      isInitialized,
+      isPaused,
+      nonce,
+      initialAmpFactor,
+      targetAmpFactor,
+      startRampTs,
+      stopRampTs,
+      futureAdminDeadline,
+      futureAdminKey,
+      adminKey,
+      tokenAccountA,
+      tokenAccountB,
+      poolMint,
+      mintA,
+      mintB,
+      adminFeeAccountA,
+      adminFeeAccountB,
+      tradeFeeNumerator,
+      tradeFeeDenominator,
+      withdrawFeeNumerator,
+      withdrawFeeDenominator,
+    } = decodedData;
 
-  const wrapInfoArray = await getAllWraps(connection);
-  const allFarmInfo = await getAllFarms(connection, QUARRY_REWARDER);
-  const saberAccount: any = await connection.getAccountInfo(poolInfoKey);
-  const saberAccountInfo = await parseSwapInfoData(
-    saberAccount.data,
-    poolInfoKey
-  );
-  const mintAwrapped = await checkWrapped(
-    saberAccountInfo.poolInfo.tokenAMint,
-    wrapInfoArray
-  );
+    const withdrawFee = withdrawFeeNumerator
+      .mul(DIGIT)
+      .div(withdrawFeeDenominator);
+    const tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
 
-  saberAccountInfo.poolInfo.mintAWrapped = mintAwrapped[0];
-  if (mintAwrapped[0]) {
-    saberAccountInfo.poolInfo.mintAWrapInfo = mintAwrapped[1];
+    return {
+      poolId,
+      authority: poolAuthority,
+      isInitialized,
+      isPaused,
+      nonce: new BN(nonce),
+      initialAmpFactor: new BN(initialAmpFactor),
+      targetAmpFactor: new BN(targetAmpFactor),
+      startRampTs: new BN(startRampTs),
+      stopRampTs: new BN(stopRampTs),
+      futureAdminDeadline,
+      futureAdminKey,
+      adminKey,
+      tokenAccountA,
+      tokenAccountB,
+      lpMint: poolMint,
+      tokenAMint: mintA,
+      tokenBMint: mintB,
+      adminFeeAccountA,
+      adminFeeAccountB,
+      withdrawFee,
+      tradingFee,
+    } as PoolInfo;
   }
-  let mintBwrapped = await checkWrapped(
-    saberAccountInfo.poolInfo.tokenBMint,
-    wrapInfoArray
-  );
-  saberAccountInfo.poolInfo.mintBWrapped = mintBwrapped[0];
-  if (mintBwrapped[0]) {
-    saberAccountInfo.poolInfo.mintBWrapInfo = mintBwrapped[1];
-  }
-  saberAccountInfo.poolInfo.poolId = poolInfoKey;
 
-  return saberAccountInfo.poolInfo;
-}
-
-export interface WrapInfo {
-  wrapAuthority: PublicKey;
-  decimal: BN;
-  multiplyer: BN;
-  underlyingWrappedTokenMint: PublicKey;
-  underlyingTokenAccount: PublicKey;
-  wrappedTokenMint: PublicKey;
-}
-
-export function parseWrapInfoData(data: any): WrapInfo {
-  const dataBuffer = data as Buffer;
-  const cutttedData = dataBuffer.slice(8);
-  const decodedData = WRAPINFO_LAYOUT.decode(cutttedData);
-  let {
-    wrapAuthority,
-    decimal,
-    multiplyer,
-    underlyingWrappedTokenMint,
-    underlyingTokenAccount,
-    wrappedTokenMint,
-  } = decodedData;
-  return {
-    wrapAuthority,
-    decimal,
-    multiplyer,
-    underlyingWrappedTokenMint,
-    underlyingTokenAccount,
-    wrappedTokenMint,
-  };
-}
-
-export async function checkWrapped(
-  tokenMint: PublicKey,
-  wrapInfoArray: WrapInfo[]
-): Promise<[boolean, WrapInfo]> {
-  for (let info of wrapInfoArray) {
-    if (info.wrappedTokenMint.equals(tokenMint)) {
-      return [true, info];
+  static async getAllFarms(
+    connection: Connection,
+    rewardMint: PublicKey = QUARRY_REWARDER
+  ): Promise<IFarmInfo[]> {
+    const adminIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: rewardMint.toString(),
+      },
+    };
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 140,
+    };
+    const filters = [adminIdMemcmp, sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const allFarmAccount = await connection.getProgramAccounts(
+      QURARRY_MINE_PROGRAM_ID,
+      config
+    );
+    let allFarmInfo: FarmInfo[] = [];
+    for (let account of allFarmAccount) {
+      let currentFarmInfo = this.parseFarm(
+        account.account.data,
+        account.pubkey
+      ) as FarmInfo;
+      allFarmInfo.push(currentFarmInfo);
     }
-  }
-  return [false, defaultWrapInfo()];
-}
-
-function defaultWrapInfo(): WrapInfo {
-  return {
-    wrapAuthority: PublicKey.default,
-    decimal: new BN(0),
-    multiplyer: new BN(0),
-    underlyingWrappedTokenMint: PublicKey.default,
-    underlyingTokenAccount: PublicKey.default,
-    wrappedTokenMint: PublicKey.default,
-  };
-}
-
-export async function getAllWraps(connection: Connection) {
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 114,
-  };
-  const filters = [sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allWrapAccount = await connection.getProgramAccounts(
-    WRAP_PROGRAM_ID,
-    config
-  );
-  let infoArray: WrapInfo[] = [];
-  for (let account of allWrapAccount) {
-    let wrapAccountInfo = parseWrapInfoData(account.account.data);
-    wrapAccountInfo.wrapAuthority = account.pubkey;
-    infoArray.push(wrapAccountInfo);
-  }
-  return infoArray;
-}
-
-export interface FarmInfo extends IFarmInfo {
-  rewarderKey: PublicKey;
-  tokenMintKey: PublicKey;
-  bump: BN;
-  index: BN;
-  tokenMintDecimals: BN;
-  famineTs: BN;
-  lastUpdateTs: BN;
-  rewardsPerTokenStored: BN;
-  annualRewardsRate: BN;
-  rewardsShare: BN;
-  totalTokensDeposited: BN;
-  numMiners: BN;
-}
-
-export class FarmInfoWrapper {
-  constructor(public farmInfo: FarmInfo) {}
-
-  getStakedAmount(): BN {
-    return this.farmInfo.totalTokensDeposited;
+    return allFarmInfo;
   }
 
-  getApr(lpPrice: number, rewardTokenPrice: number) {
-    const lpAmount = Number(
-      this.farmInfo.totalTokensDeposited.div(
-        new BN(10).pow(this.farmInfo.tokenMintDecimals)
-      )
+  static async getFarm(
+    connection: Connection,
+    farmId: PublicKey
+  ): Promise<IFarmInfo> {
+    let farm = null as unknown as FarmInfo;
+    const farmInfoAccount = await connection.getAccountInfo(farmId);
+    if (farmInfoAccount) {
+      farm = this.parseFarm(farmInfoAccount?.data, farmId) as FarmInfo;
+    }
+    return farm;
+  }
+
+  static getFarmFromLpMint(
+    allFarms: FarmInfo[],
+    mint: PublicKey
+  ): IFarmInfo | null {
+    const farm = allFarms.filter((f) => f.tokenMintKey.equals(mint));
+    return farm.length > 0 ? farm[0] : null;
+  }
+
+  static parseFarm(data: any, farmId: PublicKey): IFarmInfo {
+    let dataBuffer = data as Buffer;
+    let infoData = dataBuffer.slice(8);
+    let newFarmInfo = FARM_LAYOUT.decode(infoData);
+    let {
+      rewarderKey,
+      tokenMintKey,
+      bump,
+      index,
+      tokenMintDecimals,
+      famineTs,
+      lastUpdateTs,
+      rewardsPerTokenStored,
+      annualRewardsRate,
+      rewardsShare,
+      totalTokensDeposited,
+      numMiners,
+    } = newFarmInfo;
+
+    return {
+      farmId,
+      rewarderKey,
+      tokenMintKey,
+      bump: new BN(bump),
+      index: new BN(index),
+      tokenMintDecimals: new BN(tokenMintDecimals),
+      famineTs: new BN(famineTs),
+      lastUpdateTs: new BN(lastUpdateTs),
+      rewardsPerTokenStored: new BN(rewardsPerTokenStored),
+      annualRewardsRate: new BN(annualRewardsRate),
+      rewardsShare: new BN(rewardsShare),
+      totalTokensDeposited: new BN(totalTokensDeposited),
+      numFarmers: new BN(numMiners),
+    } as FarmInfo;
+  }
+
+  static async getAllFarmers(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IFarmerInfo[]> {
+    const adminIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 8 + 32,
+        bytes: userKey.toString(),
+      },
+    };
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 145,
+    };
+    const filters = [adminIdMemcmp, sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const allFarmerAccount = await connection.getProgramAccounts(
+      QURARRY_MINE_PROGRAM_ID,
+      config
     );
-    const lpValue = lpAmount * lpPrice;
-    const annualRewardAmount = Number(
-      this.farmInfo.annualRewardsRate.divn(10e5)
+    let allFarmerInfo: FarmerInfo[] = [];
+    for (let account of allFarmerAccount) {
+      let currentFarmInfo = this.parseFarmer(
+        account.account.data,
+        account.pubkey
+      ) as FarmerInfo;
+      if (currentFarmInfo.amount == 0) {
+        continue;
+      }
+      allFarmerInfo.push(currentFarmInfo);
+    }
+    return allFarmerInfo;
+  }
+
+  static async getFarmerId(
+    wallet: PublicKey,
+    farmId: PublicKey
+  ): Promise<PublicKey> {
+    let [farmerId, _] = await this._getFarmerIdWithBump(wallet, farmId);
+    return farmerId;
+  }
+
+  static async getFarmer(
+    conn: Connection,
+    farmerId: PublicKey
+  ): Promise<IFarmerInfo> {
+    const farmer = await conn
+      .getAccountInfo(farmerId)
+      .then((accountInfo) => this.parseFarmer(accountInfo?.data, farmerId));
+
+    return farmer;
+  }
+
+  static parseFarmer(data: any, farmerId: PublicKey): IFarmerInfo {
+    let dataBuffer = data as Buffer;
+    let infoData = dataBuffer.slice(8);
+    let newFarmerInfo = FARMER_LAYOUT.decode(infoData);
+    let {
+      infoPubkey,
+      farmKey,
+      owner,
+      bump,
+      vault,
+      rewardsEarned,
+      rewardsPerTokenPaid,
+      balance,
+      index,
+    } = newFarmerInfo;
+
+    return {
+      farmerId: infoPubkey,
+      farmId: farmKey,
+      userKey: owner,
+      amount: new BN(balance).toNumber(),
+      bump: new BN(bump),
+      vault,
+      rewardsEarned: new BN(rewardsEarned),
+      rewardsPerTokenPaid: new BN(rewardsPerTokenPaid),
+      index: new BN(index),
+    } as FarmerInfo;
+  }
+
+  static async farmerCreated(
+    connection: Connection,
+    userKey: PublicKey,
+    farm: FarmInfo
+  ) {
+    let farmerId = await this.getFarmerId(userKey, farm.farmId);
+    let farmerAccountInfo = await connection.getAccountInfo(farmerId);
+    if (farmerAccountInfo?.owner.equals(QURARRY_MINE_PROGRAM_ID)) {
+      return true;
+    }
+    return false;
+  }
+
+  // Private methods
+
+  private static async _getAllWraps(
+    connection: Connection
+  ): Promise<WrapInfo[]> {
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 114,
+    };
+    const filters = [sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const allWrapAccount = await connection.getProgramAccounts(
+      WRAP_PROGRAM_ID,
+      config
     );
-    const annualRewardValue = annualRewardAmount * rewardTokenPrice;
-
-    const apr =
-      lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
-
-    return apr;
+    let infoArray: WrapInfo[] = [];
+    for (let account of allWrapAccount) {
+      let wrapAccountInfo = this._parseWrap(account.account.data);
+      wrapAccountInfo.wrapAuthority = account.pubkey;
+      infoArray.push(wrapAccountInfo);
+    }
+    return infoArray;
   }
-}
 
-export function parseFarmInfo(data: any, farmPubkey: PublicKey): FarmInfo {
-  let dataBuffer = data as Buffer;
-  let infoData = dataBuffer.slice(8);
-  let newFarmInfo = FARM_LAYOUT.decode(infoData);
-  let {
-    rewarderKey,
-    tokenMintKey,
-    bump,
-    index,
-    tokenMintDecimals,
-    famineTs,
-    lastUpdateTs,
-    rewardsPerTokenStored,
-    annualRewardsRate,
-    rewardsShare,
-    totalTokensDeposited,
-    numMiners,
-  } = newFarmInfo;
+  private static _parseWrap(data: Buffer): WrapInfo {
+    const dataBuffer = data as Buffer;
+    const cutttedData = dataBuffer.slice(8);
+    const decodedData = WRAP_LAYOUT.decode(cutttedData);
+    let {
+      wrapAuthority,
+      decimal,
+      multiplyer,
+      underlyingWrappedTokenMint,
+      underlyingTokenAccount,
+      wrappedTokenMint,
+    } = decodedData;
 
-  return {
-    farmId: farmPubkey,
-    rewarderKey,
-    tokenMintKey,
-    bump: new BN(bump),
-    index: new BN(index),
-    tokenMintDecimals: new BN(tokenMintDecimals),
-    famineTs: new BN(famineTs),
-    lastUpdateTs: new BN(lastUpdateTs),
-    rewardsPerTokenStored: new BN(rewardsPerTokenStored),
-    annualRewardsRate: new BN(annualRewardsRate),
-    rewardsShare: new BN(rewardsShare),
-    totalTokensDeposited: new BN(totalTokensDeposited),
-    numMiners: new BN(numMiners),
-  };
-}
-
-export async function getAllFarms(
-  connection: Connection,
-  rewarderKey: PublicKey
-) {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 8,
-      bytes: rewarderKey.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 140,
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allFarmAccount = await connection.getProgramAccounts(
-    QURARRY_MINE_PROGRAM_ID,
-    config
-  );
-  let allFarmInfo: FarmInfo[] = [];
-  for (let account of allFarmAccount) {
-    let currentFarmInfo = parseFarmInfo(account.account.data, account.pubkey);
-    allFarmInfo.push(currentFarmInfo);
+    return {
+      wrapAuthority,
+      decimal,
+      multiplyer,
+      underlyingWrappedTokenMint,
+      underlyingTokenAccount,
+      wrappedTokenMint,
+    };
   }
-  return allFarmInfo;
-}
 
-export async function getFarm(
-  connection: Connection,
-  farmId: PublicKey
-): Promise<FarmInfo> {
-  let farm = null as unknown as FarmInfo;
-  const farmInfoAccount = await connection.getAccountInfo(farmId);
-  if (farmInfoAccount) {
-    farm = parseFarmInfo(farmInfoAccount?.data, farmId);
+  private static async _checkWrapped(
+    tokenMint: PublicKey,
+    wrapInfoArray: WrapInfo[]
+  ): Promise<[boolean, WrapInfo]> {
+    for (let info of wrapInfoArray) {
+      if (info.wrappedTokenMint.equals(tokenMint)) {
+        return [true, info];
+      }
+    }
+
+    return [false, defaultWrap];
   }
-  return farm;
-}
 
-export function getFarmFromLpMint(
-  allFarms: FarmInfo[],
-  mintPubkey: PublicKey
-): FarmInfo | null {
-  const farm = allFarms.filter((f) => f.tokenMintKey.equals(mintPubkey));
-  return farm.length > 0 ? farm[0] : null;
-}
+  private static async _getPoolAuthority(
+    poolId: PublicKey
+  ): Promise<PublicKey> {
+    const authority = (
+      await PublicKey.findProgramAddress([poolId.toBuffer()], POOL_PROGRAM_ID)
+    )[0];
 
-export function defaultFarm(): FarmInfo {
-  return {
-    farmId: PublicKey.default,
-    rewarderKey: PublicKey.default,
-    tokenMintKey: PublicKey.default,
-    bump: new BN(0),
-    index: new BN(0),
-    tokenMintDecimals: new BN(0),
-    famineTs: new BN(0),
-    lastUpdateTs: new BN(0),
-    rewardsPerTokenStored: new BN(0),
-    annualRewardsRate: new BN(0),
-    rewardsShare: new BN(0),
-    totalTokensDeposited: new BN(0),
-    numMiners: new BN(0),
-  };
-}
-
-export async function getMinerKey(wallet: PublicKey, farmPubkey: PublicKey) {
-  let [miner, _] = await getMinerKeyWithBump(wallet, farmPubkey);
-  return miner;
-}
-
-export async function getMiner(
-  conn: Connection,
-  minerKey: PublicKey
-): Promise<MinerInfo> {
-  const miner = await conn
-    .getAccountInfo(minerKey)
-    .then((accountInfo) => parseMinerInfo(accountInfo?.data, minerKey));
-  return miner;
-}
-
-export async function getMinerKeyWithBump(
-  wallet: PublicKey,
-  farmPubkey: PublicKey
-) {
-  let minerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
-  let miner = await PublicKey.findProgramAddress(
-    [minerBytes, farmPubkey.toBuffer(), wallet.toBuffer()],
-    QURARRY_MINE_PROGRAM_ID
-  );
-  return miner;
-}
-
-export async function minerCreated(
-  wallet: PublicKey,
-  info: FarmInfo,
-  connection: Connection
-) {
-  let minerKey = await getMinerKey(wallet, info.farmId);
-  let minerAccountInfo = await connection.getAccountInfo(minerKey);
-  if (minerAccountInfo?.owner.equals(QURARRY_MINE_PROGRAM_ID)) {
-    return true;
+    return authority;
   }
-  return false;
-}
+  private static async _getFarmerIdWithBump(
+    userKey: PublicKey,
+    farmId: PublicKey
+  ) {
+    let farmerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
+    let farmer = await PublicKey.findProgramAddress(
+      [farmerBytes, farmId.toBuffer(), userKey.toBuffer()],
+      QURARRY_MINE_PROGRAM_ID
+    );
+    return farmer;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export interface PoolInfo extends IPoolInfo {
   authority: PublicKey;
@@ -424,11 +515,42 @@ export interface PoolInfo extends IPoolInfo {
   withdrawFee: BN;
 }
 
-const DIGIT = new BN(10000000000);
+export interface FarmerInfo extends IFarmerInfo {
+  // infoPubkey: PublicKey;
+  // farmKey: PublicKey;
+  // owner: PublicKey;
+  // balance: BN;
+  bump: BN;
+  vault: PublicKey;
+  rewardsEarned: BN;
+  rewardsPerTokenPaid: BN;
+  index: BN;
+}
 
-/**
- * tradingFee and withdrawFee are in units of 6 decimals
- */
+export interface FarmInfo extends IFarmInfo {
+  rewarderKey: PublicKey;
+  tokenMintKey: PublicKey;
+  bump: BN;
+  index: BN;
+  tokenMintDecimals: BN;
+  famineTs: BN;
+  lastUpdateTs: BN;
+  rewardsPerTokenStored: BN;
+  annualRewardsRate: BN;
+  rewardsShare: BN;
+  totalTokensDeposited: BN;
+  numFarmers: BN;
+}
+
+export interface WrapInfo {
+  wrapAuthority: PublicKey;
+  decimal: BN;
+  multiplyer: BN;
+  underlyingWrappedTokenMint: PublicKey;
+  underlyingTokenAccount: PublicKey;
+  wrappedTokenMint: PublicKey;
+}
+
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
   // this.withdrawFee = withdrawFeeNumerator
@@ -605,142 +727,49 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 }
 
-export async function parseSwapInfoData(
-  data: any,
-  pubkey: PublicKey
-): Promise<PoolInfoWrapper> {
-  const decodedData = SWAPINFO_LAYOUT.decode(data);
-  let authority = (
-    await PublicKey.findProgramAddress([pubkey.toBuffer()], POOL_PROGRAM_ID)
-  )[0];
-  let {
-    isInitialized,
-    isPaused,
-    nonce,
-    initialAmpFactor,
-    targetAmpFactor,
-    startRampTs,
-    stopRampTs,
-    futureAdminDeadline,
-    futureAdminKey,
-    adminKey,
-    tokenAccountA,
-    tokenAccountB,
-    poolMint,
-    mintA,
-    mintB,
-    adminFeeAccountA,
-    adminFeeAccountB,
-    tradeFeeNumerator,
-    tradeFeeDenominator,
-    withdrawFeeNumerator,
-    withdrawFeeDenominator,
-  } = decodedData;
+export class FarmInfoWrapper implements IFarmInfoWrapper {
+  constructor(public farmInfo: FarmInfo) {}
 
-  const withdrawFee = withdrawFeeNumerator
-    .mul(DIGIT)
-    .div(withdrawFeeDenominator);
-  const tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
-
-  let poolInfo = new PoolInfoWrapper({
-    poolId: pubkey,
-    authority,
-    isInitialized,
-    isPaused,
-    nonce: new BN(nonce),
-    initialAmpFactor: new BN(initialAmpFactor),
-    targetAmpFactor: new BN(targetAmpFactor),
-    startRampTs: new BN(startRampTs),
-    stopRampTs: new BN(stopRampTs),
-    futureAdminDeadline,
-    futureAdminKey,
-    adminKey,
-    tokenAccountA,
-    tokenAccountB,
-    lpMint: poolMint,
-    tokenAMint: mintA,
-    tokenBMint: mintB,
-    adminFeeAccountA,
-    adminFeeAccountB,
-    withdrawFee,
-    tradingFee,
-  });
-
-  return poolInfo;
-}
-
-export interface MinerInfo extends IFarmerInfo {
-  // infoPubkey: PublicKey;
-  // farmKey: PublicKey;
-  // owner: PublicKey;
-  // balance: BN;
-  bump: BN;
-  vault: PublicKey;
-  rewardsEarned: BN;
-  rewardsPerTokenPaid: BN;
-  index: BN;
-}
-
-export function parseMinerInfo(data: any, miner: PublicKey): MinerInfo {
-  let dataBuffer = data as Buffer;
-  let infoData = dataBuffer.slice(8);
-  let newMinerInfo = MINER_LAYOUT.decode(infoData);
-  let {
-    infoPubkey,
-    farmKey,
-    owner,
-    bump,
-    vault,
-    rewardsEarned,
-    rewardsPerTokenPaid,
-    balance,
-    index,
-  } = newMinerInfo;
-
-  return {
-    farmerId: infoPubkey,
-    farmId: farmKey,
-    userKey: owner,
-    amount: new BN(balance).toNumber(),
-    bump: new BN(bump),
-    vault,
-    rewardsEarned: new BN(rewardsEarned),
-    rewardsPerTokenPaid: new BN(rewardsPerTokenPaid),
-    index: new BN(index),
-  };
-}
-
-export async function getAllMiner(
-  connection: Connection,
-  wallet: PublicKey
-): Promise<MinerInfo[]> {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 8 + 32,
-      bytes: wallet.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 145,
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allMinerAccount = await connection.getProgramAccounts(
-    QURARRY_MINE_PROGRAM_ID,
-    config
-  );
-  let allMinerInfo: MinerInfo[] = [];
-  for (let account of allMinerAccount) {
-    let currentFarmInfo = parseMinerInfo(account.account.data, account.pubkey);
-    if (currentFarmInfo.amount == 0) {
-      continue;
-    }
-    allMinerInfo.push(currentFarmInfo);
+  getStakedAmount(): BN {
+    return this.farmInfo.totalTokensDeposited;
   }
-  return allMinerInfo;
+
+  getApr(lpPrice: number, rewardTokenPrice: number) {
+    const lpAmount = Number(
+      this.farmInfo.totalTokensDeposited.div(
+        new BN(10).pow(this.farmInfo.tokenMintDecimals)
+      )
+    );
+    const lpValue = lpAmount * lpPrice;
+    const annualRewardAmount = Number(
+      this.farmInfo.annualRewardsRate.divn(10e5)
+    );
+    const annualRewardValue = annualRewardAmount * rewardTokenPrice;
+
+    const apr =
+      lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
+
+    return apr;
+  }
 }
 
-export const defaultMiner: MinerInfo = {
+export const defaultFarm: FarmInfo = {
+  farmId: PublicKey.default,
+  rewarderKey: PublicKey.default,
+  tokenMintKey: PublicKey.default,
+  bump: new BN(0),
+  index: new BN(0),
+  tokenMintDecimals: new BN(0),
+  famineTs: new BN(0),
+  lastUpdateTs: new BN(0),
+  rewardsPerTokenStored: new BN(0),
+  annualRewardsRate: new BN(0),
+  rewardsShare: new BN(0),
+  totalTokensDeposited: new BN(0),
+  numFarmers: new BN(0),
+};
+
+export const defaultFarmer: FarmerInfo = {
   farmerId: PublicKey.default,
   farmId: PublicKey.default,
   userKey: PublicKey.default,
@@ -750,4 +779,13 @@ export const defaultMiner: MinerInfo = {
   rewardsEarned: new BN(0),
   rewardsPerTokenPaid: new BN(0),
   index: new BN(0),
+};
+
+const defaultWrap: WrapInfo = {
+  wrapAuthority: PublicKey.default,
+  decimal: new BN(0),
+  multiplyer: new BN(0),
+  underlyingWrappedTokenMint: PublicKey.default,
+  underlyingTokenAccount: PublicKey.default,
+  wrappedTokenMint: PublicKey.default,
 };

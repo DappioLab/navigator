@@ -32,7 +32,7 @@ describe("Francium", () => {
 
   // const supplyAmount = 20000;
 
-  it("parses farm data", async () => {
+  it("fetches farm data", async () => {
     const farmId = new PublicKey(
       "3EhxTvGjycQSKBY4EFz7MGA5Ke7rf39oUU2nM9qBP6Cj"
     );

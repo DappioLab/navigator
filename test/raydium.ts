@@ -24,7 +24,7 @@ describe("Raydium", () => {
     wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   });
 
-  it("parses pool data", async () => {
+  it("fetches pool data", async () => {
     const pools = await raydium.infos.getAllPools(connection);
     const poolId = pools[0].poolId;
     console.log(poolId.toString());
@@ -33,7 +33,7 @@ describe("Raydium", () => {
     console.log(pool);
   });
 
-  it("parses farm data", async () => {
+  it("fetches farm data", async () => {
     const farms = await raydium.infos.getAllFarms(connection);
     const farmId = farms[0].farmId;
     console.log(farmId.toString());

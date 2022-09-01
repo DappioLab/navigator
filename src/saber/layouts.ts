@@ -9,22 +9,7 @@ import {
   i64,
 } from "@project-serum/borsh";
 
-export const FARM_LAYOUT = struct([
-  publicKey("rewarderKey"),
-  publicKey("tokenMintKey"),
-  u8("bump"),
-  u16("index"),
-  u8("tokenMintDecimals"),
-  i64("famineTs"),
-  i64("lastUpdateTs"),
-  u128("rewardsPerTokenStored"),
-  u64("annualRewardsRate"),
-  u64("rewardsShare"),
-  u64("totalTokensDeposited"),
-  u64("numMiners"),
-]);
-
-export const SWAPINFO_LAYOUT = struct([
+export const POOL_LAYOUT = struct([
   bool("isInitialized"),
   bool("isPaused"),
   u8("nonce"),
@@ -52,7 +37,22 @@ export const SWAPINFO_LAYOUT = struct([
   u64("withdrawFeeDenominator"),
 ]);
 
-export const MINER_LAYOUT = struct([
+export const FARM_LAYOUT = struct([
+  publicKey("rewarderKey"),
+  publicKey("tokenMintKey"),
+  u8("bump"),
+  u16("index"),
+  u8("tokenMintDecimals"),
+  i64("famineTs"),
+  i64("lastUpdateTs"),
+  u128("rewardsPerTokenStored"),
+  u64("annualRewardsRate"),
+  u64("rewardsShare"),
+  u64("totalTokensDeposited"),
+  u64("numMiners"),
+]);
+
+export const FARMER_LAYOUT = struct([
   publicKey("farmKey"),
   publicKey("owner"),
   u8("bump"),
@@ -63,7 +63,7 @@ export const MINER_LAYOUT = struct([
   u64("index"),
 ]);
 
-export const WRAPINFO_LAYOUT = struct([
+export const WRAP_LAYOUT = struct([
   u8("decimal"),
   u64("multiplyer"),
   publicKey("underlyingWrappedTokenMint"),

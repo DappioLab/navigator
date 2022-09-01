@@ -1,34 +1,44 @@
-import {
-  Connection,
-  DataSizeFilter,
-  GetProgramAccountsConfig,
-  Keypair,
-  MemcmpFilter,
-  PublicKey,
-  Transaction,
-} from "@solana/web3.js";
-import fs from "fs";
-import os from "os";
-import * as orca from "../src/orca";
+import { Connection } from "@solana/web3.js";
+import { orca } from "../src";
 
-import BN from "bn.js";
-import { NATIVE_MINT } from "@solana/spl-token-v2";
+describe("Orca", () => {
+  // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
+  //   commitment,
+  //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
+  // });
+  // const connection = new Connection("https://solana-api.tt-prod.net", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
+  // const connection = new Connection("https://ssc-dao.genesysgo.net", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
+  // const connection = new Connection("https:////api.mainnet-beta.solana.com", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
+  const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
+    wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
+  });
 
-const keyPairPath = os.homedir() + "/.config/solana/id.json";
-const PrivateKey = JSON.parse(fs.readFileSync(keyPairPath, "utf-8"));
-let privateKey = Uint8Array.from(PrivateKey);
-const wallet = Keypair.fromSecretKey(privateKey);
-const walletPublicKey = wallet.publicKey;
-async function main() {
-  const connection = new Connection("https://api.mainnet-beta.solana.com", {
-      commitment: "processed",
-    });
-  let pools = await orca.getAllPools(connection);
-  let farms = await orca.getAllFarms(connection)
-  let farmers = await orca.getAllFarmers(connection,walletPublicKey)
+  it("fetches pool data", async () => {
+    const pools = await orca.infos.getAllPools(connection);
+    const poolId = pools[0].poolId;
+    console.log(poolId.toString());
 
-  console.log(pools.length);
-  console.log(farms.length);
-  console.log(farmers.length);
-}
-main();
+    const pool = await orca.infos.getPool(connection, poolId);
+    console.log(pool);
+  });
+
+  it("fetches farm data", async () => {
+    const farms = await orca.infos.getAllFarms(connection);
+    const farmId = farms[0].farmId;
+    console.log(farmId.toString());
+
+    const farm = await orca.infos.getFarm(connection, farmId);
+    console.log(farm);
+  });
+});
