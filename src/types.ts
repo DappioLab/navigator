@@ -67,6 +67,11 @@ export interface IReserveInfoWrapper {
   reserveInfo: IReserveInfo;
 }
 
+// TODO: Util methods
+export interface IVaultInfoWrapper {
+  vaultInfo: IVaultInfo;
+}
+
 export interface IInstancePool {
   getAllPools(connection: Connection): Promise<IPoolInfo[]>;
   getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]>;
