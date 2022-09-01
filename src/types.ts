@@ -1,5 +1,4 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { inherits } from "util";
 
 export interface IPoolInfo {
   poolId: PublicKey;
@@ -41,6 +40,12 @@ export interface IReserveInfo {
   reserveId: PublicKey;
 }
 
+export interface IObligationInfo {
+  obligationId: PublicKey;
+  userKey: PublicKey;
+  reserveId?: PublicKey;
+}
+
 // TODO: Util methods
 export interface IPoolInfoWrapper {
   poolInfo: IPoolInfo;
@@ -78,6 +83,28 @@ export interface IInstanceFarm {
     farmerId: PublicKey,
     version?: number
   ): Promise<IFarmerInfo>;
+}
+
+export interface IInstanceMoneyMarket {
+  getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey
+  ): Promise<IReserveInfo[]>;
+  getReserve(
+    connection: Connection,
+    reserveId: PublicKey
+  ): Promise<IReserveInfo>;
+  parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo;
+  getAllObligations(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IObligationInfo[]>;
+  getObligation(
+    connection: Connection,
+    obligationId: PublicKey,
+    version?: number
+  ): Promise<IObligationInfo>;
+  parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo;
 }
 
 /// Example
