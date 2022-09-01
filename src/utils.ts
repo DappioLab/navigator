@@ -177,6 +177,27 @@ export function parseTokenAccount(data: any, infoPubkey: PublicKey) {
   let { mint, owner, amount } = tokenAccountInfo;
   return new TokenAccount(infoPubkey, mint, owner, amount);
 }
+
+export function parseMintAccount(data: any, mint: PublicKey) {
+  let mintLayout = struct([
+    u32("mintAuthorityOption"),
+    publicKey("mintAuthority"),
+    u64("supply"),
+    u8("decimals"),
+    bool("initialized"),
+    u32("freezeAuthorityOption"),
+    publicKey("freezeAuthority"),
+  ]);
+
+  let tokenAccountInfo = mintLayout.decode(data);
+  let { supply, decimals } = tokenAccountInfo;
+  return {
+    mint,
+    supply,
+    decimals,
+  };
+}
+
 export class TokenAccount {
   infoPubkey: PublicKey;
   mint: PublicKey;
