@@ -11,8 +11,8 @@ import {
   OPTION_PRAM_LAYOUT,
   OTC_TERMS_LAYOUT,
   PRICE_PER_PAGE_LAYOUT,
-  STATE_LAYOUT,
-  USER_VAULT_LAYOUT,
+  VAULT_LAYOUT,
+  DEPOSITOR_LAYOUT,
 } from "./layouts";
 import {
   ADMIN,
@@ -22,9 +22,11 @@ import {
   PSY_PROGRAM_ID,
 } from "./ids";
 import { struct, u128 } from "@project-serum/borsh";
+import { IDepositorInfo, IVaultInfo } from "../types";
 
-export interface VaultInfo {
-  infoPubkey: PublicKey;
+export interface VaultInfo extends IVaultInfo {
+  // vaultId
+  // shareMint (equivalent to underlyingTokenMint?)
   admin: PublicKey;
   pendingAdmin: PublicKey;
   vaultAuthority: PublicKey;
@@ -64,12 +66,11 @@ export interface VaultInfo {
   pendingvaultBumpsWriter: BN;
   isPaused: boolean;
   onlyEarlyAccess: boolean;
-  // optionPrams: OptionParameters;
 }
 
-export interface UserVaultInfo {
-  infoPubkey: PublicKey;
-  owner: PublicKey;
+export interface DepositorInfo extends IDepositorInfo {
+  // depositorId
+  // userKey
   PendingDepositDataRound: BN;
   PendingDepositDataAmount: BN;
   PendingDepositDataUnredeemedShares: BN;
@@ -79,7 +80,7 @@ export interface UserVaultInfo {
 }
 
 export interface OtcTermInfo {
-  infoPubkey: PublicKey;
+  otcTermId: PublicKey;
   round: BN;
   totalPrice: BN;
   tokenMintToBuy: PublicKey;
@@ -95,7 +96,7 @@ interface PricePerSharePageInfo {
 }
 
 interface OptionMarketInfo {
-  infoPubkey: PublicKey;
+  optionMarketId: PublicKey;
   optionMint: PublicKey;
   writerTokenMint: PublicKey;
   underlyingAssetMint: PublicKey;
@@ -135,14 +136,14 @@ export class VaultInfoWrapper {
     return address[0];
   }
 
-  async getOtcTerms() {
+  async getOtcTermId() {
     let prefix = "otc";
     let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
 
     let address = await PublicKey.findProgramAddress(
       [
         minerBytes,
-        this.vaultInfo.infoPubkey.toBuffer(),
+        this.vaultInfo.vaultId.toBuffer(),
         this.vaultInfo.optionTokenMint.toBuffer(),
         this.vaultInfo.underlyingTokenMint.toBuffer(),
       ],
@@ -162,12 +163,12 @@ export class VaultInfoWrapper {
 
 export async function parseVaultData(
   data: any,
-  infoPubkey: PublicKey
+  vaultId: PublicKey
   // optionPram: OptionParameters
 ): Promise<VaultInfo> {
   let dataBuffer = data as Buffer;
   let stateData = dataBuffer.slice(8);
-  let state = STATE_LAYOUT.decode(stateData);
+  let state = VAULT_LAYOUT.decode(stateData);
   let {
     admin,
     pendingAdmin,
@@ -211,7 +212,7 @@ export async function parseVaultData(
   } = state;
 
   return {
-    infoPubkey,
+    vaultId,
     admin,
     pendingAdmin,
     vaultAuthority,
@@ -223,6 +224,9 @@ export async function parseVaultData(
     totalShares,
     round,
     underlyingTokenMint,
+    // TODO: underlyingTokenMint is used as dummy public key for shareMint.
+    // Need to identify the correct shareMint
+    shareMint: underlyingTokenMint,
     quoteTokenMint,
     optionTokenMint,
     nextOptionTokenMint,
@@ -345,7 +349,7 @@ export async function getVault(
   return vault;
 }
 
-export async function getAllUserVaults(
+export async function getAllDepositors(
   connection: Connection,
   wallet: PublicKey,
   programId: PublicKey
@@ -361,17 +365,17 @@ export async function getAllUserVaults(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allUserVaultAccount = await connection.getProgramAccounts(
+  const allDepositorAccount = await connection.getProgramAccounts(
     programId,
     config
   );
-  let allUserVault: UserVaultInfo[] = [];
-  for (let accountInfo of allUserVaultAccount) {
-    allUserVault.push(
-      await parseUserVaultData(accountInfo.account.data, accountInfo.pubkey)
+  let allDepositor: DepositorInfo[] = [];
+  for (let accountInfo of allDepositorAccount) {
+    allDepositor.push(
+      await parseDepositorData(accountInfo.account.data, accountInfo.pubkey)
     );
   }
-  return allUserVault;
+  return allDepositor;
 }
 
 export interface OptionParameters {
@@ -424,13 +428,13 @@ export async function getAllOptionPrams(
   return allOptionPram;
 }
 
-export async function parseUserVaultData(
+export async function parseDepositorData(
   data: any,
-  infoPubkey: PublicKey
-): Promise<UserVaultInfo> {
+  depositorId: PublicKey
+): Promise<DepositorInfo> {
   let dataBuffer = data as Buffer;
   let userData = dataBuffer.slice(8);
-  let userVault = USER_VAULT_LAYOUT.decode(userData);
+  let depositor = DEPOSITOR_LAYOUT.decode(userData);
   let {
     owner,
     PendingDepositDataRound,
@@ -439,11 +443,11 @@ export async function parseUserVaultData(
     PendingWithdrawDataRound,
     PendingWithdrawDatShares,
     bump,
-  } = userVault;
+  } = depositor;
 
   return {
-    infoPubkey,
-    owner,
+    depositorId,
+    userKey: owner,
     PendingDepositDataRound,
     PendingDepositDataAmount,
     PendingDepositDataUnredeemedShares,
@@ -453,7 +457,7 @@ export async function parseUserVaultData(
   };
 }
 
-export async function getUserVaultAddress(
+export async function getDepositorId(
   wallet: PublicKey,
   vault: PublicKey,
   programId: PublicKey
@@ -467,13 +471,13 @@ export async function getUserVaultAddress(
   return address;
 }
 
-export async function checkUserVaultCreated(
+export async function checkDepositorCreated(
   wallet: PublicKey,
   vault: PublicKey,
   connection: Connection,
   programId: PublicKey
 ) {
-  let address = await getUserVaultAddress(wallet, vault, programId);
+  let address = await getDepositorId(wallet, vault, programId);
   let accountInfo = await connection.getAccountInfo(address[0]);
   if (accountInfo?.owner.equals(programId)) {
     return true;
@@ -483,7 +487,7 @@ export async function checkUserVaultCreated(
 
 export function parseOtcTermsData(
   data: any,
-  infoPubkey: PublicKey
+  otcTermId: PublicKey
 ): OtcTermInfo {
   let dataBuffer = data as Buffer;
   let otcData = dataBuffer.slice(8);
@@ -491,7 +495,7 @@ export function parseOtcTermsData(
   let { round, totalPrice, tokenMintToBuy, tokenMintToSell, bump } = otcRaw;
 
   return {
-    infoPubkey,
+    otcTermId,
     round,
     totalPrice,
     tokenMintToBuy,
@@ -501,21 +505,21 @@ export function parseOtcTermsData(
 }
 
 export async function getOtcTermsAccount(
-  vault: VaultInfoWrapper,
-  connection: Connection
+  connection: Connection,
+  vault: VaultInfoWrapper
 ): Promise<OtcTermInfo> {
-  let infoPubkey = await vault.getOtcTerms();
-  let account = await connection.getAccountInfo(infoPubkey);
+  let otcTermId = await vault.getOtcTermId();
+  let account = await connection.getAccountInfo(otcTermId);
   if (account == undefined) {
-    return defaultOtcTerms(infoPubkey);
+    return defaultOtcTerms(otcTermId);
   }
-  let otc = parseOtcTermsData(account?.data, infoPubkey);
+  let otc = parseOtcTermsData(account?.data, otcTermId);
   return otc;
 }
 
-export function defaultOtcTerms(infoPubkey: PublicKey) {
+export function defaultOtcTerms(otcTermId: PublicKey) {
   return {
-    infoPubkey,
+    otcTermId,
     round: new BN(0),
     totalPrice: new BN(0),
     tokenMintToBuy: PublicKey.default,
@@ -560,12 +564,12 @@ export async function getPricePerPageAccount(
 
 export function parseOptionMarketInfo(
   data: any,
-  infoPubkey: PublicKey
+  optionMarketId: PublicKey
 ): OptionMarketInfo {
   let dataBuffer = data as Buffer;
-  if (!data || !infoPubkey) {
+  if (!data || !optionMarketId) {
     return {
-      infoPubkey: PublicKey.default,
+      optionMarketId: PublicKey.default,
       optionMint: PublicKey.default,
       writerTokenMint: PublicKey.default,
       underlyingAssetMint: PublicKey.default,
@@ -601,7 +605,7 @@ export function parseOptionMarketInfo(
   } = market;
 
   return {
-    infoPubkey,
+    optionMarketId,
     optionMint,
     writerTokenMint,
     underlyingAssetMint,

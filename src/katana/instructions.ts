@@ -7,16 +7,18 @@ import {
 } from "@solana/web3.js";
 import BN from "bn.js";
 import { struct, u64, u8 } from "@project-serum/borsh";
-import { getUserVaultAddress, VaultInfoWrapper } from "./infos";
+import { getDepositorId, VaultInfoWrapper } from "./infos";
+
+// NOTICE: This file will be removed!
 
 export async function createUserVaultIx(
   vault: VaultInfoWrapper,
   wallet: PublicKey,
   programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(
+  let userVault = await getDepositorId(
     wallet,
-    vault.vaultInfo.infoPubkey,
+    vault.vaultInfo.vaultId,
     programId
   );
   const dataLayout = struct([u8("bump")]);
@@ -28,7 +30,7 @@ export async function createUserVaultIx(
 
   let keys = [
     { pubkey: userVault[0], isSigner: false, isWritable: true },
-    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.vaultId, isSigner: false, isWritable: true },
     { pubkey: wallet, isSigner: false, isWritable: false },
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
@@ -49,9 +51,9 @@ export async function depositIx(
   amount: BN, // NOTICE: Need to be BN.Endianness?
   programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(
+  let userVault = await getDepositorId(
     wallet,
-    vault.vaultInfo.infoPubkey,
+    vault.vaultInfo.vaultId,
     programId
   );
   const dataLayout = struct([u64("amount")]);
@@ -66,7 +68,7 @@ export async function depositIx(
   let datastring = "f223c68952e1f2b6".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.vaultId, isSigner: false, isWritable: true },
     {
       pubkey: await vault.getPricePerPage(),
       isSigner: false,
@@ -102,9 +104,9 @@ export async function claimShareIx(
   tokenAccount: PublicKey,
   programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(
+  let userVault = await getDepositorId(
     wallet,
-    vault.vaultInfo.infoPubkey,
+    vault.vaultInfo.vaultId,
     programId
   );
   let data = Buffer.alloc(8);
@@ -112,7 +114,7 @@ export async function claimShareIx(
   let datastring = "82831ded86146ef5";
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.vaultId, isSigner: false, isWritable: true },
     {
       pubkey: await vault.getPricePerPage(),
       isSigner: false,
@@ -158,9 +160,9 @@ export async function initiateWithdrawIx(
   amount: BN,
   programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(
+  let userVault = await getDepositorId(
     wallet,
-    vault.vaultInfo.infoPubkey,
+    vault.vaultInfo.vaultId,
     programId
   );
   const dataLayout = struct([u64("amount")]);
@@ -176,7 +178,7 @@ export async function initiateWithdrawIx(
   let datastring = "9cac8cf5b6faefa0".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.vaultId, isSigner: false, isWritable: true },
     { pubkey: userVault[0], isSigner: false, isWritable: true },
     {
       pubkey: vault.vaultInfo.underlyingTokenMint,
@@ -216,9 +218,9 @@ export async function completeWithdrawIx(
   tokenAccount: PublicKey,
   programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(
+  let userVault = await getDepositorId(
     wallet,
-    vault.vaultInfo.infoPubkey,
+    vault.vaultInfo.vaultId,
     programId
   );
   let data = Buffer.alloc(8);
@@ -226,7 +228,7 @@ export async function completeWithdrawIx(
   let datastring = "ac818d115ffdfb62";
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.vaultId, isSigner: false, isWritable: true },
     {
       pubkey: await vault.getPricePerPage(),
       isSigner: false,
@@ -277,9 +279,9 @@ export async function instantWithdrawIx(
   amount: BN,
   programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
 ) {
-  let userVault = await getUserVaultAddress(
+  let userVault = await getDepositorId(
     wallet,
-    vault.vaultInfo.infoPubkey,
+    vault.vaultInfo.vaultId,
     programId
   );
   const dataLayout = struct([u64("amount")]);
@@ -295,7 +297,7 @@ export async function instantWithdrawIx(
   let datastring = "ab3191b0306570a2".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let keys = [
-    { pubkey: vault.vaultInfo.infoPubkey, isSigner: false, isWritable: true },
+    { pubkey: vault.vaultInfo.vaultId, isSigner: false, isWritable: true },
     { pubkey: userVault[0], isSigner: false, isWritable: true },
     {
       pubkey: vault.vaultInfo.underlyingTokenMint,

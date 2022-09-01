@@ -5,12 +5,14 @@ import {
 import BN from "bn.js";
 import { Connection, PublicKey, Transaction } from "@solana/web3.js";
 import * as ins from "./instructions";
-import { checkUserVaultCreated, VaultInfo, VaultInfoWrapper } from "./infos";
+import { checkDepositorCreated, VaultInfoWrapper } from "./infos";
 import {
   createATAWithoutCheckIx,
   findAssociatedTokenAddress,
   wrapNative,
 } from "../utils";
+
+// NOTICE: This file will be removed!
 
 export async function deposit(
   vault: VaultInfoWrapper,
@@ -40,9 +42,9 @@ export async function deposit(
     await createATAWithoutCheckIx(wallet, vault.vaultInfo.derivativeTokenMint)
   );
   if (
-    !(await checkUserVaultCreated(
+    !(await checkDepositorCreated(
       wallet,
-      vault.vaultInfo.infoPubkey,
+      vault.vaultInfo.vaultId,
       connection,
       programId
     ))

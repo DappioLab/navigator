@@ -44,6 +44,8 @@ import {
 import { Market } from "@project-serum/serum";
 import { FRANCIUM_LENDING_PROGRAM_ID, LENDING_MARKET } from "./ids";
 
+// NOTICE: This file will be removed!
+
 // Raydium-specific
 export async function getDepositTx(
   strategy: RaydiumStrategyState,
