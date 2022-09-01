@@ -34,7 +34,6 @@ import {
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
-import { getAllOptionPrams } from "../katana/coverCall/optionInfo";
 
 export interface LedgerInfo extends IFarmerInfo {
   farmVersion: number;
