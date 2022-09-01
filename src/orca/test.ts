@@ -91,10 +91,5 @@ const connection = new Connection("https://ssc-dao.genesysgo.net", {
   // 1. Trading APR
   // 2. Emissions APR
   // 3. Double dip APR
-  parsedAPRPools.map((item) => {
-    if (item.doubleDipAPR !== null && item.emissionAPR !== null) {
-      console.log(item, "//");
-    }
-  });
   console.log(parsedAPRPools);
 })();
