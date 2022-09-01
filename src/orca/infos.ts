@@ -34,7 +34,11 @@ export interface PoolInfo extends IPoolInfo {
   tokenSupplyA: BN;
   tokenSupplyB: BN;
   lpSupply: BN;
-  apr: number | null;
+  lpMint: PublicKey;
+  lpDecimals: number;
+  tradingAPR: number | null;
+  doubleDipAPR: number | null;
+  emissionAPR: number | null;
 }
 export interface FarmInfo extends IFarmInfo {
   isInitialized: BN;
@@ -52,21 +56,31 @@ export interface FarmInfo extends IFarmInfo {
   emissionsPerSecondDenominator: BN;
   lastUpdatedTimestamp: BN;
   cumulativeEmissionsPerFarmToken: BN;
+  baseTokenVaultAccountData?: { mint: PublicKey; owner: PublicKey; amount: BN };
+  baseTokenMintAccountData?: {
+    mint: PublicKey;
+    supply: BN;
+    decimals: number;
+  };
+  rewardTokenVaultAccountData?: {
+    mint: PublicKey;
+    owner: PublicKey;
+    amount: BN;
+  };
+  rewardTokenMintAccountData?: {
+    mint: PublicKey;
+    supply: BN;
+    decimals: number;
+  };
 }
 export interface FarmerInfo extends IFarmerInfo {
   isInitialized: BN;
   accountType: BN;
   cumulativeEmissionsCheckpoint: BN;
 }
+
 export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
-  const allAPIPools: Map<
-    string,
-    {
-      poolAccount: string;
-      apy: { week: number };
-      poolId: string;
-    }
-  > = await (
+  const allAPIPools: any = await (
     await axios.get("https://api.orca.so/allPools")
   ).data;
 
@@ -76,6 +90,7 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
     tokenAccountA: BN;
     tokenAccountB: BN;
     LPsupply: BN;
+    LPDecimals: number;
   }[] = [];
   let pubKeys: PublicKey[] = [];
   const sizeFilter: DataSizeFilter = {
@@ -96,32 +111,19 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
     );
 
     let apr = null;
-
     Object.keys(allAPIPools).map((item) => {
-      //@ts-ignore
       if (allAPIPools[item].poolAccount === pooldata.poolId.toBase58()) {
-        //@ts-ignore
-
         apr = (allAPIPools[item].apy.week * 100).toFixed(2);
       }
     });
 
-    // let pool = allAPIPools.find(
-    //   (pool) => pool.poolAccount === pooldata.poolId.toBase58()
-    // );
-    // if (pool) {
-    //   symbol = pool.poolId;
-    //   apr = pool.apy.week;
-    // }
-
-    pooldata.apr = apr;
-    // pooldata.symbol = symbol;
-
+    pooldata.tradingAPR = apr;
     allPools.push(pooldata);
     pubKeys.push(pooldata.tokenAccountA);
     pubKeys.push(pooldata.tokenAccountB);
     pubKeys.push(pooldata.lpMint);
   }
+
   while (pubKeys.length > 0) {
     let pubKeysChunk = pubKeys.splice(
       0,
@@ -137,6 +139,10 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
         amountInfos[i * 3 + 1]?.data,
         pubKeysChunk[i * 3 + 1]
       ).amount;
+      let lpDecimals = utils.parseMintAccount(
+        amountInfos[i * 3 + 2]?.data,
+        pubKeysChunk[i * 3 + 2]
+      ).decimals;
       let lpSupply = new BN(
         Number(MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply)
       );
@@ -144,18 +150,21 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
         tokenAccountA: tokenAAmount,
         tokenAccountB: tokenBAmount,
         LPsupply: lpSupply,
+        LPDecimals: lpDecimals,
       });
     }
   }
 
   allPools.map((item, index) => {
-    const { tokenAccountA, tokenAccountB, LPsupply } = accounts[index];
+    const { tokenAccountA, tokenAccountB, LPsupply, LPDecimals } =
+      accounts[index];
     let newItem = item;
     newItem = {
       ...newItem,
       tokenSupplyA: tokenAccountA,
       tokenSupplyB: tokenAccountB,
       lpSupply: LPsupply,
+      lpDecimals: LPDecimals,
     };
     if (newItem.lpSupply.cmpn(0)) {
       newAllPools.push(newItem);
@@ -190,7 +199,9 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     }
     return new BN(0);
   }
+  getDailyEmissions() {}
 }
+
 export async function parsePoolInfoData(
   data: any,
   pubkey: PublicKey
@@ -207,6 +218,7 @@ export async function parsePoolInfoData(
     mintA,
     mintB,
     feeAccount,
+    LPDecimals,
   } = decodedData;
   let poolInfo: PoolInfo = {
     poolId: pubkey,
@@ -218,12 +230,15 @@ export async function parsePoolInfoData(
     tokenAccountB: tokenAccountB,
     feeAccount: feeAccount,
     lpMint: LPmint,
+    lpDecimals: LPDecimals,
     tokenAMint: mintA,
     tokenBMint: mintB,
     lpSupply: new BN(0),
     tokenSupplyA: new BN(0),
     tokenSupplyB: new BN(0),
-    apr: null,
+    tradingAPR: null,
+    emissionAPR: null,
+    doubleDipAPR: null,
   };
   return poolInfo;
 }
@@ -258,6 +273,7 @@ export async function getAllFarmers(
   }
   return allFarmers;
 }
+
 export async function getAllFarms(connection: Connection): Promise<FarmInfo[]> {
   let allFarms: FarmInfo[] = [];
   const sizeFilter: DataSizeFilter = {
@@ -269,19 +285,109 @@ export async function getAllFarms(connection: Connection): Promise<FarmInfo[]> {
     ORCA_FARM_PROGRAM_ID,
     config
   );
+
+  let baseVaultPublicKeys: PublicKey[] = [];
+  let baseTokenMintPublicKeys: PublicKey[] = [];
+  let rewardTokenVaultPublicKeys: PublicKey[] = [];
+  let rewardTokenMintPublicKeys: PublicKey[] = [];
+
   for (const accountInfo of allOrcaFarm) {
     let farmdata = await parseFarmInfoData(
       accountInfo.account.data,
       accountInfo.pubkey
     );
 
-    if (farmdata.emissionsPerSecondNumerator.cmpn(0)) {
-      continue;
-    }
+    // WRONG FILTER
+    // if (farmdata.emissionsPerSecondNumerator.cmpn(0)) {
+    //   continue;
+    // }
+
+    baseVaultPublicKeys.push(farmdata.baseTokenVault);
+    baseTokenMintPublicKeys.push(farmdata.baseTokenMint);
+    rewardTokenVaultPublicKeys.push(farmdata.rewardTokenVault);
     allFarms.push(farmdata);
+  }
+
+  let baseVaultResult: PublicKey[] = [];
+  for (var i = 0; i < baseVaultPublicKeys.length; i += 99) {
+    baseVaultResult = baseVaultPublicKeys.slice(i, i + 99);
+    let data = await connection.getMultipleAccountsInfo(baseVaultResult);
+    for (let [index, item] of data.entries()) {
+      let accountInfos = utils.parseTokenAccount(
+        item?.data,
+        baseVaultResult[index]
+      );
+
+      let farmData = allFarms.find((t) =>
+        t.baseTokenVault.equals(baseVaultResult[index])
+      );
+      farmData!.baseTokenVaultAccountData = accountInfos;
+    }
+  }
+
+  let baseMintResult: PublicKey[] = [];
+  for (var i = 0; i < baseTokenMintPublicKeys.length; i += 99) {
+    baseMintResult = baseTokenMintPublicKeys.slice(i, i + 99);
+    let data = await connection.getMultipleAccountsInfo(baseMintResult);
+    for (let [index, item] of data.entries()) {
+      let accountInfos = utils.parseMintAccount(
+        item?.data,
+        baseMintResult[index]
+      );
+
+      let farmData = allFarms.find((t) =>
+        t.baseTokenMint.equals(baseMintResult[index])
+      );
+      farmData!.baseTokenMintAccountData = accountInfos;
+    }
+  }
+
+  let rewardVaultResult: PublicKey[] = [];
+  for (var i = 0; i < rewardTokenVaultPublicKeys.length; i += 99) {
+    rewardVaultResult = rewardTokenVaultPublicKeys.slice(i, i + 99);
+    let data = await connection.getMultipleAccountsInfo(rewardVaultResult);
+    for (let [index, item] of data.entries()) {
+      let accountInfos = utils.parseTokenAccount(
+        item?.data,
+        rewardVaultResult[index]
+      );
+
+      let farmData = allFarms.find((t) =>
+        t.rewardTokenVault.equals(rewardVaultResult[index])
+      );
+
+      // Reward Mint
+      rewardTokenMintPublicKeys.push(accountInfos.mint);
+      farmData!.rewardTokenVaultAccountData = accountInfos;
+    }
+  }
+
+  let rewardMintResult: PublicKey[] = [];
+  let rewardTokenData: { mint: PublicKey; supply: BN; decimals: number }[] = [];
+  for (let i = 0; i < rewardTokenMintPublicKeys.length; i += 99) {
+    rewardMintResult = rewardTokenMintPublicKeys.slice(i, i + 99);
+    let data = await connection.getMultipleAccountsInfo(rewardMintResult);
+    for (let [index, item] of data.entries()) {
+      let accountInfos = utils.parseMintAccount(
+        item?.data,
+        rewardMintResult[index]
+      );
+
+      rewardTokenData.push(accountInfos);
+    }
+  }
+
+  for (let i = 0; i < allFarms.length; i++) {
+    let data = rewardTokenData.find((t) =>
+      t.mint.equals(allFarms[i].rewardTokenVaultAccountData?.mint!)
+    );
+    if (data) {
+      allFarms[i].rewardTokenMintAccountData = data;
+    }
   }
   return allFarms;
 }
+
 export async function parseFarmInfoData(
   data: any,
   pubkey: PublicKey
@@ -307,6 +413,7 @@ export async function parseFarmInfoData(
     lastUpdatedTimestamp,
     cumulativeEmissionsPerFarmToken,
   } = decodedData;
+
   let farmInfo = {
     farmId: pubkey,
     isInitialized: new BN(isInitialized),
