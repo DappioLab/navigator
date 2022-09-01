@@ -1,15 +1,58 @@
-import { getAccount } from "@solana/spl-token-v2";
-import {
-  Connection,
-  PublicKey,
-  GetProgramAccountsConfig,
-  MemcmpFilter,
-  DataSizeFilter,
-} from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { INFTPoolInfo, INFTFarmInfo } from "../types";
-import { NFT_STAKING_PROGRAM_ID, NFT_MINING_PROGRAM_ID } from "./ids";
+import {
+  INFTPoolInfo,
+  INFTFarmInfo,
+  IInstanceNFTPool,
+  IInstanceNFTFarm,
+} from "../types";
 import { POOL_LAYOUT, FARM_LAYOUT } from "./layout";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceOrca
+
+let infos: IInstanceNFTPool & IInstanceNFTFarm;
+
+infos = class InstanceNFTFinance {
+  static async getAllPools(connection: Connection): Promise<INFTPoolInfo[]> {
+    return [];
+  }
+
+  static async getPool(
+    connection: Connection,
+    poolId: PublicKey
+  ): Promise<INFTPoolInfo> {
+    return {} as INFTPoolInfo;
+  }
+
+  static parsePool(data: Buffer, farmId: PublicKey): INFTPoolInfo {
+    return {} as INFTPoolInfo;
+  }
+
+  static async getAllFarms(connection: Connection): Promise<INFTFarmInfo[]> {
+    return [];
+  }
+
+  static async getFarm(
+    connection: Connection,
+    farmId: PublicKey
+  ): Promise<INFTFarmInfo> {
+    return {} as INFTFarmInfo;
+  }
+
+  static parseFarm(data: Buffer, farmId: PublicKey): INFTFarmInfo {
+    return {} as INFTFarmInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export interface NFTPoolInfo extends INFTPoolInfo {
   admin: PublicKey;

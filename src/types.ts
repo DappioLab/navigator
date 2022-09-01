@@ -91,6 +91,18 @@ export interface IInstanceFarm {
   ): Promise<IFarmerInfo>;
 }
 
+export interface IInstanceNFTPool {
+  getAllPools(connection: Connection): Promise<INFTPoolInfo[]>;
+  getPool(connection: Connection, poolId: PublicKey): Promise<INFTPoolInfo>;
+  parsePool(data: Buffer, farmId: PublicKey): INFTPoolInfo;
+}
+
+export interface IInstanceNFTFarm {
+  getAllFarms(connection: Connection): Promise<IFarmInfo[]>;
+  getFarm(connection: Connection, farmId: PublicKey): Promise<INFTFarmInfo>;
+  parseFarm(data: Buffer, farmId: PublicKey): INFTFarmInfo;
+}
+
 export interface IInstanceMoneyMarket {
   getAllReserves(
     connection: Connection,
