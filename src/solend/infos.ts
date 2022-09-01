@@ -1,13 +1,89 @@
-import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  GetProgramAccountsConfig,
+  MemcmpFilter,
+  DataSizeFilter,
+} from "@solana/web3.js";
 import BN from "bn.js";
-import { IReserveInfo, IReserveInfoWrapper } from "../types";
-import { SOLEND_LENDING_MARKET_ID_ALL, SOLEND_LENDING_MARKET_ID_MAIN_POOL, SOLEND_PROGRAM_ID } from "./ids";
-import { COLLATERAL_LAYOUT, LOAN_LAYOUT, OBLIGATION_LAYOUT, RESERVE_LAYOUT } from "./layouts";
+import {
+  IInstanceMoneyMarket,
+  IObligationInfo,
+  IReserveInfo,
+  IReserveInfoWrapper,
+} from "../types";
+import {
+  SOLEND_LENDING_MARKET_ID_ALL,
+  SOLEND_LENDING_MARKET_ID_MAIN_POOL,
+  SOLEND_PROGRAM_ID,
+} from "./ids";
+import {
+  COLLATERAL_LAYOUT,
+  LOAN_LAYOUT,
+  OBLIGATION_LAYOUT,
+  RESERVE_LAYOUT,
+} from "./layouts";
 import { getSlndPrice, isMining } from "./utils";
 import { getTokenList, IServicesTokenInfo } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceSolend
+
+let infos: IInstanceMoneyMarket;
+
+infos = class InstanceSolend {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey
+  ): Promise<IReserveInfo[]> {
+    return [];
+  }
+
+  static async getReserve(
+    connection: Connection,
+    reserveId: PublicKey
+  ): Promise<IReserveInfo> {
+    return {} as IReserveInfo;
+  }
+
+  static parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo {
+    return {} as IReserveInfo;
+  }
+
+  static async getAllObligations(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IObligationInfo[]> {
+    return [];
+  }
+
+  static async getObligation(
+    connection: Connection,
+    obligationId: PublicKey,
+    version?: number
+  ): Promise<IObligationInfo> {
+    return {} as IObligationInfo;
+  }
+
+  static parseObligation(
+    data: Buffer,
+    obligationId: PublicKey
+  ): IObligationInfo {
+    return {} as IObligationInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export const RESERVE_LAYOUT_SPAN = 619;
 
@@ -105,7 +181,8 @@ export interface LastUpdate {
 
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
-  let { version, lastUpdate, lendingMarket, liquidity, collateral, config } = decodedData;
+  let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
+    decodedData;
   return {
     reserveId: pubkey,
     version,
@@ -151,7 +228,9 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   supplyAmount() {
-    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
+    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
+      new BN(`1${"".padEnd(18, "0")}`)
+    );
     let availableAmount = this.reserveInfo.liquidity.availableAmount;
     return borrowedAmount.add(availableAmount);
   }
@@ -163,7 +242,9 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       miningApy = 0;
     } else {
       let slndPrice = await getSlndPrice(connection);
-      let slndPerYear = MINING_MULTIPLIER(this.reserveInfo.reserveId).div(new BN(`1${"".padEnd(3, "0")}`));
+      let slndPerYear = MINING_MULTIPLIER(this.reserveInfo.reserveId).div(
+        new BN(`1${"".padEnd(3, "0")}`)
+      );
 
       let supplyUSDValue = this.supplyAmount()
         .div(new BN(`1${"".padEnd(decimal, "0")}`))
@@ -182,38 +263,53 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       borrowingApy = 0;
     } else {
       let slndPrice = await getSlndPrice(connection);
-      let slndPerYear = BORROWING_MULTIPLIER(this.reserveInfo.reserveId).div(new BN(`1${"".padEnd(3, "0")}`));
+      let slndPerYear = BORROWING_MULTIPLIER(this.reserveInfo.reserveId).div(
+        new BN(`1${"".padEnd(3, "0")}`)
+      );
       let borrowUSDValue = this.supplyAmount()
         .sub(this.reserveInfo.liquidity.availableAmount) // supplyAmt - avaiableAmt = borrowAmt
         .div(new BN(`1${"".padEnd(decimal, "0")}`))
         .mul(this.reserveInfo.liquidity.marketPrice)
         .div(new BN(`1${"".padEnd(18, "0")}`));
-      borrowingApy = (Number(slndPerYear.mul(slndPrice)) * 0.9) / Number(borrowUSDValue);
+      borrowingApy =
+        (Number(slndPerYear.mul(slndPrice)) * 0.9) / Number(borrowUSDValue);
     }
     return borrowingApy;
   }
 
   calculateUtilizationRatio() {
-    const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
-    const totalAmount = this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
+    const borrowedAmount = this.reserveInfo.liquidity.borrowedAmountWads.div(
+      new BN(`1${"".padEnd(18, "0")}`)
+    );
+    const totalAmount =
+      this.reserveInfo.liquidity.availableAmount.add(borrowedAmount);
     const currentUtilization = Number(borrowedAmount) / Number(totalAmount);
     return currentUtilization;
   }
 
   calculateBorrowAPY() {
     const currentUtilization = this.calculateUtilizationRatio();
-    const optimalUtilization = Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
+    const optimalUtilization =
+      Number(new BN(this.reserveInfo.config.optimalUtilizationRate)) / 100;
     let borrowAPY;
     if (optimalUtilization === 1.0 || currentUtilization < optimalUtilization) {
       const normalizedFactor = currentUtilization / optimalUtilization;
-      const optimalBorrowRate = Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
-      const minBorrowRate = Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
-      borrowAPY = normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
+      const optimalBorrowRate =
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
+      const minBorrowRate =
+        Number(new BN(this.reserveInfo.config.minBorrowRate)) / 100;
+      borrowAPY =
+        normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
     } else {
-      const normalizedFactor = (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
-      const optimalBorrowRate = Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
-      const maxBorrowRate = Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
-      borrowAPY = normalizedFactor * (maxBorrowRate - optimalBorrowRate) + optimalBorrowRate;
+      const normalizedFactor =
+        (currentUtilization - optimalUtilization) / (1 - optimalUtilization);
+      const optimalBorrowRate =
+        Number(new BN(this.reserveInfo.config.optimalBorrowRate)) / 100;
+      const maxBorrowRate =
+        Number(new BN(this.reserveInfo.config.maxBorrowRate)) / 100;
+      borrowAPY =
+        normalizedFactor * (maxBorrowRate - optimalBorrowRate) +
+        optimalBorrowRate;
     }
 
     return borrowAPY;
@@ -229,11 +325,15 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return this.partnerRewardData;
   }
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
-    return reserveAmount.mul(this.supplyAmount()).div(this.reserveTokenSupply());
+    return reserveAmount
+      .mul(this.supplyAmount())
+      .div(this.reserveTokenSupply());
   }
 
   convertLiquidityAmountToReserveAmount(liquidityAmount: BN) {
-    return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
+    return liquidityAmount
+      .mul(this.reserveTokenSupply())
+      .div(this.supplyAmount());
   }
 }
 
@@ -258,7 +358,9 @@ interface ISolendAPIPartnerReward {
 export async function getAllReserveWrappers(connection: Connection) {
   const allReserves = await getAllReserves(connection);
   const allPartnersRewardData: ISolendAPIPartnerReward[] = await (
-    await axios.get("https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true")
+    await axios.get(
+      "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
+    )
   ).data;
   const tokenList = await getTokenList();
 
@@ -273,10 +375,14 @@ export async function getAllReserveWrappers(connection: Connection) {
           newInfo.reserveInfo.reserveId.toBase58() === item.reserveID
       ) ?? null;
 
-    let price = tokenList.find((t) => t.mint === newInfo.supplyTokenMint().toBase58())?.price;
+    let price = tokenList.find(
+      (t) => t.mint === newInfo.supplyTokenMint().toBase58()
+    )?.price;
     let partnerRewardData: IPartnerReward[] | null = null;
 
-    const poolTotalSupply = Number(newInfo.supplyAmount()) / 10 ** Number(newInfo.supplyTokenDecimal());
+    const poolTotalSupply =
+      Number(newInfo.supplyAmount()) /
+      10 ** Number(newInfo.supplyTokenDecimal());
     const poolTotalSupplyValue = poolTotalSupply * price!;
 
     if (partnerRewards.length > 0) {
@@ -288,7 +394,14 @@ export async function getAllReserveWrappers(connection: Connection) {
             const rewardTokenPrice = rewardToken.price;
             return {
               rewardToken,
-              rate: Number((((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)),
+              rate: Number(
+                (
+                  ((rewardRate * rewardTokenPrice) /
+                    poolTotalSupplyValue /
+                    10 ** 36) *
+                  100
+                ).toFixed(2)
+              ),
               side: r.side,
             } as IPartnerReward;
           }
@@ -304,7 +417,10 @@ export async function getAllReserveWrappers(connection: Connection) {
   return reserveInfoWrappers;
 }
 
-async function getAllReserves(connection: Connection, lendingMarket?: PublicKey) {
+async function getAllReserves(
+  connection: Connection,
+  lendingMarket?: PublicKey
+) {
   const dataSizeFilters: DataSizeFilter = {
     dataSize: RESERVE_LAYOUT_SPAN,
   };
@@ -322,7 +438,10 @@ async function getAllReserves(connection: Connection, lendingMarket?: PublicKey)
   }
 
   const config: GetProgramAccountsConfig = { filters: filters };
-  const reserveAccounts = await connection.getProgramAccounts(SOLEND_PROGRAM_ID, config);
+  const reserveAccounts = await connection.getProgramAccounts(
+    SOLEND_PROGRAM_ID,
+    config
+  );
   let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
     let info = parseReserveData(account.account.data, account.pubkey);
@@ -332,7 +451,10 @@ async function getAllReserves(connection: Connection, lendingMarket?: PublicKey)
   return reserves;
 }
 
-export async function getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
+export async function getReserve(
+  connection: Connection,
+  reserveId: PublicKey
+): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
   return parseReserveData(reserveAccountInfo?.data, reserveId);
 }
@@ -352,13 +474,20 @@ export async function getObligation(
   }
 }
 
-export async function getAllObligation(connection: Connection, wallet: PublicKey) {
+export async function getAllObligation(
+  connection: Connection,
+  wallet: PublicKey
+) {
   let allObligationAddress: PublicKey[] = [];
   let allObligationInfoWrapper: ObligationInfoWrapper[] = [];
   for (let lendingMarket of SOLEND_LENDING_MARKET_ID_ALL) {
-    allObligationAddress.push(await getObligationPublicKey(wallet, lendingMarket));
+    allObligationAddress.push(
+      await getObligationPublicKey(wallet, lendingMarket)
+    );
   }
-  let allAccountInfo = await connection.getMultipleAccountsInfo(allObligationAddress);
+  let allAccountInfo = await connection.getMultipleAccountsInfo(
+    allObligationAddress
+  );
 
   allAccountInfo.map((accountInfo) => {
     if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
@@ -394,20 +523,39 @@ export interface ObligationInfo {
   unhealthyBorrowValue: BN;
 }
 
-export async function getObligationPublicKey(wallet: PublicKey, lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL) {
+export async function getObligationPublicKey(
+  wallet: PublicKey,
+  lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL
+) {
   const seed = lendingMarket.toString().slice(0, 32);
-  const obligationAddress = await PublicKey.createWithSeed(wallet, seed, SOLEND_PROGRAM_ID);
+  const obligationAddress = await PublicKey.createWithSeed(
+    wallet,
+    seed,
+    SOLEND_PROGRAM_ID
+  );
   return obligationAddress;
 }
 
-export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
-  const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], SOLEND_PROGRAM_ID))[0];
+export async function getLendingMarketAuthority(
+  lendingMarket: PublicKey
+): Promise<PublicKey> {
+  const authority = (
+    await PublicKey.findProgramAddress(
+      [lendingMarket.toBuffer()],
+      SOLEND_PROGRAM_ID
+    )
+  )[0];
 
   return authority;
 }
 
-export async function obligationCreated(connection: Connection, wallet: PublicKey) {
-  let obligationInfo = await connection.getAccountInfo(await getObligationPublicKey(wallet));
+export async function obligationCreated(
+  connection: Connection,
+  wallet: PublicKey
+) {
+  let obligationInfo = await connection.getAccountInfo(
+    await getObligationPublicKey(wallet)
+  );
   if (obligationInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
     return true;
   }
@@ -427,8 +575,14 @@ export class ObligationInfoWrapper {
     let depositedValue = new BN(0);
     for (let depositedReserve of this.obligationCollaterals) {
       for (let reserveInfoWrapper of reserveInfos) {
-        if (depositedReserve.reserveId.equals(reserveInfoWrapper.reserveInfo.reserveId)) {
-          let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
+        if (
+          depositedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId
+          )
+        ) {
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
           let thisDepositedValue = depositedReserve.depositedAmount
             .mul(reserveInfoWrapper.supplyAmount())
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
@@ -436,18 +590,28 @@ export class ObligationInfoWrapper {
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
           depositedValue = depositedValue.add(thisDepositedValue);
 
-          let thisUnhealthyBorrowValue = new BN(reserveInfoWrapper.reserveInfo.config.liquidationThreshold)
+          let thisUnhealthyBorrowValue = new BN(
+            reserveInfoWrapper.reserveInfo.config.liquidationThreshold
+          )
             .mul(thisDepositedValue)
             .div(new BN(`1${"".padEnd(2, "0")}`));
-          unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
+          unhealthyBorrowValue = unhealthyBorrowValue.add(
+            thisUnhealthyBorrowValue
+          );
         }
       }
     }
 
     for (let borrowedReserve of this.obligationLoans) {
       for (let reserveInfoWrapper of reserveInfos) {
-        if (borrowedReserve.reserveId.equals(reserveInfoWrapper.reserveInfo.reserveId)) {
-          let decimal = Number(new BN(reserveInfoWrapper.reserveTokenDecimal()));
+        if (
+          borrowedReserve.reserveId.equals(
+            reserveInfoWrapper.reserveInfo.reserveId
+          )
+        ) {
+          let decimal = Number(
+            new BN(reserveInfoWrapper.reserveTokenDecimal())
+          );
           let thisborrowedValue = borrowedReserve.borrowedAmount
             .mul(reserveInfoWrapper.reserveInfo.liquidity.marketPrice)
             .div(new BN(`1${"".padEnd(decimal, "0")}`));
@@ -461,14 +625,29 @@ export class ObligationInfoWrapper {
     this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
   }
 
-  getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
+  getRefreshedBorrowLimit(
+    reserves: ReserveInfoWrapper[],
+    tokenList: IServicesTokenInfo[]
+  ) {
     const limits = this.obligationCollaterals.map((deposit) => {
-      const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
-      const supplyToken = tokenList.find((t) => t.mint === reserve?.supplyTokenMint().toBase58());
+      const reserve = reserves.find((r) =>
+        r.reserveInfo.reserveId.equals(deposit.reserveId)
+      );
+      const supplyToken = tokenList.find(
+        (t) => t.mint === reserve?.supplyTokenMint().toBase58()
+      );
       if (!reserve || !supplyToken) return 0;
-      const depositAmount = reserve.convertReserveAmountToLiquidityAmount(deposit.depositedAmount);
-      const amt = Number(depositAmount) / 10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
-      return amt * supplyToken.price * (Number(reserve?.reserveInfo.config.loanToValueRatio) / 100);
+      const depositAmount = reserve.convertReserveAmountToLiquidityAmount(
+        deposit.depositedAmount
+      );
+      const amt =
+        Number(depositAmount) /
+        10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
+      return (
+        amt *
+        supplyToken.price *
+        (Number(reserve?.reserveInfo.config.loanToValueRatio) / 100)
+      );
     });
     return limits.length > 0 ? limits.reduce((a, b) => a + b) : 0;
   }
@@ -491,14 +670,21 @@ export function parseObligationData(data: any) {
     dataFlat,
   } = decodedInfo;
 
-  const depositsBuffer = dataFlat.slice(0, depositsLen * COLLATERAL_LAYOUT.span);
-  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(depositsBuffer) as ObligationCollateral[];
+  const depositsBuffer = dataFlat.slice(
+    0,
+    depositsLen * COLLATERAL_LAYOUT.span
+  );
+  const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
+    depositsBuffer
+  ) as ObligationCollateral[];
 
   const borrowsBuffer = dataFlat.slice(
     depositsBuffer.length,
     depositsLen * COLLATERAL_LAYOUT.span + borrowsLen * LOAN_LAYOUT.span
   );
-  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as ObligationLoan[];
+  const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(
+    borrowsBuffer
+  ) as ObligationLoan[];
 
   const obligationInfo = {
     version,
@@ -511,7 +697,11 @@ export function parseObligationData(data: any) {
     unhealthyBorrowValue,
   } as ObligationInfo;
 
-  const obligationInfoWrapper = new ObligationInfoWrapper(obligationInfo, depositCollaterals, borrowLoans);
+  const obligationInfoWrapper = new ObligationInfoWrapper(
+    obligationInfo,
+    depositCollaterals,
+    borrowLoans
+  );
 
   return obligationInfoWrapper;
 }

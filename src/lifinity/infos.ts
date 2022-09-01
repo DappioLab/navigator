@@ -1,15 +1,39 @@
-import {
-  Connection,
-  MemcmpFilter,
-  GetProgramAccountsConfig,
-  DataSizeFilter,
-  PublicKey,
-} from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
-import { MintLayout } from "@solana/spl-token-v2";
+import { IInstancePool, IPoolInfo, IPoolInfoWrapper } from "../types";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
-import { LIFINITY_ALL_AMM_ID, LIFINITY_PROGRAM_ID } from "./ids";
+import { LIFINITY_ALL_AMM_ID } from "./ids";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceLifinity
+
+let infos: IInstancePool;
+
+infos = class InstanceLifinity {
+  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
+    return [];
+  }
+
+  static async getPool(
+    connection: Connection,
+    poolId: PublicKey
+  ): Promise<IPoolInfo> {
+    return {} as IPoolInfo;
+  }
+
+  static parsePool(data: Buffer, farmId: PublicKey): IPoolInfo {
+    return {} as IPoolInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export interface PoolInfo extends IPoolInfo {
   index: BN; // discriminator

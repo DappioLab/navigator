@@ -22,7 +22,56 @@ import {
   PSY_PROGRAM_ID,
 } from "./ids";
 import { struct, u128 } from "@project-serum/borsh";
-import { IDepositorInfo, IVaultInfo } from "../types";
+import { IDepositorInfo, IInstanceVault, IVaultInfo } from "../types";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceKatana
+
+let infos: IInstanceVault;
+
+infos = class InstanceKatana {
+  static async getAllVaults(connection: Connection): Promise<IVaultInfo[]> {
+    return [];
+  }
+
+  static async getVault(
+    connection: Connection,
+    vaultId: PublicKey
+  ): Promise<IVaultInfo> {
+    return {} as IVaultInfo;
+  }
+
+  static parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo {
+    return {} as IVaultInfo;
+  }
+
+  static async getAllDepositors(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IDepositorInfo[]> {
+    return [];
+  }
+
+  static async getDepositor(
+    connection: Connection,
+    depositorId: PublicKey
+  ): Promise<IDepositorInfo> {
+    return {} as IDepositorInfo;
+  }
+
+  static parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo {
+    return {} as IDepositorInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export interface VaultInfo extends IVaultInfo {
   // vaultId
