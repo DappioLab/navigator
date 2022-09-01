@@ -36,6 +36,12 @@ export interface IVaultInfo {
 }
 
 // TODO
+export interface IDepositorInfo {
+  depositorId: PublicKey;
+  userKey: PublicKey;
+}
+
+// TODO
 export interface IReserveInfo {
   reserveId: PublicKey;
 }
@@ -105,6 +111,21 @@ export interface IInstanceMoneyMarket {
     version?: number
   ): Promise<IObligationInfo>;
   parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo;
+}
+
+export interface IInstanceVault {
+  getAllVaults(connection: Connection): Promise<IVaultInfo[]>;
+  getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo>;
+  parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo;
+  getAllDepositors(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IDepositorInfo[]>;
+  getDepositor(
+    connection: Connection,
+    depositorId: PublicKey
+  ): Promise<IDepositorInfo>;
+  parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo;
 }
 
 /// Example
