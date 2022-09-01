@@ -4,6 +4,8 @@
   "description": "",
   "main": "src/index.ts",
   "scripts": {
+    "testRaydium": "mocha --require ts-node/register --timeout 10000000 ./test/raydium.ts",
+
     "test": "mocha --require ts-node/register --timeout 10000000 ./test/**/*",
     "test-farm": "mocha --require ts-node/register --timeout 10000000 ./test/farm.ts",
     "test-lend": "mocha --require ts-node/register --timeout 10000000 ./test/lend.ts",
