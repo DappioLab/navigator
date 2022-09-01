@@ -9,9 +9,11 @@ import {
   IReserveInfo,
   IReserveInfoWrapper,
   IVaultInfo,
+  IVaultInfoWrapper,
 } from "../types";
-import { TULIP_PROGRAM_ID } from "./ids";
+import { TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import { RESERVE_LAYOUT } from "./layout";
+import config from "./constants/vaults_v2_config.json";
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -21,7 +23,7 @@ import { RESERVE_LAYOUT } from "./layout";
 
 let infos: IInstanceMoneyMarket & IInstanceVault;
 
-infos = class InstanceSolend {
+infos = class InstanceTulip {
   static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<IReserveInfo[]> {
     return [];
   }
@@ -142,6 +144,13 @@ export interface ReserveInfo extends IReserveInfo {
   config: ReserveConfig;
 }
 
+export interface VaultInfo extends IVaultInfo {
+  vaultPDA: PublicKey;
+  underlyingDepositQueue: PublicKey;
+  underlyingCompoundQueue: PublicKey;
+  underlyingMint: PublicKey;
+}
+
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
@@ -248,5 +257,42 @@ export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
     liquidity,
     collateral,
     config,
+  };
+}
+
+export class VaultInfoWrapper implements IVaultInfoWrapper {
+  constructor(public vaultInfo: VaultInfo) {}
+
+  async deriveTrackingAddress(owner: PublicKey): Promise<[PublicKey, number]> {
+    return await PublicKey.findProgramAddress(
+      [Buffer.from("tracking"), this.vaultInfo.vaultId.toBuffer(), owner.toBuffer()],
+      TULIP_VAULT_V2_PROGRAM_ID
+    );
+  }
+
+  async deriveTrackingPdaAddress(trackingAddress: PublicKey): Promise<[PublicKey, number]> {
+    return await PublicKey.findProgramAddress([trackingAddress.toBuffer()], TULIP_VAULT_V2_PROGRAM_ID);
+  }
+
+  async deriveTrackingQueueAddress(trackingPdaAddress: PublicKey): Promise<[PublicKey, number]> {
+    return await PublicKey.findProgramAddress(
+      [Buffer.from("queue"), trackingPdaAddress.toBuffer()],
+      TULIP_VAULT_V2_PROGRAM_ID
+    );
+  }
+}
+
+async function getVault(connection: Connection, vaultId: PublicKey): Promise<VaultInfo> {
+  const targetVault = config.vaults.accounts.find((vault) => {
+    return vault.multi_deposit_optimizer?.account.toString() == vaultId.toString();
+  });
+
+  return {
+    vaultId: new PublicKey(targetVault!.multi_deposit_optimizer!.account),
+    shareMint: new PublicKey(targetVault!.multi_deposit_optimizer!.base.shares_mint),
+    vaultPDA: new PublicKey(targetVault!.multi_deposit_optimizer!.base.pda),
+    underlyingDepositQueue: new PublicKey(targetVault!.multi_deposit_optimizer!.base.underlying_deposit_queue),
+    underlyingCompoundQueue: new PublicKey(targetVault!.multi_deposit_optimizer!.base.underlying_compound_queue),
+    underlyingMint: new PublicKey(targetVault!.multi_deposit_optimizer!.base.underlying_mint),
   };
 }
