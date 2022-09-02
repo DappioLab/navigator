@@ -1,16 +1,16 @@
-# Dappio-ts: The Universal Typescript Client for Instantiating DeFi Protocols
+# Navigator: The Universal Typescript Client for Instantiating DeFi Protocols
 
 ## Overview
 
-![](https://hackmd.io/_uploads/ByO7BxCko.png)
+![](https://hackmd.io/_uploads/SJtWPoyxo.png)
 
-`dappio-ts` is a Typescript client for instantiating various of kinds of DeFi protocols. You can use it as a standalone dependency in your own project or together with [Dappio Gateway](https://guide.dappio.xyz/the-universal-rabbit-hole).
+Navigator is a Typescript client for instantiating various of kinds of DeFi protocols. You can use it as a standalone dependency in your own project or together with [Dappio Gateway](https://guide.dappio.xyz/the-universal-rabbit-hole).
 
 ## Usage
 
 ```typescript
 import { PublicKey, Connection } from "@solana/web3.js";
-import { raydium } from "@dappio/dappio-ts";
+import { raydium } from "@dappio/navigator";
 
 const connection = new Connection("https:////api.mainnet-beta.solana.com", {
   commitment: "confirmed",
