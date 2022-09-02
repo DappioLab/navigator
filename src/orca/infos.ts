@@ -69,6 +69,13 @@ infos = class InstanceOrca {
     return [];
   }
 
+  static async getFarmerId(
+    farmerId: PublicKey,
+    userKey: PublicKey
+  ): Promise<PublicKey> {
+    return new PublicKey("");
+  }
+
   static async getFarmer(
     connection: Connection,
     farmerId: PublicKey,

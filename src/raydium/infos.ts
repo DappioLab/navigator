@@ -929,10 +929,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
           this.farmInfo.poolRewardTokenAccountPubkeyB
         );
       } catch (e) {
-        console.log(
-          "[dappio-ts/src/raydium/infos.ts] -> updateAllTokenAccount() failed at parseTokenAccount\n",
-          e
-        );
+        console.log("updateAllTokenAccount() failed at parseTokenAccount", e);
       }
     }
     return this;
