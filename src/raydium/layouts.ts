@@ -7,8 +7,7 @@ import { blob, seq, struct } from "buffer-layout";
 
 /* ================= state layouts ================= */
 
-// Legacy name: STAKE_INFO_LAYOUT
-export const FARM_STATE_LAYOUT_V3 = struct([
+export const FARM_LAYOUT_V3 = struct([
   u64("state"),
   u64("nonce"),
   publicKey("lpVault"),
@@ -23,8 +22,7 @@ export const FARM_STATE_LAYOUT_V3 = struct([
   seq(u64(), 1, "perSlotRewards"),
 ]);
 
-// Legacy name: STAKE_INFO_LAYOUT_V4
-export const REAL_FARM_STATE_LAYOUT_V5 = struct([
+export const FARM_LAYOUT_V5 = struct([
   u64("state"),
   u64("nonce"),
   publicKey("lpVault"),
@@ -42,10 +40,7 @@ export const REAL_FARM_STATE_LAYOUT_V5 = struct([
   publicKey("owner"), // name name defined by dappio
 ]);
 
-/* ================= ledger layouts ================= */
-
-// Legacy name:  USER_STAKE_INFO_ACCOUNT_LAYOUT
-export const FARM_LEDGER_LAYOUT_V3_1 = struct([
+export const FARMER_LAYOUT_V3_1 = struct([
   u64("state"),
   publicKey("id"),
   publicKey("owner"),
@@ -53,8 +48,7 @@ export const FARM_LEDGER_LAYOUT_V3_1 = struct([
   seq(u64(), 1, "rewardDebts"),
 ]);
 
-// Legacy name: USER_STAKE_INFO_ACCOUNT_LAYOUT_V3_1
-export const FARM_LEDGER_LAYOUT_V3_2 = struct([
+export const FARMER_LAYOUT_V3_2 = struct([
   u64("state"),
   publicKey("id"),
   publicKey("owner"),
@@ -63,16 +57,15 @@ export const FARM_LEDGER_LAYOUT_V3_2 = struct([
   seq(u64(), 17),
 ]);
 
-// Legacy name: USER_STAKE_INFO_ACCOUNT_LAYOUT_V4
-export const FARM_LEDGER_LAYOUT_V5_1 = struct([
+export const FARMER_LAYOUT_V5_1 = struct([
   u64("state"),
   publicKey("id"),
   publicKey("owner"),
   u64("deposited"),
   seq(u64(), 2, "rewardDebts"),
 ]);
-// Legacy name: USER_STAKE_INFO_ACCOUNT_LAYOUT_V5
-export const FARM_LEDGER_LAYOUT_V5_2 = struct([
+
+export const FARMER_LAYOUT_V5_2 = struct([
   u64("state"),
   publicKey("id"),
   publicKey("owner"),
@@ -81,7 +74,7 @@ export const FARM_LEDGER_LAYOUT_V5_2 = struct([
   seq(u64(), 17),
 ]);
 
-export const AMM_INFO_LAYOUT_V4 = struct([
+export const POOL_LAYOUT_V4 = struct([
   u64("status"),
   u64("nonce"),
   u64("orderNum"),
@@ -134,37 +127,4 @@ export const AMM_INFO_LAYOUT_V4 = struct([
   publicKey("poolTempLpTokenAccount"),
   publicKey("ammOwner"),
   publicKey("pnlOwner"),
-]);
-
-export const STAKE_INFO_LAYOUT = struct([
-  u64("state"),
-  u64("nonce"),
-  publicKey("poolLpTokenAccountPubkey"),
-  publicKey("poolRewardTokenAccountPubkey"),
-  publicKey("owner"),
-  publicKey("feeOwner"),
-  u64("feeY"),
-  u64("feeX"),
-  u64("totalReward"),
-  u128("rewardPerShareNet"),
-  u64("lastBlock"),
-  u64("rewardPerBlock"),
-]);
-
-export const STAKE_INFO_LAYOUT_V4 = struct([
-  u64("state"),
-  u64("nonce"),
-  publicKey("poolLpTokenAccountPubkey"),
-  publicKey("poolRewardTokenAccountPubkey"),
-  u64("totalReward"),
-  u128("perShare"),
-  u64("perBlock"),
-  u8("option"),
-  publicKey("poolRewardTokenAccountPubkeyB"),
-  blob(7),
-  u64("totalRewardB"),
-  u128("perShareB"),
-  u64("perBlockB"),
-  u64("lastBlock"),
-  publicKey("owner"),
 ]);

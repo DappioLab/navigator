@@ -10,6 +10,8 @@ import {
   IFarmerInfo,
   IFarmInfo,
   IFarmInfoWrapper,
+  IInstanceMoneyMarket,
+  IObligationInfo,
   IReserveInfo,
   IReserveInfoWrapper,
 } from "../types";
@@ -37,6 +39,62 @@ import {
 import { seq } from "buffer-layout";
 import { struct, u64, u8, bool } from "@project-serum/borsh";
 import { IServicesTokenInfo } from "../utils";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceLarix
+
+let infos: IInstanceMoneyMarket;
+
+infos = class InstanceSolend {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey
+  ): Promise<IReserveInfo[]> {
+    return [];
+  }
+
+  static async getReserve(
+    connection: Connection,
+    reserveId: PublicKey
+  ): Promise<IReserveInfo> {
+    return {} as IReserveInfo;
+  }
+
+  static parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo {
+    return {} as IReserveInfo;
+  }
+
+  static async getAllObligations(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IObligationInfo[]> {
+    return [];
+  }
+
+  static async getObligation(
+    connection: Connection,
+    obligationId: PublicKey,
+    version?: number
+  ): Promise<IObligationInfo> {
+    return {} as IObligationInfo;
+  }
+
+  static parseObligation(
+    data: Buffer,
+    obligationId: PublicKey
+  ): IObligationInfo {
+    return {} as IObligationInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export const RESERVE_LAYOUT_SPAN = 873;
 

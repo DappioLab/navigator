@@ -7,19 +7,83 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmerInfo, IFarmInfo, IPoolInfo, IPoolInfoWrapper } from "../types";
 import {
-  computeD,
-  getTokenAccountAmount,
-  getTokenSupply,
-  normalizedTradeFee,
-  N_COINS,
-  ZERO,
-} from "../utils";
+  IFarmerInfo,
+  IFarmInfo,
+  IInstanceFarm,
+  IInstancePool,
+  IPoolInfo,
+  IPoolInfoWrapper,
+} from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { utils } from "..";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceOrca
+
+let infos: IInstancePool & IInstanceFarm;
+
+infos = class InstanceOrca {
+  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
+    return [];
+  }
+
+  static async getPool(
+    connection: Connection,
+    poolId: PublicKey
+  ): Promise<IPoolInfo> {
+    return {} as IPoolInfo;
+  }
+
+  static parsePool(data: Buffer, farmId: PublicKey): IPoolInfo {
+    return {} as IPoolInfo;
+  }
+
+  static async getAllFarms(
+    connection: Connection,
+    rewardMint?: PublicKey
+  ): Promise<IFarmInfo[]> {
+    return [];
+  }
+
+  static async getFarm(
+    connection: Connection,
+    farmId: PublicKey
+  ): Promise<IFarmInfo> {
+    return {} as IFarmInfo;
+  }
+
+  static parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo {
+    return {} as IFarmInfo;
+  }
+
+  static async getAllFarmers(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IFarmerInfo[]> {
+    return [];
+  }
+
+  static async getFarmer(
+    connection: Connection,
+    farmerId: PublicKey,
+    version?: number
+  ): Promise<IFarmerInfo> {
+    return {} as IFarmerInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
 export interface PoolInfo extends IPoolInfo {
   version: BN;
   isInitialized: BN;
@@ -70,12 +134,12 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   const config: GetProgramAccountsConfig = { filters: filters };
   const allOrcaPool = await connection.getProgramAccounts(
     ORCA_POOL_PROGRAM_ID,
-    config,
+    config
   );
   for (const accountInfo of allOrcaPool) {
     let pooldata = await parsePoolInfoData(
       accountInfo.account.data,
-      accountInfo.pubkey,
+      accountInfo.pubkey
     );
     allPools.push(pooldata);
     pubKeys.push(pooldata.tokenAccountA);
@@ -85,22 +149,20 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   while (pubKeys.length > 0) {
     let pubKeysChunk = pubKeys.splice(
       0,
-      pubKeys.length > 99 ? 99 : pubKeys.length,
+      pubKeys.length > 99 ? 99 : pubKeys.length
     );
     let amountInfos = await connection.getMultipleAccountsInfo(pubKeysChunk);
     for (let i = 0; i < amountInfos.length / 3; i++) {
       let tokenAAmount = utils.parseTokenAccount(
         amountInfos[i * 3]?.data,
-        pubKeysChunk[i * 3],
+        pubKeysChunk[i * 3]
       ).amount;
       let tokenBAmount = utils.parseTokenAccount(
         amountInfos[i * 3 + 1]?.data,
-        pubKeysChunk[i * 3 + 1],
+        pubKeysChunk[i * 3 + 1]
       ).amount;
       let lpSupply = new BN(
-        Number(
-          MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply,
-        ),
+        Number(MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply)
       );
       accounts.push({
         tokenAccountA: tokenAAmount,
@@ -155,7 +217,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 }
 export async function parsePoolInfoData(
   data: any,
-  pubkey: PublicKey,
+  pubkey: PublicKey
 ): Promise<PoolInfo> {
   const decodedData = POOL_LAYOUT.decode(data);
   let {
@@ -191,7 +253,7 @@ export async function parsePoolInfoData(
 
 export async function getAllFarmers(
   connection: Connection,
-  wallet: PublicKey,
+  wallet: PublicKey
 ): Promise<FarmerInfo[]> {
   let allFarmers: FarmerInfo[] = [];
   const sizeFilter: DataSizeFilter = {
@@ -208,12 +270,12 @@ export async function getAllFarmers(
   const config: GetProgramAccountsConfig = { filters: filters };
   const allOrcaPool = await connection.getProgramAccounts(
     ORCA_FARM_PROGRAM_ID,
-    config,
+    config
   );
   for (const accountInfo of allOrcaPool) {
     let farmerInfo = await parseFarmerInfoData(
       accountInfo.account.data,
-      accountInfo.pubkey,
+      accountInfo.pubkey
     );
     allFarmers.push(farmerInfo);
   }
@@ -228,12 +290,12 @@ export async function getAllFarms(connection: Connection): Promise<FarmInfo[]> {
   const config: GetProgramAccountsConfig = { filters: filters };
   const allOrcaFarm = await connection.getProgramAccounts(
     ORCA_FARM_PROGRAM_ID,
-    config,
+    config
   );
   for (const accountInfo of allOrcaFarm) {
     let farmdata = await parseFarmInfoData(
       accountInfo.account.data,
-      accountInfo.pubkey,
+      accountInfo.pubkey
     );
 
     if (farmdata.emissionsPerSecondNumerator.cmpn(0)) {
@@ -245,12 +307,12 @@ export async function getAllFarms(connection: Connection): Promise<FarmInfo[]> {
 }
 export async function parseFarmInfoData(
   data: any,
-  pubkey: PublicKey,
+  pubkey: PublicKey
 ): Promise<FarmInfo> {
   const decodedData = FARM_LAYOUT.decode(data);
   let authority = await PublicKey.findProgramAddress(
     [pubkey.toBuffer()],
-    ORCA_FARM_PROGRAM_ID,
+    ORCA_FARM_PROGRAM_ID
   );
   let {
     isInitialized,
@@ -287,7 +349,7 @@ export async function parseFarmInfoData(
     cumulativeEmissionsPerFarmToken: new BN(
       cumulativeEmissionsPerFarmToken,
       10,
-      "le",
+      "le"
     ),
   };
   return farmInfo;
@@ -295,7 +357,7 @@ export async function parseFarmInfoData(
 
 export async function parseFarmerInfoData(
   data: any,
-  pubkey: PublicKey,
+  pubkey: PublicKey
 ): Promise<FarmerInfo> {
   let decodedData = FARMER_LAYOUT.decode(data);
   let {
@@ -316,7 +378,7 @@ export async function parseFarmerInfoData(
     cumulativeEmissionsCheckpoint: new BN(
       cumulativeEmissionsCheckpoint,
       10,
-      "le",
+      "le"
     ),
   };
   return farmerInfo;
@@ -327,18 +389,18 @@ export async function getPool(poolKey: PublicKey, connection: Connection) {
   let pool = await parsePoolInfoData(data.data, poolKey);
   let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
   let balanceAccounts = (await connection.getMultipleAccountsInfo(
-    accounts,
+    accounts
   )) as AccountInfo<Buffer>[];
   let tokenAccountABalance = utils.parseTokenAccount(
     balanceAccounts[0].data,
-    accounts[0],
+    accounts[0]
   ).amount;
   let tokenAccountBBalance = utils.parseTokenAccount(
     balanceAccounts[1].data,
-    accounts[1],
+    accounts[1]
   ).amount;
   let lpMintBalance = new BN(
-    Number(MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply),
+    Number(MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply)
   );
   pool.tokenSupplyA = tokenAccountABalance;
   pool.tokenSupplyB = tokenAccountBBalance;
@@ -349,7 +411,7 @@ export async function getPool(poolKey: PublicKey, connection: Connection) {
 export async function getPoolAuthority(poolKey: PublicKey) {
   let poolAuthority = await PublicKey.findProgramAddress(
     [poolKey.toBuffer()],
-    ORCA_POOL_PROGRAM_ID,
+    ORCA_POOL_PROGRAM_ID
   );
   return poolAuthority[0];
 }
@@ -357,7 +419,7 @@ export async function getPoolAuthority(poolKey: PublicKey) {
 export async function checkFarmer(
   farmId: PublicKey,
   wallet: PublicKey,
-  connection: Connection,
+  connection: Connection
 ) {
   let farmer = await getFarmerKey(farmId, wallet);
   let farmerAccount = await connection.getAccountInfo(farmer[0]);
@@ -370,7 +432,7 @@ export async function checkFarmer(
 export async function getFarmerKey(farmId: PublicKey, wallet: PublicKey) {
   let farmerKey = await PublicKey.findProgramAddress(
     [farmId.toBuffer(), wallet.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
-    ORCA_FARM_PROGRAM_ID,
+    ORCA_FARM_PROGRAM_ID
   );
   return farmerKey;
 }

@@ -15,7 +15,7 @@ export const OPTION_PRAM_LAYOUT = struct([
   u64("strike"),
 ]);
 
-export const STATE_LAYOUT = struct([
+export const VAULT_LAYOUT = struct([
   publicKey("admin"),
   publicKey("pendingAdmin"),
   publicKey("vaultAuthority"),
@@ -57,7 +57,7 @@ export const STATE_LAYOUT = struct([
   bool("onlyEarlyAccess"),
 ]);
 
-export const USER_VAULT_LAYOUT = struct([
+export const DEPOSITOR_LAYOUT = struct([
   publicKey("owner"),
   u128("PendingDepositDataRound"),
   u128("PendingDepositDataAmount"),

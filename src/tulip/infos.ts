@@ -7,9 +7,106 @@ import {
   DataSizeFilter,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IReserveInfo, IReserveInfoWrapper } from "../types";
+import {
+  IDepositorInfo,
+  IInstanceMoneyMarket,
+  IInstanceVault,
+  IObligationInfo,
+  IReserveInfo,
+  IReserveInfoWrapper,
+  IVaultInfo,
+} from "../types";
 import { TULIP_PROGRAM_ID } from "./ids";
 import { RESERVE_LAYOUT } from "./layout";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceTulip
+
+let infos: IInstanceMoneyMarket & IInstanceVault;
+
+infos = class InstanceSolend {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey
+  ): Promise<IReserveInfo[]> {
+    return [];
+  }
+
+  static async getReserve(
+    connection: Connection,
+    reserveId: PublicKey
+  ): Promise<IReserveInfo> {
+    return {} as IReserveInfo;
+  }
+
+  static parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo {
+    return {} as IReserveInfo;
+  }
+
+  static async getAllObligations(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IObligationInfo[]> {
+    return [];
+  }
+
+  static async getObligation(
+    connection: Connection,
+    obligationId: PublicKey,
+    version?: number
+  ): Promise<IObligationInfo> {
+    return {} as IObligationInfo;
+  }
+
+  static parseObligation(
+    data: Buffer,
+    obligationId: PublicKey
+  ): IObligationInfo {
+    return {} as IObligationInfo;
+  }
+
+  static async getAllVaults(connection: Connection): Promise<IVaultInfo[]> {
+    return [];
+  }
+
+  static async getVault(
+    connection: Connection,
+    vaultId: PublicKey
+  ): Promise<IVaultInfo> {
+    return {} as IVaultInfo;
+  }
+
+  static parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo {
+    return {} as IVaultInfo;
+  }
+
+  static async getAllDepositors(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IDepositorInfo[]> {
+    return [];
+  }
+
+  static async getDepositor(
+    connection: Connection,
+    depositorId: PublicKey
+  ): Promise<IDepositorInfo> {
+    return {} as IDepositorInfo;
+  }
+
+  static parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo {
+    return {} as IDepositorInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 const RESERVE_LAYOUT_SPAN = 622;
 const WAD = new BN(10).pow(new BN(18));

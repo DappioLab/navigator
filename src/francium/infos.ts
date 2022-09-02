@@ -27,10 +27,68 @@ import {
 import {
   IFarmerInfo,
   IFarmInfo,
+  IInstanceMoneyMarket,
+  IObligationInfo,
   IReserveInfo,
   IReserveInfoWrapper,
 } from "../types";
 import { utils } from "..";
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+// TODO: Implement InstanceFrancium
+
+let infos: IInstanceMoneyMarket;
+
+infos = class InstanceFrancium {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey
+  ): Promise<IReserveInfo[]> {
+    return [];
+  }
+
+  static async getReserve(
+    connection: Connection,
+    reserveId: PublicKey
+  ): Promise<IReserveInfo> {
+    return {} as IReserveInfo;
+  }
+
+  static parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo {
+    return {} as IReserveInfo;
+  }
+
+  static async getAllObligations(
+    connection: Connection,
+    userKey: PublicKey
+  ): Promise<IObligationInfo[]> {
+    return [];
+  }
+
+  static async getObligation(
+    connection: Connection,
+    obligationId: PublicKey,
+    version?: number
+  ): Promise<IObligationInfo> {
+    return {} as IObligationInfo;
+  }
+
+  static parseObligation(
+    data: Buffer,
+    obligationId: PublicKey
+  ): IObligationInfo {
+    return {} as IObligationInfo;
+  }
+};
+
+export { infos };
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 export interface ReserveInfo extends IReserveInfo {
   market: PublicKey;

@@ -34,9 +34,17 @@ import {
   parseReserveInfo,
   RaydiumStrategyState,
 } from "./infos";
-import { parseV4PoolInfo, parseFarmV45, FARM_PROGRAM_ID_V5 } from "../raydium";
+import {
+  infos as raydiumInfos,
+  PoolInfo as RaydiumPoolInfo,
+  FarmInfo as RaydiumFarmInfo,
+  FarmInfoWrapper as RaydiumFarmInfoWrapper,
+  FARM_PROGRAM_ID_V5,
+} from "../raydium";
 import { Market } from "@project-serum/serum";
 import { FRANCIUM_LENDING_PROGRAM_ID, LENDING_MARKET } from "./ids";
+
+// NOTICE: This file will be removed!
 
 // Raydium-specific
 export async function getDepositTx(
@@ -63,7 +71,10 @@ export async function getDepositTx(
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
   let lending0 = parseReserveInfo(accountsInfo[0]?.data, pubkeys[0]);
   let lending1 = parseReserveInfo(accountsInfo[1]?.data, pubkeys[1]);
-  let ammInfo = parseV4PoolInfo(accountsInfo[2]?.data, pubkeys[2]).poolInfo;
+  let ammInfo = raydiumInfos.parsePool(
+    accountsInfo[2]?.data as Buffer,
+    pubkeys[2]
+  ) as RaydiumPoolInfo;
   let serumMarket = await Market.load(
     connection,
     ammInfo.serumMarket,
@@ -154,8 +165,15 @@ export async function getWithdrawTx(
 
   let pubkeys = [strategy.ammId, strategy.stakePoolId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let ammInfo = parseV4PoolInfo(accountsInfo[0]?.data, pubkeys[0]).poolInfo;
-  let stakeInfo = parseFarmV45(accountsInfo[1]?.data, pubkeys[1], 4);
+  let ammInfo = raydiumInfos.parsePool(
+    accountsInfo[0]?.data as Buffer,
+    pubkeys[0]
+  ) as RaydiumPoolInfo;
+  let stakeInfo = raydiumInfos.parseFarm(
+    accountsInfo[1]?.data as Buffer,
+    pubkeys[1]
+  ) as RaydiumFarmInfo;
+  const farmInfoWrapper = new RaydiumFarmInfoWrapper(stakeInfo);
   let serumMarket = await Market.load(
     connection,
     ammInfo.serumMarket,
@@ -199,7 +217,7 @@ export async function getWithdrawTx(
   preTx.add(
     await unstake(
       strategy,
-      stakeInfo,
+      farmInfoWrapper,
       wallet,
       strategyFarmInfo,
       userInfoAccount,

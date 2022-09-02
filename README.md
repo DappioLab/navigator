@@ -1,55 +1,60 @@
-# Dappio typescript library
+# Dappio-ts: The Universal Typescript Client for Instantiating DeFi Protocols
 
-# Usage
+## Overview
 
-## Farm test
+![](https://hackmd.io/_uploads/ByO7BxCko.png)
 
-Simply use `npm run test` to start testing Raydium and Saber amm farming features
+`dappio-ts` is a Typescript client for instantiating various of kinds of DeFi protocols. You can use it as a standalone dependency in your own project or together with [Dappio Gateway](https://guide.dappio.xyz/the-universal-rabbit-hole).
 
-Before doing the test please following the steps below:
+## Usage
 
-1. Create a test wallet address from your phantom wallet.
-2. export the wallet address to solana cli interface.
+```typescript
+import { PublicKey, Connection } from "@solana/web3.js";
+import { raydium } from "@dappio/dappio-ts";
 
-- get the secret phrases from phantom browser extension and copy it to clipboard.
-- export the certain wallet derived from your secret phrase. Change the first 0 to the wallet index you want to export
+const connection = new Connection("https:////api.mainnet-beta.solana.com", {
+  commitment: "confirmed",
+});
 
+// Fetch all pools
+const pools = await raydium.infos.getAllPools(connection);
+
+// Fetch pool (RAY-USDC)
+const poolId = new PublicKey("6UmmUiYoBjSrhakAobJw8BvkmJtDVxaeBtbt7rxWo1mg");
+const pool = await raydium.infos.getPool(connection, poolId);
+
+// Fetch all farms
+const farms = await raydium.infos.getAllFarms(connection);
+
+// Fetch farm (RAY-USDC)
+const farmId = new PublicKey("CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS");
+const farm = await raydium.infos.getFarm(connection, farmId);
 ```
-solana-keygen recover 'prompt:?key=0/0' -o ~/.config/solana/dappio-1.json
-```
 
-- make sure the solana cli config is under dappio mainnet fork
+## Supported Protocols
 
-```
-Config File: /Users/macbookpro4eric/.config/solana/cli/config.yml
-RPC URL: https://rpc-mainnet-fork.dappio.xyz
-WebSocket URL: https://rpc-mainnet-fork.dappio.xyz/ws
-Keypair Path: /Users/macbookpro4eric/.config/solana/dappio-1.json
-Commitment: confirmed
-```
+| Protocol | Type               |
+| -------- | ------------------ |
+| Raydium  | Pool / Farm        |
+| Orca     | Pool / Farm        |
+| Saber    | Pool / Farm        |
+| Lifinity | Pool               |
+| Solend   | MoneyMarket        |
+| Larix    | MoneyMarket / Farm |
+| Francium | MoneyMarket        |
+| Tulip    | MoneyMarket        |
+| Katana   | Vault              |
 
-- Airdrop 1 sol by `solana airdrop 1`
-- exchange Some RAY [here](https://solana-dapp-boilerplate.vercel.app/)
-- Stake the RAY into [Staking farm](https://raydium.io/staking/) in Raydium dapp (Remember to change the RPC to dappio-mainnet-fork: https://rpc-mainnet-fork.dappio.xyz )
+## Test
 
-## Katana test
+Run all tests:
 
 ```bash
-$ solana airdrop 10
-$ yarn coverCall
-# make sure there's USDC balance in the wallet first
-$ yarn putSell
+$ yarn run test
 ```
 
-## Larix Test
+Or specifically run test for one specific protocol:
 
 ```bash
-$ solana airdrop 1
-$ yarn larixTest
-```
-
-## Francium Test
-
-```bash
-$ yarn start
+$ yarn run testRaydium
 ```

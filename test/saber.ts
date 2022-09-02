@@ -1,7 +1,7 @@
-import { PublicKey, Connection } from "@solana/web3.js";
-import { larix } from "../src";
+import { Connection } from "@solana/web3.js";
+import { saber } from "../src";
 
-describe("Larix", () => {
+describe("Saber", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
@@ -24,19 +24,21 @@ describe("Larix", () => {
     wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   });
 
-  // const options = anchor.AnchorProvider.defaultOptions();
-  // const wallet = NodeWallet.local();
-  // const provider = new anchor.AnchorProvider(connection, wallet, options);
+  it("fetches pool data", async () => {
+    const pools = await saber.infos.getAllPools(connection);
+    const poolId = pools[0].poolId;
+    console.log(poolId.toString());
 
-  // anchor.setProvider(provider);
-
-  // const supplyAmount = 20000;
+    const pool = await saber.infos.getPool(connection, poolId);
+    console.log(pool);
+  });
 
   it("fetches farm data", async () => {
-    const farmId = new PublicKey(
-      "FStv7oj29DghUcCRDRJN9sEkB4uuh4SqWBY9pvSQ4Rch"
-    );
-    const farm = await larix.getFarm(connection, farmId);
+    const farms = await saber.infos.getAllFarms(connection);
+    const farmId = farms[0].farmId;
+    console.log(farmId.toString());
+
+    const farm = await saber.infos.getFarm(connection, farmId);
     console.log(farm);
   });
 });
