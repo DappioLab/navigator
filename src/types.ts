@@ -84,11 +84,22 @@ export interface IInstanceFarm {
     connection: Connection,
     userKey: PublicKey
   ): Promise<IFarmerInfo[]>;
+  getFarmerId(
+    farmId: PublicKey,
+    userKey: PublicKey,
+    version?: number
+  ): Promise<PublicKey>;
   getFarmer(
     connection: Connection,
     farmerId: PublicKey,
     version?: number
   ): Promise<IFarmerInfo>;
+
+  // Optional Methods
+  getFarmerIdWithBump?(
+    farmId: PublicKey,
+    userKey: PublicKey
+  ): Promise<[PublicKey, number]>;
 }
 
 export interface IInstanceNFTPool {

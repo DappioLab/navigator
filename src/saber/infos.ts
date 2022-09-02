@@ -342,10 +342,10 @@ infos = class InstanceSaber {
   }
 
   static async getFarmerId(
-    wallet: PublicKey,
-    farmId: PublicKey
+    farmId: PublicKey,
+    userKey: PublicKey
   ): Promise<PublicKey> {
-    let [farmerId, _] = await this._getFarmerIdWithBump(wallet, farmId);
+    let [farmerId, _] = await this.getFarmerIdWithBump(farmId, userKey);
     return farmerId;
   }
 
@@ -470,10 +470,11 @@ infos = class InstanceSaber {
 
     return authority;
   }
-  private static async _getFarmerIdWithBump(
-    userKey: PublicKey,
-    farmId: PublicKey
-  ) {
+
+  static async getFarmerIdWithBump(
+    farmId: PublicKey,
+    userKey: PublicKey
+  ): Promise<[PublicKey, number]> {
     let farmerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
     let farmer = await PublicKey.findProgramAddress(
       [farmerBytes, farmId.toBuffer(), userKey.toBuffer()],
