@@ -12,7 +12,7 @@ Navigator is a Typescript client for instantiating various of kinds of DeFi prot
 import { PublicKey, Connection } from "@solana/web3.js";
 import { raydium } from "@dappio/navigator";
 
-const connection = new Connection("https:////api.mainnet-beta.solana.com", {
+const connection = new Connection("https://api.mainnet-beta.solana.com", {
   commitment: "confirmed",
 });
 
