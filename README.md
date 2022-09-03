@@ -1,4 +1,4 @@
-# Navigator: The Universal Typescript Client for Instantiating DeFi Protocols
+# Dappio Navigator: The Universal Typescript Client for Instantiating DeFi Protocols
 
 ## Overview
 
