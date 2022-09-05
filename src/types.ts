@@ -7,6 +7,10 @@ export interface IPoolInfo {
   lpMint: PublicKey;
 }
 
+export interface INFTRarityInfo {
+  rarityId: PublicKey;
+}
+
 export interface INFTPoolInfo {
   poolId: PublicKey;
   proveTokenMint: PublicKey;
