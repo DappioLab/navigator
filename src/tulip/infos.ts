@@ -12,8 +12,8 @@ import {
   IVaultInfoWrapper,
 } from "../types";
 import { TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
-import { RESERVE_LAYOUT } from "./layout";
-import config from "./constants/vaults_v2_config.json";
+import { RAYDIUM_VAULT_V1_LAYOUT, RESERVE_LAYOUT } from "./layout";
+// import config from "./constants/vaults_v2_config.json";
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -88,6 +88,7 @@ export { infos };
 ////////////////////////////////////////////////////////////
 
 const RESERVE_LAYOUT_SPAN = 622;
+const RAYDIUM_VAULT_V1_LAYOUT_SPAN = 1712;
 const WAD = new BN(10).pow(new BN(18));
 
 interface ReserveConfig {
@@ -145,10 +146,7 @@ export interface ReserveInfo extends IReserveInfo {
 }
 
 export interface VaultInfo extends IVaultInfo {
-  vaultPDA: PublicKey;
-  underlyingDepositQueue: PublicKey;
-  underlyingCompoundQueue: PublicKey;
-  underlyingMint: PublicKey;
+  base: Base;
 }
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
@@ -282,17 +280,158 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   }
 }
 
-async function getVault(connection: Connection, vaultId: PublicKey): Promise<VaultInfo> {
-  const targetVault = config.vaults.accounts.find((vault) => {
-    return vault.multi_deposit_optimizer?.account.toString() == vaultId.toString();
-  });
+export async function getVault(connection: Connection, vaultId: PublicKey): Promise<RaydiumVaultInfo> {
+  const vaultAccountInfo = await connection.getAccountInfo(vaultId);
+
+  let parseVault;
+  switch (vaultAccountInfo?.data.length) {
+    case RAYDIUM_VAULT_V1_LAYOUT_SPAN:
+      parseVault = parseRaydiumVault;
+      break;
+    default:
+      parseVault = parseRaydiumVault;
+  }
+
+  const vault = parseVault(vaultAccountInfo?.data, vaultId);
+
+  return vault;
+}
+
+export function parseRaydiumVault(data: any, vaultId: PublicKey): RaydiumVaultInfo {
+  const decodeData = RAYDIUM_VAULT_V1_LAYOUT.decode(data);
+  const {
+    base,
+    raydiumLpMintAddress,
+    raydiumAmmId,
+    raydiumAmmAuthority,
+    raydiumAmmOpenOrders,
+    raydiumAmmQuantitiesOrTargetOrders,
+    raydiumStakeProgram,
+    raydiumLiquidityProgram,
+    raydiumCoinTokenAccount,
+    raydiumPcTokenAccount,
+    raydiumPoolTempTokenAccount,
+    raydiumPoolLpTokenAccount,
+    raydiumPoolWithdrawQueue,
+    raydiumPoolId,
+    raydiumPoolAuthority,
+    raydiumPoolRewardATokenAccount,
+    raydiumPoolRewardBTokenAccount,
+    dualRewards,
+    vaultRewardATokenAccount,
+    vaultRewardBTokenAccount,
+    vaultStakeInfoAccount,
+    associatedStakeInfoAddress,
+    coinMint,
+    pcMint,
+    serumMarket,
+  } = decodeData;
 
   return {
-    vaultId: new PublicKey(targetVault!.multi_deposit_optimizer!.account),
-    shareMint: new PublicKey(targetVault!.multi_deposit_optimizer!.base.shares_mint),
-    vaultPDA: new PublicKey(targetVault!.multi_deposit_optimizer!.base.pda),
-    underlyingDepositQueue: new PublicKey(targetVault!.multi_deposit_optimizer!.base.underlying_deposit_queue),
-    underlyingCompoundQueue: new PublicKey(targetVault!.multi_deposit_optimizer!.base.underlying_compound_queue),
-    underlyingMint: new PublicKey(targetVault!.multi_deposit_optimizer!.base.underlying_mint),
+    vaultId,
+    shareMint: base.sharesMint,
+    base,
+    raydiumLpMintAddress,
+    raydiumAmmId,
+    raydiumAmmAuthority,
+    raydiumAmmOpenOrders,
+    raydiumAmmQuantitiesOrTargetOrders,
+    raydiumStakeProgram,
+    raydiumLiquidityProgram,
+    raydiumCoinTokenAccount,
+    raydiumPcTokenAccount,
+    raydiumPoolTempTokenAccount,
+    raydiumPoolLpTokenAccount,
+    raydiumPoolWithdrawQueue,
+    raydiumPoolId,
+    raydiumPoolAuthority,
+    raydiumPoolRewardATokenAccount,
+    raydiumPoolRewardBTokenAccount,
+    dualRewards,
+    vaultRewardATokenAccount,
+    vaultRewardBTokenAccount,
+    vaultStakeInfoAccount,
+    associatedStakeInfoAddress,
+    coinMint,
+    pcMint,
+    serumMarket,
   };
+}
+
+interface Fees {
+  feeMultiplier: BN;
+  controllerFee: BN;
+  platformFee: BN;
+  withdrawFee: BN;
+  depositFee: BN;
+  feeWallet: PublicKey;
+  totalCollectedA: BN;
+  totalCollectedB: BN;
+}
+
+interface RealizedYield {
+  gainPerSecond: BN;
+  apr: BN;
+}
+
+interface Base {
+  nonce: BN;
+  tag: BN[];
+  pda: PublicKey;
+  pdaNonce: BN;
+  pdaAlignment: BN[];
+  totalDepositedBalance: BN;
+  totalShares: BN;
+  underlyingMint: PublicKey;
+  underlyingWithdrawQueue: PublicKey;
+  underlyingDepositQueue: PublicKey;
+  underlyingCompoundQueue: PublicKey;
+  sharesMint: PublicKey;
+  withdrawsPaused: BN;
+  depositsPaused: BN;
+  compoundPaused: BN;
+  supportsCompound: BN;
+  rebasePaused: BN;
+  rebalancePaused: BN;
+  stateAlignment: BN[];
+  precisionFactor: BN;
+  lastCompoundTime: BN;
+  compoundInterval: BN;
+  slippageTolerance: BN;
+  slipAlignment: BN[];
+  fees: Fees;
+  farm: BN[];
+  configured: BN;
+  configuredAlignment: BN[];
+  pendingFees: BN;
+  totalDepositedBalanceCap: BN;
+  realizedYield: RealizedYield;
+}
+
+export interface RaydiumVaultInfo extends VaultInfo {
+  base: Base;
+  raydiumLpMintAddress: PublicKey;
+  raydiumAmmId: PublicKey;
+  raydiumAmmAuthority: PublicKey;
+  raydiumAmmOpenOrders: PublicKey;
+  raydiumAmmQuantitiesOrTargetOrders: PublicKey;
+  raydiumStakeProgram: PublicKey;
+  raydiumLiquidityProgram: PublicKey;
+  raydiumCoinTokenAccount: PublicKey;
+  raydiumPcTokenAccount: PublicKey;
+  raydiumPoolTempTokenAccount: PublicKey;
+  raydiumPoolLpTokenAccount: PublicKey;
+  raydiumPoolWithdrawQueue: PublicKey;
+  raydiumPoolId: PublicKey;
+  raydiumPoolAuthority: PublicKey;
+  raydiumPoolRewardATokenAccount: PublicKey;
+  raydiumPoolRewardBTokenAccount: PublicKey;
+  dualRewards: BN;
+  vaultRewardATokenAccount: PublicKey;
+  vaultRewardBTokenAccount: PublicKey;
+  vaultStakeInfoAccount: PublicKey;
+  associatedStakeInfoAddress: PublicKey;
+  coinMint: PublicKey;
+  pcMint: PublicKey;
+  serumMarket: PublicKey;
 }
