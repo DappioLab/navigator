@@ -280,7 +280,33 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   }
 }
 
-export async function getVault(connection: Connection, vaultId: PublicKey): Promise<RaydiumVaultInfo> {
+export async function getAllVaults(connection: Connection): Promise<VaultInfo[]> {
+  const sizeFilter: DataSizeFilter = {
+    dataSize: RAYDIUM_VAULT_V1_LAYOUT_SPAN,
+  };
+  const filters = [sizeFilter];
+  const config: GetProgramAccountsConfig = { filters: filters };
+  const allVaultAccount = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
+  let allVault: VaultInfo[] = [];
+
+  for (let vaultAccountInfo of allVaultAccount) {
+    let parseVault;
+    switch (vaultAccountInfo.account.data.length) {
+      case RAYDIUM_VAULT_V1_LAYOUT_SPAN:
+        parseVault = parseRaydiumVault;
+        break;
+      default:
+        parseVault = parseRaydiumVault;
+    }
+
+    const vault = parseVault(vaultAccountInfo.account.data, vaultAccountInfo.pubkey);
+    allVault.push(vault);
+  }
+
+  return allVault;
+}
+
+export async function getVault(connection: Connection, vaultId: PublicKey): Promise<VaultInfo> {
   const vaultAccountInfo = await connection.getAccountInfo(vaultId);
 
   let parseVault;
