@@ -13,15 +13,7 @@ import { OpenOrders } from "@project-serum/serum";
 import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
 import { parseTokenAccount } from "../utils";
-import {
-  IFarmInfo,
-  IPoolInfo,
-  IFarmerInfo,
-  IPoolInfoWrapper,
-  IFarmInfoWrapper,
-  IInstancePool,
-  IInstanceFarm,
-} from "../types";
+import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 import { FarmerInfo, FarmInfo, PoolInfo } from ".";
@@ -29,7 +21,7 @@ import { FarmerInfo, FarmInfo, PoolInfo } from ".";
 let infos: IInstancePool & IInstanceFarm;
 
 infos = class InstanceRaydium {
-  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
+  static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
     let allPool: PoolInfo[] = [];
     //V4 pools
     const v4SizeFilter: DataSizeFilter = {
@@ -39,7 +31,7 @@ infos = class InstanceRaydium {
     const v4config: GetProgramAccountsConfig = { filters: v4Filters };
     const allV4AMMAccount = await connection.getProgramAccounts(POOL_PROGRAM_ID_V4, v4config);
     for (let v4Account of allV4AMMAccount) {
-      let poolInfo = this.parsePool(v4Account.account.data, v4Account.pubkey) as PoolInfo;
+      let poolInfo = this.parsePool(v4Account.account.data, v4Account.pubkey);
       if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
         allPool.push(poolInfo);
       }
@@ -48,15 +40,15 @@ infos = class InstanceRaydium {
     return allPool;
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
-    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo as PoolInfo));
+  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
+    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
   }
 
-  static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
     let pool = null as unknown as PoolInfo;
     const poolInfoAccount = await connection.getAccountInfo(poolId);
 
-    let poolInfo = this.parsePool(poolInfoAccount?.data as Buffer, poolId) as PoolInfo;
+    let poolInfo = this.parsePool(poolInfoAccount?.data as Buffer, poolId);
 
     if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
       pool = poolInfo;
@@ -65,7 +57,7 @@ infos = class InstanceRaydium {
     return pool;
   }
 
-  static parsePool(data: Buffer, infoPubkey: PublicKey): IPoolInfo {
+  static parsePool(data: Buffer, infoPubkey: PublicKey): PoolInfo {
     let poolData = Buffer.from(data);
     let rawPoolData = POOL_LAYOUT_V4.decode(poolData);
     let {
@@ -120,7 +112,7 @@ infos = class InstanceRaydium {
       pnlOwner,
     } = rawPoolData;
 
-    const poolInfo: PoolInfo = {
+    return {
       poolId: infoPubkey,
       version: 4,
       status,
@@ -159,11 +151,9 @@ infos = class InstanceRaydium {
       ammOwner,
       pnlOwner,
     };
-
-    return poolInfo;
   }
 
-  static async getAllFarms(connection: Connection): Promise<IFarmInfo[]> {
+  static async getAllFarms(connection: Connection): Promise<FarmInfo[]> {
     let allFarm: FarmInfo[] = [];
     const v1SizeFilter: DataSizeFilter = {
       dataSize: 200,
@@ -200,18 +190,18 @@ infos = class InstanceRaydium {
     return allFarm;
   }
 
-  static async getAllFarmWrappers(connection: Connection): Promise<IFarmInfoWrapper[]> {
-    return (await this.getAllFarms(connection)).map((farmInfo) => new FarmInfoWrapper(farmInfo as FarmInfo));
+  static async getAllFarmWrappers(connection: Connection): Promise<FarmInfoWrapper[]> {
+    return (await this.getAllFarms(connection)).map((farmInfo) => new FarmInfoWrapper(farmInfo));
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<FarmInfo> {
     const farmInfoAccount = await connection.getAccountInfo(farmId);
-    const farm = this.parseFarm(farmInfoAccount?.data as Buffer, farmId) as FarmInfo;
+    const farm = this.parseFarm(farmInfoAccount?.data as Buffer, farmId);
 
     return farm;
   }
 
-  static parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo {
+  static parseFarm(data: Buffer, farmId: PublicKey): FarmInfo {
     // v3 size = 200
     // v5 size = 224
     const version = data.length == 200 ? 3 : 5;
@@ -225,7 +215,7 @@ infos = class InstanceRaydium {
     return farm;
   }
 
-  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]> {
+  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<FarmerInfo[]> {
     let memcmpFilter: MemcmpFilter = {
       memcmp: {
         offset: 8 + 32,
@@ -264,7 +254,7 @@ infos = class InstanceRaydium {
     return farmerId;
   }
 
-  static async getFarmer(connection: Connection, farmerId: PublicKey, version: number): Promise<IFarmerInfo> {
+  static async getFarmer(connection: Connection, farmerId: PublicKey, version: number): Promise<FarmerInfo> {
     const farmerAcccountInfo = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
     const info =
       farmerAcccountInfo &&
@@ -444,7 +434,7 @@ infos = class InstanceRaydium {
           farmVersion: farmVersion,
           mints: relatedMints,
           rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
-        } as FarmerInfo;
+        };
       })
     );
   }
