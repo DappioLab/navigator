@@ -22,6 +22,15 @@ export interface INFTFarmInfo {
   rewardTokenMint: PublicKey;
 }
 
+export interface INFTVaultInfo {
+  vaultId: PublicKey;
+}
+
+export interface INFTMinerInfo {
+  minerId: PublicKey;
+  userKey: PublicKey;
+}
+
 // TODO
 export interface IFarmInfo {
   farmId: PublicKey;
