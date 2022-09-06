@@ -91,18 +91,11 @@ export function BORROWING_MULTIPLIER(reserve: PublicKey) {
   }
 }
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
 let infos: IInstanceMoneyMarket;
 
 infos = class InstanceSolend {
   // Returns ReserveInfos w/ partnerRewardData
-  static async getAllReserves(
-    connection: Connection,
-    marketId?: PublicKey
-  ): Promise<ReserveInfo[]> {
+  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<ReserveInfo[]> {
     const dataSizeFilters: DataSizeFilter = {
       dataSize: RESERVE_LAYOUT_SPAN,
     };
@@ -120,10 +113,7 @@ infos = class InstanceSolend {
     }
 
     const config: GetProgramAccountsConfig = { filters: filters };
-    const reserveAccounts = await connection.getProgramAccounts(
-      SOLEND_PROGRAM_ID,
-      config
-    );
+    const reserveAccounts = await connection.getProgramAccounts(SOLEND_PROGRAM_ID, config);
     let reserves = [] as ReserveInfo[];
     for (let account of reserveAccounts) {
       let info = this.parseReserve(account.account.data, account.pubkey);
@@ -131,9 +121,7 @@ infos = class InstanceSolend {
     }
 
     const allPartnersRewardData: ISolendAPIPartnerReward[] = await (
-      await axios.get(
-        "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true"
-      )
+      await axios.get("https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true")
     ).data;
     const tokenList = await getTokenList();
 
@@ -147,14 +135,10 @@ infos = class InstanceSolend {
             wrapper.reserveInfo.reserveId.toBase58() === item.reserveID
         ) ?? null;
 
-      let price = tokenList.find(
-        (t) => t.mint === wrapper.supplyTokenMint().toBase58()
-      )?.price;
+      let price = tokenList.find((t) => t.mint === wrapper.supplyTokenMint().toBase58())?.price;
       let partnerRewardData: IPartnerReward[] | null = null;
 
-      const poolTotalSupply =
-        Number(wrapper.supplyAmount()) /
-        10 ** Number(wrapper.supplyTokenDecimal());
+      const poolTotalSupply = Number(wrapper.supplyAmount()) / 10 ** Number(wrapper.supplyTokenDecimal());
       const poolTotalSupplyValue = poolTotalSupply * price!;
 
       if (partnerRewards.length > 0) {
@@ -166,14 +150,7 @@ infos = class InstanceSolend {
               const rewardTokenPrice = rewardToken.price;
               return {
                 rewardToken,
-                rate: Number(
-                  (
-                    ((rewardRate * rewardTokenPrice) /
-                      poolTotalSupplyValue /
-                      10 ** 36) *
-                    100
-                  ).toFixed(2)
-                ),
+                rate: Number((((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)),
                 side: r.side,
               } as IPartnerReward;
             }
@@ -188,20 +165,15 @@ infos = class InstanceSolend {
     return reserveWithPartnerRewardData;
   }
   // Returns ReserveInfo w/o partnerRewardData
-  static async getReserve(
-    connection: Connection,
-    reserveId: PublicKey
-  ): Promise<ReserveInfo> {
+  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
     const reserveAccountInfo = await connection.getAccountInfo(reserveId);
-    if (!reserveAccountInfo)
-      throw Error(`Cannot get reserveId ${reserveId} Account data `);
+    if (!reserveAccountInfo) throw Error(`Cannot get reserveId ${reserveId} Account data `);
     return this.parseReserve(reserveAccountInfo?.data, reserveId);
   }
   // Returns ReserveInfo w/o partnerRewardData
   static parseReserve(data: Buffer, reserveId: PublicKey): ReserveInfo {
     const decodedData = RESERVE_LAYOUT.decode(data);
-    let { version, lastUpdate, lendingMarket, liquidity, collateral, config } =
-      decodedData;
+    let { version, lastUpdate, lendingMarket, liquidity, collateral, config } = decodedData;
     return {
       reserveId,
       version,
@@ -214,27 +186,17 @@ infos = class InstanceSolend {
     };
   }
 
-  static async getAllObligations(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<ObligationInfo[]> {
+  static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<ObligationInfo[]> {
     let allObligationAddress: PublicKey[] = [];
     let allObligationInfos: ObligationInfo[] = [];
     for (let lendingMarket of SOLEND_LENDING_MARKET_ID_ALL) {
-      allObligationAddress.push(
-        await getObligationPublicKey(userKey, lendingMarket)
-      );
+      allObligationAddress.push(await getObligationPublicKey(userKey, lendingMarket));
     }
-    let allAccountInfo = await connection.getMultipleAccountsInfo(
-      allObligationAddress
-    );
+    let allAccountInfo = await connection.getMultipleAccountsInfo(allObligationAddress);
 
     allAccountInfo.map((accountInfo, index) => {
       if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
-        let obligationInfo = this.parseObligation(
-          accountInfo.data,
-          allObligationAddress[index]
-        );
+        let obligationInfo = this.parseObligation(accountInfo.data, allObligationAddress[index]);
         allObligationInfos.push(obligationInfo);
       }
     });
@@ -248,20 +210,14 @@ infos = class InstanceSolend {
   ): Promise<ObligationInfo> {
     let accountInfo = await connection.getAccountInfo(obligationId);
     if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
-      let obligationInfo = this.parseObligation(
-        accountInfo?.data,
-        obligationId
-      ) as ObligationInfo;
+      let obligationInfo = this.parseObligation(accountInfo?.data, obligationId) as ObligationInfo;
       return obligationInfo;
     } else {
       return defaultObligationWrapper.obligationInfo;
     }
   }
 
-  static parseObligation(
-    data: Buffer,
-    obligationId: PublicKey
-  ): ObligationInfo {
+  static parseObligation(data: Buffer, obligationId: PublicKey): ObligationInfo {
     let dataBuffer = data as Buffer;
     let decodedInfo = OBLIGATION_LAYOUT.decode(dataBuffer);
     let {
@@ -278,21 +234,14 @@ infos = class InstanceSolend {
       dataFlat,
     } = decodedInfo;
 
-    const depositsBuffer = dataFlat.slice(
-      0,
-      depositsLen * COLLATERAL_LAYOUT.span
-    );
-    const obligationCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
-      depositsBuffer
-    ) as ObligationCollateral[];
+    const depositsBuffer = dataFlat.slice(0, depositsLen * COLLATERAL_LAYOUT.span);
+    const obligationCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(depositsBuffer) as ObligationCollateral[];
 
     const borrowsBuffer = dataFlat.slice(
       depositsBuffer.length,
       depositsLen * COLLATERAL_LAYOUT.span + borrowsLen * LOAN_LAYOUT.span
     );
-    const obligationLoans = seq(LOAN_LAYOUT, borrowsLen).decode(
-      borrowsBuffer
-    ) as ObligationLoan[];
+    const obligationLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as ObligationLoan[];
 
     const obligationInfo = {
       version,
@@ -313,10 +262,6 @@ infos = class InstanceSolend {
 };
 
 export { infos };
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
 
 // Obligation related types
 //all from https://docs.solend.fi/protocol/addresses
@@ -726,11 +671,15 @@ export interface LastUpdate {
 
 // Obligation related methods
 
+<<<<<<< HEAD
 export async function getObligationPublicKey(
   wallet: PublicKey,
   lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL
 ) {
 >>>>>>> d4be266 (Add infos instance for Solend & Lifinity/ Refactor solend ParnerReward & Obligation)
+=======
+export async function getObligationPublicKey(wallet: PublicKey, lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL) {
+>>>>>>> c1ac2ca (Rebase & Minor cleanup)
   const seed = lendingMarket.toString().slice(0, 32);
   const obligationAddress = await PublicKey.createWithSeed(wallet, seed, SOLEND_PROGRAM_ID);
   return obligationAddress;
@@ -795,6 +744,7 @@ export class ObligationInfoWrapper {
   }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
     const limits = this.obligationCollaterals.map((deposit) => {
       const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
@@ -812,6 +762,12 @@ export class ObligationInfoWrapper {
         (t) => t.mint === reserve?.supplyTokenMint().toBase58()
       );
 >>>>>>> d4be266 (Add infos instance for Solend & Lifinity/ Refactor solend ParnerReward & Obligation)
+=======
+  getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
+    const limits = this.obligationInfo.obligationCollaterals.map((deposit) => {
+      const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
+      const supplyToken = tokenList.find((t) => t.mint === reserve?.supplyTokenMint().toBase58());
+>>>>>>> c1ac2ca (Rebase & Minor cleanup)
       if (!reserve || !supplyToken) return 0;
       const depositAmount = reserve.convertReserveAmountToLiquidityAmount(deposit.depositedAmount);
       const amt = Number(depositAmount) / 10 ** Number(reserve.reserveInfo.liquidity.mintDecimals);
