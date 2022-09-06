@@ -13,28 +13,20 @@ let infos: IInstancePool;
 infos = class InstanceLifinity {
   static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
     const allLifinityAccount = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
-    let poolConfigArray: PublicKey[] = [];
-    let poolInfoArray: PoolInfo[] = [];
 
-    for (let index in allLifinityAccount) {
-      const lifinityAccount = allLifinityAccount[index];
-      if (!lifinityAccount) continue;
-      const poolInfo = this.parsePool(lifinityAccount.data, LIFINITY_ALL_AMM_ID[index]);
-      poolInfoArray.push(poolInfo);
-      poolConfigArray.push(poolInfo.poolConfig.key);
-    }
+    const poolInfoAndConfigKeys = allLifinityAccount
+      .filter((accountInfo) => accountInfo)
+      .map((accountInfo, index) => {
+        const poolInfo = this.parsePool(accountInfo!.data, LIFINITY_ALL_AMM_ID[index]);
+        return { poolInfo, poolConfigKey: poolInfo.poolConfig.key };
+      });
 
-    const allpoolConfigInfo = await connection.getMultipleAccountsInfo(poolConfigArray);
+    const poolConfigInfos = await connection.getMultipleAccountsInfo(poolInfoAndConfigKeys.map((p) => p.poolConfigKey));
 
-    poolInfoArray.forEach((poolInfo, index) => {
-      const poolConfig = this._parsePoolConfig(allpoolConfigInfo[index]?.data, poolConfigArray[index]);
-      poolInfoArray[index] = {
-        ...poolInfo,
-        poolConfig,
-      };
-    });
-
-    return poolInfoArray;
+    return poolInfoAndConfigKeys.map((poolInfoAndConfigKey, index) => ({
+      ...poolInfoAndConfigKey.poolInfo,
+      poolConfig: this._parsePoolConfig(poolConfigInfos[index]?.data, poolInfoAndConfigKeys[index].poolConfigKey),
+    }));
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
@@ -96,7 +88,7 @@ infos = class InstanceLifinity {
       ? hostFeeDenominator
       : hostFeeNumerator.mul(DIGIT).div(hostFeeDenominator);
 
-    let poolInfo: PoolInfo = {
+    let poolInfo = {
       poolId,
       index: new BN(index),
       initializerKey,
@@ -150,7 +142,7 @@ infos = class InstanceLifinity {
       configTemp2,
     } = decodedData;
 
-    const poolConfig: PoolConfig = {
+    const poolConfig = {
       key: pubkey,
       index: new BN(index),
       concentrationRatio: new BN(concentrationRatio),

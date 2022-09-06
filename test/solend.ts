@@ -23,34 +23,16 @@ describe("Solend", () => {
   //   confirmTransactionInitialTimeout: 180 * 1000,
   //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   // });
-  const solReserveId = new PublicKey(
-    "8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36"
-  );
 
-  // const options = anchor.AnchorProvider.defaultOptions();
-  // const wallet = NodeWallet.local();
-  // const provider = new anchor.AnchorProvider(connection, wallet, options);
-
-  // anchor.setProvider(provider);
-
-  // const supplyAmount = 20000;
+  const solReserveId = new PublicKey("8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36");
 
   it(" Can get all reserves", async () => {
-    const reserves = (await solend.infos.getAllReserves(
-      connection
-    )) as solend.ReserveInfo[];
+    const reserves = (await solend.infos.getAllReserves(connection)) as solend.ReserveInfo[];
     console.log(`Fetched ${reserves.length} reserves`);
-    console.log(
-      `reserves with partner rewards: ${
-        reserves.filter((r) => r.partnerRewardData).length
-      }`
-    );
+    console.log(`reserves with partner rewards: ${reserves.filter((r) => r.partnerRewardData.length > 0).length}`);
   });
   it(" Can get reserve", async () => {
-    const reserve = (await solend.infos.getReserve(
-      connection,
-      solReserveId
-    )) as solend.ReserveInfo;
+    const reserve = (await solend.infos.getReserve(connection, solReserveId)) as solend.ReserveInfo;
     console.log(
       `Fetched reserve: ${JSON.stringify({
         id: reserve.reserveId,
@@ -76,9 +58,7 @@ describe("Solend", () => {
       connection,
       new PublicKey("41j1YyQCohRXZqZYDudemMvAAmFoCg9jyqEkEqd6djG1")
     )) as solend.ObligationInfo;
-    console.log(
-      `** collateral count: ${obligation.obligationCollaterals.length}`
-    );
+    console.log(`** collateral count: ${obligation.obligationCollaterals.length}`);
     console.log(`** loan count: ${obligation.obligationLoans.length}`);
   });
 });
