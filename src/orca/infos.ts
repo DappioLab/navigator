@@ -13,14 +13,10 @@ import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { utils } from "..";
 
-// TODO: Implement InstanceOrca
-
 let infos: IInstancePool & IInstanceFarm;
-
 infos = class InstanceOrca {
   static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
     let allPools: PoolInfo[] = [];
-    let newAllPools: PoolInfo[] = [];
     let accounts: {
       tokenAccountA: BN;
       tokenAccountB: BN;
@@ -60,21 +56,21 @@ infos = class InstanceOrca {
       }
     }
 
-    allPools.map((item, index) => {
-      const { tokenAccountA, tokenAccountB, LPsupply } = accounts[index];
-      let newItem = item;
+    let newAllPools: PoolInfo[] = [];
+    newAllPools = allPools
+      .map((item, index) => {
+        const { tokenAccountA, tokenAccountB, LPsupply } = accounts[index];
+        let newItem = item;
 
-      newItem = {
-        ...newItem,
-        tokenSupplyA: tokenAccountA,
-        tokenSupplyB: tokenAccountB,
-        lpSupply: LPsupply,
-      };
-
-      if (newItem.lpSupply.cmpn(0)) {
-        newAllPools.push(newItem);
-      }
-    });
+        newItem = {
+          ...newItem,
+          tokenSupplyA: tokenAccountA,
+          tokenSupplyB: tokenAccountB,
+          lpSupply: LPsupply,
+        };
+        return newItem;
+      })
+      .filter((item) => item.lpSupply.cmpn(0));
 
     return newAllPools;
   }
@@ -110,7 +106,7 @@ infos = class InstanceOrca {
       feeAccount,
     } = decodedData;
 
-    let poolInfo: PoolInfo = {
+    return {
       poolId: infoPubkey,
       version: version,
       isInitialized: new BN(isInitialized),
@@ -125,8 +121,7 @@ infos = class InstanceOrca {
       lpSupply: new BN(0),
       tokenSupplyA: new BN(0),
       tokenSupplyB: new BN(0),
-    };
-    return poolInfo;
+    } as PoolInfo;
   }
 
   static async getAllFarms(connection: Connection, rewardMint?: PublicKey): Promise<IFarmInfo[]> {
@@ -138,14 +133,15 @@ infos = class InstanceOrca {
     const allOrcaFarm = await connection.getProgramAccounts(ORCA_FARM_PROGRAM_ID, config);
 
     let allFarm: FarmInfo[] = [];
-    for (const accountInfo of allOrcaFarm) {
-      let farmData = (await this.parseFarm(accountInfo.account.data, accountInfo.pubkey)) as unknown as FarmInfo;
+    allFarm = allOrcaFarm
+      .map((item) => {
+        let farmData = this.parseFarm(item.account.data, item.pubkey) as unknown as FarmInfo;
+        return farmData;
+      })
+      .filter((item) => {
+        return !item.emissionsPerSecondNumerator.cmpn(0);
+      });
 
-      if (farmData.emissionsPerSecondNumerator.cmpn(0)) {
-        continue;
-      }
-      allFarm.push(farmData);
-    }
     return allFarm;
   }
 
@@ -175,7 +171,7 @@ infos = class InstanceOrca {
       cumulativeEmissionsPerFarmToken,
     } = decodedData;
 
-    let farmInfo = {
+    return {
       farmId,
       isInitialized: new BN(isInitialized),
       nonce: new BN(nonce),
@@ -191,8 +187,7 @@ infos = class InstanceOrca {
       emissionsPerSecondDenominator: emissionsPerSecondDenominator,
       lastUpdatedTimestamp: lastUpdatedTimestamp,
       cumulativeEmissionsPerFarmToken: new BN(cumulativeEmissionsPerFarmToken, 10, "le"),
-    };
-    return farmInfo;
+    } as FarmInfo;
   }
 
   static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]> {
@@ -211,10 +206,10 @@ infos = class InstanceOrca {
     const allOrcaPool = await connection.getProgramAccounts(ORCA_FARM_PROGRAM_ID, config);
 
     let allFarmerInfo: FarmerInfo[] = [];
-    for (const accountInfo of allOrcaPool) {
-      let farmerInfo = await this._parseFarmerInfo(accountInfo.account.data, accountInfo.pubkey);
-      allFarmerInfo.push(farmerInfo);
-    }
+    allFarmerInfo = allOrcaPool.map((item) => {
+      let farmerInfo = this._parseFarmerInfo(item.account.data, item.pubkey);
+      return farmerInfo;
+    });
     return allFarmerInfo;
   }
 
@@ -229,16 +224,15 @@ infos = class InstanceOrca {
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<IFarmerInfo> {
     let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
-    let farmer = await this._parseFarmerInfo(data.data, farmerId);
-    return farmer;
+    return await this._parseFarmerInfo(data.data, farmerId);
   }
 
-  private static async _parseFarmerInfo(data: Buffer, pubkey: PublicKey): Promise<FarmerInfo> {
+  private static _parseFarmerInfo(data: Buffer, pubkey: PublicKey): FarmerInfo {
     let decodedData = FARMER_LAYOUT.decode(data);
     let { isInitialized, accountType, globalFarm, owner, baseTokensConverted, cumulativeEmissionsCheckpoint } =
       decodedData;
 
-    let farmerInfo = {
+    return {
       farmerId: pubkey,
       farmId: globalFarm,
       userKey: owner,
@@ -247,7 +241,6 @@ infos = class InstanceOrca {
       accountType: new BN(accountType),
       cumulativeEmissionsCheckpoint: new BN(cumulativeEmissionsCheckpoint, 10, "le"),
     };
-    return farmerInfo;
   }
 };
 
