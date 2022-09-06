@@ -134,6 +134,22 @@ export interface IInstanceNFTFarm {
   parseFarm(data: Buffer, farmId: PublicKey): INFTFarmInfo;
 }
 
+export interface IInstanceNFTVault {
+  getAllNFTVaults(connection: Connection): Promise<INFTVaultInfo[]>;
+  // TODO: Add wrapper for NFTVaultInfo
+  // getAllNFTVaultWrappers(connection: Connection): Promise<INFTVaultInfoWrapper[]>;
+  getNFTVault(connection: Connection, vaultId: PublicKey): Promise<INFTVaultInfo>;
+  parseNFTVault(data: Buffer, vaultId: PublicKey): INFTVaultInfo;
+}
+
+export interface IInstanceNFTMiner {
+  getAllNFTMiners(connection: Connection): Promise<INFTMinerInfo[]>;
+  // TODO: Add wrapper for NFTMinerInfo
+  // getAllNFTMinerWrappers(connection: Connection): Promise<INFTMinerInfoWrapper[]>;
+  getNFTMiner(connection: Connection, minerId: PublicKey): Promise<INFTMinerInfo>;
+  parseNFTMiner(data: Buffer, minerId: PublicKey): INFTMinerInfo;
+}
+
 export interface IInstanceVault {
   getAllVaults(connection: Connection): Promise<IVaultInfo[]>;
   // TODO: Add wrapper for VaultInfo
