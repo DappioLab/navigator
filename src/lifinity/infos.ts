@@ -40,12 +40,10 @@ infos = class InstanceLifinity {
     const poolConfigInfo = await connection.getAccountInfo(poolInfo.poolConfig.key);
     const poolConfig = this._parsePoolConfig(poolConfigInfo?.data, poolInfo.poolConfig.key);
 
-    poolInfo = {
+    return {
       ...poolInfo,
       poolConfig,
     };
-
-    return poolInfo;
   }
 
   static parsePool(data: Buffer, poolId: PublicKey): PoolInfo {
@@ -88,7 +86,7 @@ infos = class InstanceLifinity {
       ? hostFeeDenominator
       : hostFeeNumerator.mul(DIGIT).div(hostFeeDenominator);
 
-    let poolInfo = {
+    return {
       poolId,
       index: new BN(index),
       initializerKey,
@@ -117,8 +115,6 @@ infos = class InstanceLifinity {
       curveType: new BN(curveType),
       curveParameters: new BN(curveParameters),
     };
-
-    return poolInfo;
   }
   private static _parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
     const decodedData = CONFIG_LAYOUT.decode(data);
@@ -142,7 +138,7 @@ infos = class InstanceLifinity {
       configTemp2,
     } = decodedData;
 
-    const poolConfig = {
+    return {
       key: pubkey,
       index: new BN(index),
       concentrationRatio: new BN(concentrationRatio),
@@ -162,8 +158,6 @@ infos = class InstanceLifinity {
       depositCap: new BN(depositCap),
       configTemp2: new BN(configTemp2),
     };
-
-    return poolConfig;
   }
 };
 
