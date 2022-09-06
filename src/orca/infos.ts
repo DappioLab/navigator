@@ -56,8 +56,7 @@ infos = class InstanceOrca {
       }
     }
 
-    let newAllPools: PoolInfo[] = [];
-    newAllPools = allPools
+    return allPools
       .map((item, index) => {
         const { tokenAccountA, tokenAccountB, LPsupply } = accounts[index];
         let newItem = item;
@@ -71,8 +70,6 @@ infos = class InstanceOrca {
         return newItem;
       })
       .filter((item) => item.lpSupply.cmpn(0));
-
-    return newAllPools;
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
@@ -132,8 +129,7 @@ infos = class InstanceOrca {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allOrcaFarm = await connection.getProgramAccounts(ORCA_FARM_PROGRAM_ID, config);
 
-    let allFarm: FarmInfo[] = [];
-    allFarm = allOrcaFarm
+    return allOrcaFarm
       .map((item) => {
         let farmData = this.parseFarm(item.account.data, item.pubkey) as unknown as FarmInfo;
         return farmData;
@@ -141,14 +137,11 @@ infos = class InstanceOrca {
       .filter((item) => {
         return !item.emissionsPerSecondNumerator.cmpn(0);
       });
-
-    return allFarm;
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<IFarmInfo> {
     let data = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
-    let farm = (await this.parseFarm(data.data, farmId)) as unknown as FarmInfo;
-    return farm;
+    return (await this.parseFarm(data.data, farmId)) as unknown as FarmInfo;
   }
 
   static parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo {
@@ -205,12 +198,10 @@ infos = class InstanceOrca {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allOrcaPool = await connection.getProgramAccounts(ORCA_FARM_PROGRAM_ID, config);
 
-    let allFarmerInfo: FarmerInfo[] = [];
-    allFarmerInfo = allOrcaPool.map((item) => {
+    return allOrcaPool.map((item) => {
       let farmerInfo = this._parseFarmerInfo(item.account.data, item.pubkey);
       return farmerInfo;
     });
-    return allFarmerInfo;
   }
 
   static async getFarmerId(farmId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
