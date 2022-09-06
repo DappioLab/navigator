@@ -1,41 +1,11 @@
-import {
-  Connection,
-  MemcmpFilter,
-  GetProgramAccountsConfig,
-  DataSizeFilter,
-  PublicKey,
-} from "@solana/web3.js";
+import { Connection, MemcmpFilter, GetProgramAccountsConfig, DataSizeFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import {
-  IFarmerInfo,
-  IFarmInfo,
-  IFarmInfoWrapper,
-  IInstanceFarm,
-  IInstancePool,
-  IPoolInfo,
-  IPoolInfoWrapper,
-} from "../types";
-import {
-  computeD,
-  getTokenAccountAmount,
-  normalizedTradeFee,
-  N_COINS,
-  ZERO,
-} from "../utils";
-import {
-  ADMIN_KEY,
-  QURARRY_MINE_PROGRAM_ID,
-  WRAP_PROGRAM_ID,
-  POOL_PROGRAM_ID,
-  QUARRY_REWARDER,
-} from "./ids";
-import {
-  POOL_LAYOUT,
-  FARM_LAYOUT,
-  FARMER_LAYOUT,
-  WRAP_LAYOUT,
-} from "./layouts";
+import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
+import { computeD, getTokenAccountAmount, normalizedTradeFee, N_COINS, ZERO } from "../utils";
+import { ADMIN_KEY, QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
+import { POOL_LAYOUT, FARM_LAYOUT, FARMER_LAYOUT, WRAP_LAYOUT } from "./layouts";
 import { MintLayout } from "@solana/spl-token-v2";
+import { defaultWrap, FarmerInfo, FarmInfo, PoolInfo, WrapInfo } from ".";
 
 /**
  * tradingFee and withdrawFee are in units of 6 decimals
@@ -43,14 +13,10 @@ import { MintLayout } from "@solana/spl-token-v2";
 
 const DIGIT = new BN(10000000000);
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
 let infos: IInstancePool & IInstanceFarm;
 
 infos = class InstanceSaber {
-  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
+  static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
     const adminIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 75,
@@ -62,10 +28,7 @@ infos = class InstanceSaber {
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allSaberAccount = await connection.getProgramAccounts(
-      POOL_PROGRAM_ID,
-      config
-    );
+    const allSaberAccount = await connection.getProgramAccounts(POOL_PROGRAM_ID, config);
     let infoArray: PoolInfo[] = [];
     let wrapInfoArray = await this._getAllWraps(connection);
 
@@ -84,26 +47,16 @@ infos = class InstanceSaber {
       }
 
       const poolAuthority = await this._getPoolAuthority(poolId);
-      let saberAccountInfo = (await this.parsePool(
-        account.account.data,
-        poolId,
-        poolAuthority
-      )) as PoolInfo;
+      let saberAccountInfo = await this.parsePool(account.account.data, poolId, poolAuthority);
       if (saberAccountInfo.isPaused) {
         continue;
       }
-      let mintAwrapped = await this._checkWrapped(
-        saberAccountInfo.tokenAMint,
-        wrapInfoArray
-      );
+      let mintAwrapped = await this._checkWrapped(saberAccountInfo.tokenAMint, wrapInfoArray);
       saberAccountInfo.mintAWrapped = mintAwrapped[0];
       if (mintAwrapped[0]) {
         saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
       }
-      let mintBwrapped = await this._checkWrapped(
-        saberAccountInfo.tokenBMint,
-        wrapInfoArray
-      );
+      let mintBwrapped = await this._checkWrapped(saberAccountInfo.tokenBMint, wrapInfoArray);
       saberAccountInfo.mintBWrapped = mintBwrapped[0];
       if (mintBwrapped[0]) {
         saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
@@ -115,10 +68,11 @@ infos = class InstanceSaber {
     return infoArray;
   }
 
-  static async getPool(
-    connection: Connection,
-    poolId: PublicKey
-  ): Promise<IPoolInfo> {
+  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
+    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
+  }
+
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
     // const adminIdMemcmp: MemcmpFilter = {
     //   memcmp: {
     //     offset: 75,
@@ -134,24 +88,14 @@ infos = class InstanceSaber {
     const wrapInfoArray = await this._getAllWraps(connection);
     const saberAccount: any = await connection.getAccountInfo(poolId);
     const poolAuthority = await this._getPoolAuthority(poolId);
-    const saberAccountInfo = this.parsePool(
-      saberAccount.data,
-      poolId,
-      poolAuthority
-    ) as PoolInfo;
-    const mintAwrapped = await this._checkWrapped(
-      saberAccountInfo.tokenAMint,
-      wrapInfoArray
-    );
+    const saberAccountInfo = this.parsePool(saberAccount.data, poolId, poolAuthority);
+    const mintAwrapped = await this._checkWrapped(saberAccountInfo.tokenAMint, wrapInfoArray);
 
     saberAccountInfo.mintAWrapped = mintAwrapped[0];
     if (mintAwrapped[0]) {
       saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
     }
-    let mintBwrapped = await this._checkWrapped(
-      saberAccountInfo.tokenBMint,
-      wrapInfoArray
-    );
+    let mintBwrapped = await this._checkWrapped(saberAccountInfo.tokenBMint, wrapInfoArray);
     saberAccountInfo.mintBWrapped = mintBwrapped[0];
     if (mintBwrapped[0]) {
       saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
@@ -161,11 +105,7 @@ infos = class InstanceSaber {
     return saberAccountInfo;
   }
 
-  static parsePool(
-    data: Buffer,
-    poolId: PublicKey,
-    poolAuthority?: PublicKey
-  ): IPoolInfo {
+  static parsePool(data: Buffer, poolId: PublicKey, poolAuthority?: PublicKey): PoolInfo {
     const decodedData = POOL_LAYOUT.decode(data);
 
     let {
@@ -192,14 +132,12 @@ infos = class InstanceSaber {
       withdrawFeeDenominator,
     } = decodedData;
 
-    const withdrawFee = withdrawFeeNumerator
-      .mul(DIGIT)
-      .div(withdrawFeeDenominator);
+    const withdrawFee = withdrawFeeNumerator.mul(DIGIT).div(withdrawFeeDenominator);
     const tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
 
     return {
       poolId,
-      authority: poolAuthority,
+      authority: poolAuthority as PublicKey,
       isInitialized,
       isPaused,
       nonce: new BN(nonce),
@@ -219,13 +157,10 @@ infos = class InstanceSaber {
       adminFeeAccountB,
       withdrawFee,
       tradingFee,
-    } as PoolInfo;
+    };
   }
 
-  static async getAllFarms(
-    connection: Connection,
-    rewardMint: PublicKey = QUARRY_REWARDER
-  ): Promise<IFarmInfo[]> {
+  static async getAllFarms(connection: Connection, rewardMint: PublicKey = QUARRY_REWARDER): Promise<FarmInfo[]> {
     const adminIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 8,
@@ -237,42 +172,34 @@ infos = class InstanceSaber {
     };
     const filters = [adminIdMemcmp, sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allFarmAccount = await connection.getProgramAccounts(
-      QURARRY_MINE_PROGRAM_ID,
-      config
-    );
+    const allFarmAccount = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
     let allFarmInfo: FarmInfo[] = [];
     for (let account of allFarmAccount) {
-      let currentFarmInfo = this.parseFarm(
-        account.account.data,
-        account.pubkey
-      ) as FarmInfo;
+      let currentFarmInfo = this.parseFarm(account.account.data, account.pubkey);
       allFarmInfo.push(currentFarmInfo);
     }
     return allFarmInfo;
   }
 
-  static async getFarm(
-    connection: Connection,
-    farmId: PublicKey
-  ): Promise<IFarmInfo> {
+  static async getAllFarmWrappers(connection: Connection): Promise<FarmInfoWrapper[]> {
+    return (await this.getAllFarms(connection)).map((farmInfo) => new FarmInfoWrapper(farmInfo));
+  }
+
+  static async getFarm(connection: Connection, farmId: PublicKey): Promise<FarmInfo> {
     let farm = null as unknown as FarmInfo;
     const farmInfoAccount = await connection.getAccountInfo(farmId);
     if (farmInfoAccount) {
-      farm = this.parseFarm(farmInfoAccount?.data, farmId) as FarmInfo;
+      farm = this.parseFarm(farmInfoAccount?.data, farmId);
     }
     return farm;
   }
 
-  static getFarmFromLpMint(
-    allFarms: FarmInfo[],
-    mint: PublicKey
-  ): IFarmInfo | null {
+  static getFarmFromLpMint(allFarms: FarmInfo[], mint: PublicKey): FarmInfo | null {
     const farm = allFarms.filter((f) => f.tokenMintKey.equals(mint));
     return farm.length > 0 ? farm[0] : null;
   }
 
-  static parseFarm(data: any, farmId: PublicKey): IFarmInfo {
+  static parseFarm(data: any, farmId: PublicKey): FarmInfo {
     let dataBuffer = data as Buffer;
     let infoData = dataBuffer.slice(8);
     let newFarmInfo = FARM_LAYOUT.decode(infoData);
@@ -305,13 +232,10 @@ infos = class InstanceSaber {
       rewardsShare: new BN(rewardsShare),
       totalTokensDeposited: new BN(totalTokensDeposited),
       numFarmers: new BN(numMiners),
-    } as FarmInfo;
+    };
   }
 
-  static async getAllFarmers(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<IFarmerInfo[]> {
+  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<FarmerInfo[]> {
     const adminIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 8 + 32,
@@ -323,16 +247,10 @@ infos = class InstanceSaber {
     };
     const filters = [adminIdMemcmp, sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allFarmerAccount = await connection.getProgramAccounts(
-      QURARRY_MINE_PROGRAM_ID,
-      config
-    );
+    const allFarmerAccount = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
     let allFarmerInfo: FarmerInfo[] = [];
     for (let account of allFarmerAccount) {
-      let currentFarmInfo = this.parseFarmer(
-        account.account.data,
-        account.pubkey
-      ) as FarmerInfo;
+      let currentFarmInfo = this.parseFarmer(account.account.data, account.pubkey);
       if (currentFarmInfo.amount == 0) {
         continue;
       }
@@ -341,18 +259,12 @@ infos = class InstanceSaber {
     return allFarmerInfo;
   }
 
-  static async getFarmerId(
-    farmId: PublicKey,
-    userKey: PublicKey
-  ): Promise<PublicKey> {
+  static async getFarmerId(farmId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
     let [farmerId, _] = await this.getFarmerIdWithBump(farmId, userKey);
     return farmerId;
   }
 
-  static async getFarmer(
-    conn: Connection,
-    farmerId: PublicKey
-  ): Promise<IFarmerInfo> {
+  static async getFarmer(conn: Connection, farmerId: PublicKey): Promise<FarmerInfo> {
     const farmer = await conn
       .getAccountInfo(farmerId)
       .then((accountInfo) => this.parseFarmer(accountInfo?.data, farmerId));
@@ -360,21 +272,11 @@ infos = class InstanceSaber {
     return farmer;
   }
 
-  static parseFarmer(data: any, farmerId: PublicKey): IFarmerInfo {
+  static parseFarmer(data: any, farmerId: PublicKey): FarmerInfo {
     let dataBuffer = data as Buffer;
     let infoData = dataBuffer.slice(8);
     let newFarmerInfo = FARMER_LAYOUT.decode(infoData);
-    let {
-      infoPubkey,
-      farmKey,
-      owner,
-      bump,
-      vault,
-      rewardsEarned,
-      rewardsPerTokenPaid,
-      balance,
-      index,
-    } = newFarmerInfo;
+    let { infoPubkey, farmKey, owner, bump, vault, rewardsEarned, rewardsPerTokenPaid, balance, index } = newFarmerInfo;
 
     return {
       farmerId: infoPubkey,
@@ -386,14 +288,10 @@ infos = class InstanceSaber {
       rewardsEarned: new BN(rewardsEarned),
       rewardsPerTokenPaid: new BN(rewardsPerTokenPaid),
       index: new BN(index),
-    } as FarmerInfo;
+    };
   }
 
-  static async farmerCreated(
-    connection: Connection,
-    userKey: PublicKey,
-    farm: FarmInfo
-  ) {
+  static async farmerCreated(connection: Connection, userKey: PublicKey, farm: FarmInfo) {
     let farmerId = await this.getFarmerId(userKey, farm.farmId);
     let farmerAccountInfo = await connection.getAccountInfo(farmerId);
     if (farmerAccountInfo?.owner.equals(QURARRY_MINE_PROGRAM_ID)) {
@@ -404,18 +302,13 @@ infos = class InstanceSaber {
 
   // Private methods
 
-  private static async _getAllWraps(
-    connection: Connection
-  ): Promise<WrapInfo[]> {
+  private static async _getAllWraps(connection: Connection): Promise<WrapInfo[]> {
     const sizeFilter: DataSizeFilter = {
       dataSize: 114,
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allWrapAccount = await connection.getProgramAccounts(
-      WRAP_PROGRAM_ID,
-      config
-    );
+    const allWrapAccount = await connection.getProgramAccounts(WRAP_PROGRAM_ID, config);
     let infoArray: WrapInfo[] = [];
     for (let account of allWrapAccount) {
       let wrapAccountInfo = this._parseWrap(account.account.data);
@@ -429,14 +322,8 @@ infos = class InstanceSaber {
     const dataBuffer = data as Buffer;
     const cutttedData = dataBuffer.slice(8);
     const decodedData = WRAP_LAYOUT.decode(cutttedData);
-    let {
-      wrapAuthority,
-      decimal,
-      multiplyer,
-      underlyingWrappedTokenMint,
-      underlyingTokenAccount,
-      wrappedTokenMint,
-    } = decodedData;
+    let { wrapAuthority, decimal, multiplyer, underlyingWrappedTokenMint, underlyingTokenAccount, wrappedTokenMint } =
+      decodedData;
 
     return {
       wrapAuthority,
@@ -448,10 +335,7 @@ infos = class InstanceSaber {
     };
   }
 
-  private static async _checkWrapped(
-    tokenMint: PublicKey,
-    wrapInfoArray: WrapInfo[]
-  ): Promise<[boolean, WrapInfo]> {
+  private static async _checkWrapped(tokenMint: PublicKey, wrapInfoArray: WrapInfo[]): Promise<[boolean, WrapInfo]> {
     for (let info of wrapInfoArray) {
       if (info.wrappedTokenMint.equals(tokenMint)) {
         return [true, info];
@@ -461,20 +345,13 @@ infos = class InstanceSaber {
     return [false, defaultWrap];
   }
 
-  private static async _getPoolAuthority(
-    poolId: PublicKey
-  ): Promise<PublicKey> {
-    const authority = (
-      await PublicKey.findProgramAddress([poolId.toBuffer()], POOL_PROGRAM_ID)
-    )[0];
+  private static async _getPoolAuthority(poolId: PublicKey): Promise<PublicKey> {
+    const authority = (await PublicKey.findProgramAddress([poolId.toBuffer()], POOL_PROGRAM_ID))[0];
 
     return authority;
   }
 
-  static async getFarmerIdWithBump(
-    farmId: PublicKey,
-    userKey: PublicKey
-  ): Promise<[PublicKey, number]> {
+  static async getFarmerIdWithBump(farmId: PublicKey, userKey: PublicKey): Promise<[PublicKey, number]> {
     let farmerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
     let farmer = await PublicKey.findProgramAddress(
       [farmerBytes, farmId.toBuffer(), userKey.toBuffer()],
@@ -486,72 +363,6 @@ infos = class InstanceSaber {
 
 export { infos };
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-export interface PoolInfo extends IPoolInfo {
-  authority: PublicKey;
-  isInitialized: boolean;
-  isPaused: boolean;
-  nonce: BN;
-  initialAmpFactor: BN;
-  targetAmpFactor: BN;
-  startRampTs: BN;
-  stopRampTs: BN;
-  futureAdminDeadline: BN;
-  futureAdminKey: PublicKey;
-  adminKey: PublicKey;
-  tokenAccountA: PublicKey;
-  tokenAccountB: PublicKey;
-  AtokenAccountAmount?: BN;
-  BtokenAccountAmount?: BN;
-  mintAWrapped?: Boolean;
-  mintAWrapInfo?: WrapInfo;
-  mintBWrapped?: Boolean;
-  mintBWrapInfo?: WrapInfo;
-  adminFeeAccountA: PublicKey;
-  adminFeeAccountB: PublicKey;
-  tradingFee: BN;
-  withdrawFee: BN;
-}
-
-export interface FarmerInfo extends IFarmerInfo {
-  // infoPubkey: PublicKey;
-  // farmKey: PublicKey;
-  // owner: PublicKey;
-  // balance: BN;
-  bump: BN;
-  vault: PublicKey;
-  rewardsEarned: BN;
-  rewardsPerTokenPaid: BN;
-  index: BN;
-}
-
-export interface FarmInfo extends IFarmInfo {
-  rewarderKey: PublicKey;
-  tokenMintKey: PublicKey;
-  bump: BN;
-  index: BN;
-  tokenMintDecimals: BN;
-  famineTs: BN;
-  lastUpdateTs: BN;
-  rewardsPerTokenStored: BN;
-  annualRewardsRate: BN;
-  rewardsShare: BN;
-  totalTokensDeposited: BN;
-  numFarmers: BN;
-}
-
-export interface WrapInfo {
-  wrapAuthority: PublicKey;
-  decimal: BN;
-  multiplyer: BN;
-  underlyingWrappedTokenMint: PublicKey;
-  underlyingTokenAccount: PublicKey;
-  wrappedTokenMint: PublicKey;
-}
-
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
   // this.withdrawFee = withdrawFeeNumerator
@@ -559,20 +370,10 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   //   .div(withdrawFeeDenominator);
   // this.tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
   async updateAmount(connection: Connection) {
-    this.poolInfo.AtokenAccountAmount = await getTokenAccountAmount(
-      connection,
-      this.poolInfo.tokenAccountA
-    );
-    this.poolInfo.BtokenAccountAmount = await getTokenAccountAmount(
-      connection,
-      this.poolInfo.tokenAccountB
-    );
+    this.poolInfo.AtokenAccountAmount = await getTokenAccountAmount(connection, this.poolInfo.tokenAccountA);
+    this.poolInfo.BtokenAccountAmount = await getTokenAccountAmount(connection, this.poolInfo.tokenAccountB);
   }
-  async calculateDepositRecieve(
-    connection: Connection,
-    AtokenIn: BN,
-    BtokenIN: BN
-  ) {
+  async calculateDepositRecieve(connection: Connection, AtokenIn: BN, BtokenIN: BN) {
     if (!this.poolInfo.AtokenAccountAmount) {
       await this.updateAmount(connection);
     }
@@ -585,10 +386,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const pcBalance = this.poolInfo.BtokenAccountAmount!;
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then(
-        (accountInfo) =>
-          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
-      );
+      .then((accountInfo) => new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply)));
 
     const coinAmountBeforeFee = coinBalance.mul(new BN(lpAmount)).div(lpSupply);
     const coinFee = this.poolInfo.withdrawFee.eq(ZERO)
@@ -620,10 +418,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     await this.updateAmount(conn);
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then(
-        (accountInfo) =>
-          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
-      );
+      .then((accountInfo) => new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply)));
 
     const amp = this.poolInfo.targetAmpFactor;
     const coinBalance = this.poolInfo.AtokenAccountAmount!;
@@ -634,38 +429,23 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       tokenBAmount = 0;
     }
 
-    const depositCoinAmount = tokenAMint.equals(this.poolInfo.tokenAMint)
-      ? new BN(tokenAAmount)
-      : new BN(tokenBAmount);
-    const depositPcAmount = tokenAMint.equals(this.poolInfo.tokenBMint)
-      ? new BN(tokenAAmount)
-      : new BN(tokenBAmount);
+    const depositCoinAmount = tokenAMint.equals(this.poolInfo.tokenAMint) ? new BN(tokenAAmount) : new BN(tokenBAmount);
+    const depositPcAmount = tokenAMint.equals(this.poolInfo.tokenBMint) ? new BN(tokenAAmount) : new BN(tokenBAmount);
 
     const d0 = computeD(amp, coinBalance, pcBalance);
-    const d1 = computeD(
-      amp,
-      coinBalance.add(depositCoinAmount),
-      pcBalance.add(depositPcAmount)
-    );
+    const d1 = computeD(amp, coinBalance.add(depositCoinAmount), pcBalance.add(depositPcAmount));
     if (d1.lt(d0)) {
       throw new Error("New D cannot be less than previous D");
     }
 
     const oldBalances = [coinBalance, pcBalance];
-    const newBalances = [
-      coinBalance.add(depositCoinAmount),
-      pcBalance.add(depositPcAmount),
-    ];
+    const newBalances = [coinBalance.add(depositCoinAmount), pcBalance.add(depositPcAmount)];
     const adjustedBalances = newBalances.map((newBalance, i) => {
       const oldBalance = oldBalances[i] as BN;
       const idealBalance = d1.div(d0).mul(oldBalance);
       const difference = idealBalance.sub(newBalance);
       const diffAbs = difference.gt(ZERO) ? difference : difference.neg();
-      const fee = normalizedTradeFee(
-        this.poolInfo.tradingFee,
-        N_COINS,
-        diffAbs
-      );
+      const fee = normalizedTradeFee(this.poolInfo.tradingFee, N_COINS, diffAbs);
 
       return newBalance.sub(fee);
     }) as [BN, BN];
@@ -680,10 +460,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     await this.updateAmount(conn);
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then(
-        (accountInfo) =>
-          new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply))
-      );
+      .then((accountInfo) => new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply)));
     if (lpSupply.eq(ZERO)) {
       return 0;
     }
@@ -692,8 +469,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const coinBalance = this.poolInfo.AtokenAccountAmount!;
     const pcBalance = this.poolInfo.BtokenAccountAmount!;
 
-    const virtualPrice =
-      Number(computeD(amp, coinBalance, pcBalance)) / Number(lpSupply);
+    const virtualPrice = Number(computeD(amp, coinBalance, pcBalance)) / Number(lpSupply);
 
     const min_price = Math.min(tokenAPrice, tokenBPrice);
 
@@ -702,27 +478,18 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  async getApr(
-    conn: Connection,
-    tradingVolumeIn24Hours: number,
-    lpPrice: number
-  ) {
+  async getApr(conn: Connection, tradingVolumeIn24Hours: number, lpPrice: number) {
     await this.updateAmount(conn);
 
-    const [lpSupply, lpDecimals] = await conn
-      .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) => {
-        const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
-        const supply = Number(lpMintInfo.supply);
-        const decimals = lpMintInfo.decimals;
-        return [supply, decimals];
-      });
+    const [lpSupply, lpDecimals] = await conn.getAccountInfo(this.poolInfo.lpMint).then((accountInfo) => {
+      const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+      const supply = Number(lpMintInfo.supply);
+      const decimals = lpMintInfo.decimals;
+      return [supply, decimals];
+    });
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
     const tradingFee = Number(this.poolInfo.tradingFee) / 10e9;
-    const apr =
-      lpValue > 0
-        ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100
-        : 0;
+    const apr = lpValue > 0 ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100 : 0;
 
     return apr;
   }
@@ -736,57 +503,13 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
   }
 
   getApr(lpPrice: number, rewardTokenPrice: number) {
-    const lpAmount = Number(
-      this.farmInfo.totalTokensDeposited.div(
-        new BN(10).pow(this.farmInfo.tokenMintDecimals)
-      )
-    );
+    const lpAmount = Number(this.farmInfo.totalTokensDeposited.div(new BN(10).pow(this.farmInfo.tokenMintDecimals)));
     const lpValue = lpAmount * lpPrice;
-    const annualRewardAmount = Number(
-      this.farmInfo.annualRewardsRate.divn(10e5)
-    );
+    const annualRewardAmount = Number(this.farmInfo.annualRewardsRate.divn(10e5));
     const annualRewardValue = annualRewardAmount * rewardTokenPrice;
 
-    const apr =
-      lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
+    const apr = lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
 
     return apr;
   }
 }
-
-export const defaultFarm: FarmInfo = {
-  farmId: PublicKey.default,
-  rewarderKey: PublicKey.default,
-  tokenMintKey: PublicKey.default,
-  bump: new BN(0),
-  index: new BN(0),
-  tokenMintDecimals: new BN(0),
-  famineTs: new BN(0),
-  lastUpdateTs: new BN(0),
-  rewardsPerTokenStored: new BN(0),
-  annualRewardsRate: new BN(0),
-  rewardsShare: new BN(0),
-  totalTokensDeposited: new BN(0),
-  numFarmers: new BN(0),
-};
-
-export const defaultFarmer: FarmerInfo = {
-  farmerId: PublicKey.default,
-  farmId: PublicKey.default,
-  userKey: PublicKey.default,
-  amount: new BN(0).toNumber(),
-  bump: new BN(0),
-  vault: PublicKey.default,
-  rewardsEarned: new BN(0),
-  rewardsPerTokenPaid: new BN(0),
-  index: new BN(0),
-};
-
-const defaultWrap: WrapInfo = {
-  wrapAuthority: PublicKey.default,
-  decimal: new BN(0),
-  multiplyer: new BN(0),
-  underlyingWrappedTokenMint: PublicKey.default,
-  underlyingTokenAccount: PublicKey.default,
-  wrappedTokenMint: PublicKey.default,
-};
