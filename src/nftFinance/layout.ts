@@ -21,6 +21,13 @@ export const POOL_LAYOUT = struct([
   u64("totalLocked"),
 ]);
 
+export const NFT_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  publicKey("user"),
+  publicKey("poolInfo"),
+  publicKey("nftMint"),
+]);
+
 export const FARM_LAYOUT = struct([
   u64("discriminator"),
   publicKey("admin"),
@@ -32,4 +39,15 @@ export const FARM_LAYOUT = struct([
   u8("farmAuthorityBump"),
   u64("rewardTokenPerSlot"),
   u64("totalProveTokenDeposited"),
+]);
+
+export const MINER_LAYOUT = struct([
+  u64("discriminator"),
+  publicKey("owner"),
+  publicKey("farmInfo"),
+  publicKey("minerVault"),
+  u64("lastUpdateSlot"),
+  u64("unclaimedAmount"),
+  u64("depositedAmount"),
+  u8("minerBump"),
 ]);
