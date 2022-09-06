@@ -8,25 +8,170 @@ import { LIFINITY_ALL_AMM_ID } from "./ids";
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-// TODO: Implement InstanceLifinity
-
 let infos: IInstancePool;
 
 infos = class InstanceLifinity {
-  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
-    return [];
+  static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
+    const allLifinityAccount = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
+    let poolConfigArray: PublicKey[] = [];
+    let poolInfoArray: PoolInfo[] = [];
+
+    for (let index in allLifinityAccount) {
+      const lifinityAccount = allLifinityAccount[index];
+      if (!lifinityAccount) continue;
+      const poolInfo = this.parsePool(lifinityAccount.data, LIFINITY_ALL_AMM_ID[index]);
+      poolInfoArray.push(poolInfo);
+      poolConfigArray.push(poolInfo.poolConfig.key);
+    }
+
+    const allpoolConfigInfo = await connection.getMultipleAccountsInfo(poolConfigArray);
+
+    poolInfoArray.forEach((poolInfo, index) => {
+      const poolConfig = this._parsePoolConfig(allpoolConfigInfo[index]?.data, poolConfigArray[index]);
+      poolInfoArray[index] = {
+        ...poolInfo,
+        poolConfig,
+      };
+    });
+
+    return poolInfoArray;
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
     return [];
   }
 
-  static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
-    return {} as IPoolInfo;
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
+    const lifinityAccount = await connection.getAccountInfo(poolId);
+    if (!lifinityAccount) throw Error("Could not get Lifinity Account info");
+    let poolInfo = this.parsePool(lifinityAccount.data, poolId);
+    const poolConfigInfo = await connection.getAccountInfo(poolInfo.poolConfig.key);
+    const poolConfig = this._parsePoolConfig(poolConfigInfo?.data, poolInfo.poolConfig.key);
+
+    poolInfo = {
+      ...poolInfo,
+      poolConfig,
+    };
+
+    return poolInfo;
   }
 
-  static parsePool(data: Buffer, farmId: PublicKey): IPoolInfo {
-    return {} as IPoolInfo;
+  static parsePool(data: Buffer, poolId: PublicKey): PoolInfo {
+    const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
+    let {
+      index,
+      initializerKey,
+      initializerDepositTokenAccount,
+      initializerReceiveTokenAccount,
+      initializerAmount,
+      takerAmount,
+      initialized,
+      bumpSeed,
+      freezeTrade,
+      freezeDeposit,
+      freezeWithdraw,
+      baseDecimals,
+      tokenProgramId,
+      tokenAAccount,
+      tokenBAccount,
+      poolMint,
+      tokenAMint,
+      tokenBMint,
+      poolFeeAccount,
+      pythAccount,
+      pythPcAccount,
+      configAccount,
+      tradeFeeNumerator,
+      tradeFeeDenominator,
+      hostFeeNumerator,
+      hostFeeDenominator,
+      curveType,
+      curveParameters,
+    } = decodedData;
+
+    const tradeFee = tradeFeeDenominator.isZero()
+      ? tradeFeeDenominator
+      : tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
+    const hostFee = hostFeeDenominator.isZero()
+      ? hostFeeDenominator
+      : hostFeeNumerator.mul(DIGIT).div(hostFeeDenominator);
+
+    let poolInfo: PoolInfo = {
+      poolId,
+      index: new BN(index),
+      initializerKey,
+      initializerDepositTokenAccount,
+      initializerReceiveTokenAccount,
+      initializerAmount: new BN(initializerAmount),
+      takerAmount: new BN(takerAmount),
+      initialized: new BN(initialized),
+      bumpSeed: new BN(bumpSeed),
+      freezeTrade: new BN(freezeTrade),
+      freezeDeposit: new BN(freezeDeposit),
+      freezeWithdraw: new BN(freezeWithdraw),
+      baseDecimals: new BN(baseDecimals),
+      tokenProgramId,
+      tokenAAccount,
+      tokenBAccount,
+      lpMint: poolMint,
+      tokenAMint,
+      tokenBMint,
+      poolFeeAccount,
+      pythAccount,
+      pythPcAccount,
+      poolConfig: { ...defaultPoolConfig, key: configAccount },
+      tradeFee: new BN(tradeFee),
+      hostFee: new BN(hostFee),
+      curveType: new BN(curveType),
+      curveParameters: new BN(curveParameters),
+    };
+
+    return poolInfo;
+  }
+  private static _parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
+    const decodedData = CONFIG_LAYOUT.decode(data);
+    let {
+      index,
+      concentrationRatio,
+      lastPrice,
+      adjustRatio,
+      balanceRatio,
+      lastBalancedPrice,
+      configDenominator,
+      pythConfidenceLimit,
+      pythSlotLimit,
+      volumeX,
+      volumeY,
+      volumeXinY,
+      coefficientUp,
+      coefficientDown,
+      oracleStatus,
+      depositCap,
+      configTemp2,
+    } = decodedData;
+
+    const poolConfig: PoolConfig = {
+      key: pubkey,
+      index: new BN(index),
+      concentrationRatio: new BN(concentrationRatio),
+      lastPrice: new BN(lastPrice),
+      adjustRatio: new BN(adjustRatio),
+      balanceRatio: new BN(balanceRatio),
+      lastBalancedPrice: new BN(lastBalancedPrice),
+      configDenominator: new BN(configDenominator),
+      pythConfidenceLimit: new BN(pythConfidenceLimit),
+      pythSlotLimit: new BN(pythSlotLimit),
+      volumeX: new BN(volumeX),
+      volumeY: new BN(volumeY),
+      volumeXinY: new BN(volumeXinY),
+      coefficientUp: new BN(coefficientUp),
+      coefficientDown: new BN(coefficientDown),
+      oracleStatus: new BN(oracleStatus),
+      depositCap: new BN(depositCap),
+      configTemp2: new BN(configTemp2),
+    };
+
+    return poolConfig;
   }
 };
 
@@ -91,167 +236,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 }
 
-export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
-  const allLifinityAccount = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
-
-  let poolConfigArray: PublicKey[] = [];
-  let poolInfoArray: PoolInfo[] = [];
-
-  for (let index in allLifinityAccount) {
-    const lifinityAccount = allLifinityAccount[index];
-    const poolInfo = parsePoolInfo(lifinityAccount?.data, LIFINITY_ALL_AMM_ID[index]);
-    poolInfoArray.push(poolInfo);
-    poolConfigArray.push(poolInfo.poolConfig.key);
-  }
-
-  const allpoolConfigInfo = await connection.getMultipleAccountsInfo(poolConfigArray);
-
-  poolInfoArray.forEach((poolInfo, index) => {
-    const poolConfig = parsePoolConfig(allpoolConfigInfo[index]?.data, poolConfigArray[index]);
-    poolInfoArray[index] = {
-      ...poolInfo,
-      poolConfig,
-    };
-  });
-
-  return poolInfoArray;
-}
-
-export async function getPool(connection: Connection, poolInfoKey: PublicKey): Promise<PoolInfo> {
-  const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
-
-  let poolInfo = parsePoolInfo(lifinityAccount?.data, poolInfoKey);
-  const poolConfigInfo = await connection.getAccountInfo(poolInfo.poolConfig.key);
-  const poolConfig = parsePoolConfig(poolConfigInfo?.data, poolInfo.poolConfig.key);
-
-  poolInfo = {
-    ...poolInfo,
-    poolConfig,
-  };
-
-  return poolInfo;
-}
-
 const DIGIT = new BN(10000000000);
-
-export function parsePoolInfo(data: any, pubkey: PublicKey): PoolInfo {
-  const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
-  let {
-    index,
-    initializerKey,
-    initializerDepositTokenAccount,
-    initializerReceiveTokenAccount,
-    initializerAmount,
-    takerAmount,
-    initialized,
-    bumpSeed,
-    freezeTrade,
-    freezeDeposit,
-    freezeWithdraw,
-    baseDecimals,
-    tokenProgramId,
-    tokenAAccount,
-    tokenBAccount,
-    poolMint,
-    tokenAMint,
-    tokenBMint,
-    poolFeeAccount,
-    pythAccount,
-    pythPcAccount,
-    configAccount,
-    tradeFeeNumerator,
-    tradeFeeDenominator,
-    hostFeeNumerator,
-    hostFeeDenominator,
-    curveType,
-    curveParameters,
-  } = decodedData;
-
-  const tradeFee = tradeFeeDenominator.isZero()
-    ? tradeFeeDenominator
-    : tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
-  const hostFee = hostFeeDenominator.isZero()
-    ? hostFeeDenominator
-    : hostFeeNumerator.mul(DIGIT).div(hostFeeDenominator);
-
-  let poolInfo: PoolInfo = {
-    poolId: pubkey,
-    index: new BN(index),
-    initializerKey,
-    initializerDepositTokenAccount,
-    initializerReceiveTokenAccount,
-    initializerAmount: new BN(initializerAmount),
-    takerAmount: new BN(takerAmount),
-    initialized: new BN(initialized),
-    bumpSeed: new BN(bumpSeed),
-    freezeTrade: new BN(freezeTrade),
-    freezeDeposit: new BN(freezeDeposit),
-    freezeWithdraw: new BN(freezeWithdraw),
-    baseDecimals: new BN(baseDecimals),
-    tokenProgramId,
-    tokenAAccount,
-    tokenBAccount,
-    lpMint: poolMint,
-    tokenAMint,
-    tokenBMint,
-    poolFeeAccount,
-    pythAccount,
-    pythPcAccount,
-    poolConfig: { ...defaultPoolConfig, key: configAccount },
-    tradeFee: new BN(tradeFee),
-    hostFee: new BN(hostFee),
-    curveType: new BN(curveType),
-    curveParameters: new BN(curveParameters),
-  };
-
-  return poolInfo;
-}
-
-export function parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
-  const decodedData = CONFIG_LAYOUT.decode(data);
-  let {
-    index,
-    concentrationRatio,
-    lastPrice,
-    adjustRatio,
-    balanceRatio,
-    lastBalancedPrice,
-    configDenominator,
-    pythConfidenceLimit,
-    pythSlotLimit,
-    volumeX,
-    volumeY,
-    volumeXinY,
-    coefficientUp,
-    coefficientDown,
-    oracleStatus,
-    depositCap,
-    configTemp2,
-  } = decodedData;
-
-  const poolConfig: PoolConfig = {
-    key: pubkey,
-    index: new BN(index),
-    concentrationRatio: new BN(concentrationRatio),
-    lastPrice: new BN(lastPrice),
-    adjustRatio: new BN(adjustRatio),
-    balanceRatio: new BN(balanceRatio),
-    lastBalancedPrice: new BN(lastBalancedPrice),
-    configDenominator: new BN(configDenominator),
-    pythConfidenceLimit: new BN(pythConfidenceLimit),
-    pythSlotLimit: new BN(pythSlotLimit),
-    volumeX: new BN(volumeX),
-    volumeY: new BN(volumeY),
-    volumeXinY: new BN(volumeXinY),
-    coefficientUp: new BN(coefficientUp),
-    coefficientDown: new BN(coefficientDown),
-    oracleStatus: new BN(oracleStatus),
-    depositCap: new BN(depositCap),
-    configTemp2: new BN(configTemp2),
-  };
-
-  return poolConfig;
-}
 
 export const defaultPoolConfig: PoolConfig = {
   key: new PublicKey(0),
