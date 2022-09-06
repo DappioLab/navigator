@@ -9,7 +9,7 @@
     "testSaber": "mocha --require ts-node/register --timeout 10000000 ./test/saber.ts",
     "testFrancium": "mocha --require ts-node/register --timeout 10000000 ./test/francium.ts",
     "testLarix": "mocha --require ts-node/register --timeout 10000000 ./test/larix.ts",
-    "testOrca": "ts-node ./test/orca.ts"
+    "testOrca": "mocha --require ts-node/register --timeout 10000000 ./test/orca.ts"
   },
   "keywords": [],
   "author": "",
