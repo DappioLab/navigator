@@ -1,3 +1,4 @@
+import BN from "bn.js";
 import {
   AccountInfo,
   Connection,
@@ -15,7 +16,6 @@ import {
   FARM_LAYOUT,
   FARMER_LAYOUT,
 } from "./layouts";
-import BN from "bn.js";
 import {
   LYF_ORCA_PROGRAM_ID,
   ADMIN,
@@ -24,39 +24,105 @@ import {
   FRANCIUM_LENDING_PROGRAM_ID,
   FRANCIUM_LENDING_REWARD_PROGRAM_ID,
 } from "./ids";
-import {
-  IFarmerInfo,
-  IFarmInfo,
-  IInstanceMoneyMarket,
-  IObligationInfo,
-  IReserveInfo,
-  IReserveInfoWrapper,
-} from "../types";
+import { IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper } from "../types";
 import { utils } from "..";
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-// TODO: Implement InstanceFrancium
+import * as types from ".";
 
 let infos: IInstanceMoneyMarket;
-
 infos = class InstanceFrancium {
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<IReserveInfo[]> {
-    return [];
+  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
+    const programIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 10,
+        bytes: LENDING_MARKET.toString(),
+      },
+    };
+    const dataSizeFilters: DataSizeFilter = {
+      dataSize: RESERVE_LAYOUT.span,
+    };
+    const filters = [programIdMemcmp, dataSizeFilters];
+    const config: GetProgramAccountsConfig = { filters };
+
+    const reserveAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_PROGRAM_ID, config);
+    return reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
   }
 
-  static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<IReserveInfoWrapper[]> {
-    return [];
+  static async getAllReserveWrappers(
+    connection: Connection,
+    marketId?: PublicKey
+  ): Promise<types.ReserveInfoWrapper[]> {
+    let reserves = await this.getAllReserves(connection);
+    return reserves.map((reserveInfo) => new ReserveInfoWrapper(reserveInfo));
   }
 
-  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<IReserveInfo> {
-    return {} as IReserveInfo;
+  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<types.ReserveInfo> {
+    let reserveAccount = (await connection.getAccountInfo(reserveId)) as AccountInfo<Buffer>;
+    return this.parseReserve(reserveAccount.data, reserveId);
   }
 
-  static parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo {
-    return {} as IReserveInfo;
+  static parseReserve(data: Buffer, reserveId: PublicKey): types.ReserveInfo {
+    let buffer = Buffer.from(data);
+    let rawLending = RESERVE_LAYOUT.decode(buffer);
+
+    let {
+      version,
+      last_updateSlot,
+      last_updateStale,
+      lendingMarket,
+      liquidityMintPubkey,
+      liquidityMint_decimals,
+      liquiditySupplyPubkey,
+      liquidityFeeReceiver,
+      oracle,
+      liquidity_available_amount,
+      liquidity_borrowed_amount_wads,
+      liquidity_cumulative_borrowRate_wads,
+      liquidityMarketPrice,
+      shareMintPubkey,
+      shareMintTotalSupply,
+      shareSupplyPubkey,
+      creditMintPubkey,
+      creditMintTotalSupply,
+      creditSupplyPubkey,
+      threshold_1,
+      threshold_2,
+      base_1,
+      factor_1,
+      base_2,
+      factor_2,
+      base_3,
+      factor_3,
+      interestReverseRate,
+      accumulated_interestReverse,
+    } = rawLending;
+
+    return {
+      tokenMint: liquidityMintPubkey,
+      reserveId,
+      tknAccount: liquiditySupplyPubkey,
+      feeAccount: liquidityFeeReceiver,
+      shareMint: shareMintPubkey,
+      shareAccount: shareSupplyPubkey,
+      creditMint: creditMintPubkey,
+      creditAccount: creditSupplyPubkey,
+      market: lendingMarket,
+      decimal: new BN(liquidityMint_decimals),
+      liquidityAvailableAmount: new BN(liquidity_available_amount),
+      liquidityBorrowedAmount: new BN(liquidity_borrowed_amount_wads).div(new BN(`1${"".padEnd(18, "0")}`)),
+      marketPrice: new BN(liquidityMarketPrice),
+      shareMintTotalSupply: new BN(shareMintTotalSupply),
+      creditMintTotalSupply: new BN(creditMintTotalSupply),
+      interestReverseRate: new BN(interestReverseRate),
+      accumulatedInterestReverse: new BN(accumulated_interestReverse),
+      threshold1: new BN(threshold_1).toNumber(),
+      threshold2: new BN(threshold_2).toNumber(),
+      base1: new BN(base_1).toNumber(),
+      factor1: new BN(factor_1).toNumber(),
+      base2: new BN(base_2).toNumber(),
+      factor2: new BN(factor_2).toNumber(),
+      base3: new BN(base_3).toNumber(),
+      factor3: new BN(factor_3).toNumber(),
+    };
   }
 
   static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<IObligationInfo[]> {
@@ -78,39 +144,8 @@ infos = class InstanceFrancium {
 
 export { infos };
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-export interface ReserveInfo extends IReserveInfo {
-  market: PublicKey;
-  tokenMint: PublicKey;
-  tknAccount: PublicKey;
-  feeAccount: PublicKey;
-  shareMint: PublicKey;
-  shareAccount: PublicKey;
-  creditMint: PublicKey;
-  creditAccount: PublicKey;
-  decimal: BN;
-  liquidityAvailableAmount: BN;
-  liquidityBorrowedAmount: BN;
-  marketPrice: BN;
-  shareMintTotalSupply: BN;
-  creditMintTotalSupply: BN;
-  interestReverseRate: BN;
-  accumulatedInterestReverse: BN;
-  threshold1: number;
-  threshold2: number;
-  base1: number;
-  factor1: number;
-  base2: number;
-  factor2: number;
-  base3: number;
-  factor3: number;
-}
-
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  constructor(public reserveInfo: ReserveInfo) {}
+  constructor(public reserveInfo: types.ReserveInfo) {}
 
   supplyTokenMint() {
     return this.reserveInfo.tokenMint;
@@ -175,100 +210,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 }
 
-export function parseReserveInfo(data: any, infoPubkey: PublicKey): ReserveInfo {
-  let buffer = Buffer.from(data);
-  let rawLending = RESERVE_LAYOUT.decode(buffer);
-
-  let {
-    version,
-    last_updateSlot,
-    last_updateStale,
-    lendingMarket,
-    liquidityMintPubkey,
-    liquidityMint_decimals,
-    liquiditySupplyPubkey,
-    liquidityFeeReceiver,
-    oracle,
-    liquidity_available_amount,
-    liquidity_borrowed_amount_wads,
-    liquidity_cumulative_borrowRate_wads,
-    liquidityMarketPrice,
-    shareMintPubkey,
-    shareMintTotalSupply,
-    shareSupplyPubkey,
-    creditMintPubkey,
-    creditMintTotalSupply,
-    creditSupplyPubkey,
-    threshold_1,
-    threshold_2,
-    base_1,
-    factor_1,
-    base_2,
-    factor_2,
-    base_3,
-    factor_3,
-    interestReverseRate,
-    accumulated_interestReverse,
-  } = rawLending;
-
-  return {
-    tokenMint: liquidityMintPubkey,
-    reserveId: infoPubkey,
-    tknAccount: liquiditySupplyPubkey,
-    feeAccount: liquidityFeeReceiver,
-    shareMint: shareMintPubkey,
-    shareAccount: shareSupplyPubkey,
-    creditMint: creditMintPubkey,
-    creditAccount: creditSupplyPubkey,
-    market: lendingMarket,
-    decimal: new BN(liquidityMint_decimals),
-    liquidityAvailableAmount: new BN(liquidity_available_amount),
-    liquidityBorrowedAmount: new BN(liquidity_borrowed_amount_wads).div(new BN(`1${"".padEnd(18, "0")}`)),
-    marketPrice: new BN(liquidityMarketPrice),
-    shareMintTotalSupply: new BN(shareMintTotalSupply),
-    creditMintTotalSupply: new BN(creditMintTotalSupply),
-    interestReverseRate: new BN(interestReverseRate),
-    accumulatedInterestReverse: new BN(accumulated_interestReverse),
-    threshold1: new BN(threshold_1).toNumber(),
-    threshold2: new BN(threshold_2).toNumber(),
-    base1: new BN(base_1).toNumber(),
-    factor1: new BN(factor_1).toNumber(),
-    base2: new BN(base_2).toNumber(),
-    factor2: new BN(factor_2).toNumber(),
-    base3: new BN(base_3).toNumber(),
-    factor3: new BN(factor_3).toNumber(),
-  };
-}
-
-export interface FarmInfo extends IFarmInfo {
-  // farmId
-
-  version: BN;
-  isDualRewards: BN;
-  admin: PublicKey;
-  tokenProgramId: PublicKey;
-  poolAuthority: PublicKey;
-  stakedTokenMint: PublicKey;
-  stakedTokenAccount: PublicKey;
-  rewardsTokenMint: PublicKey;
-  rewardsTokenAccount: PublicKey;
-  rewardsTokenMintB: PublicKey;
-  rewardsTokenAccountB: PublicKey;
-  poolStakeCap: BN;
-  userStakeCap: BN;
-  rewardsStartSlot: BN;
-  rewardsEndSlot: BN;
-  rewardsPerDay: BN;
-  rewardsStartSlotB: BN;
-  rewardsEndSlotB: BN;
-  rewardsPerDayB: BN;
-  totalStakedAmount: BN;
-  lastUpdateSlot: BN;
-  accumulatedRewardsPerShare: BN;
-  accumulatedRewardsPerShareB: BN;
-}
-
-export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
+export function parseFarmData(data: any, farmId: PublicKey): types.FarmInfo {
   let buffer = Buffer.from(data);
   let rawFarm = FARM_LAYOUT.decode(buffer);
   let {
@@ -325,21 +267,7 @@ export function parseFarmData(data: any, farmId: PublicKey): FarmInfo {
   };
 }
 
-export interface FarmerInfo extends IFarmerInfo {
-  // farmerId
-  // userKey
-  // farmerId
-  // amount
-
-  version: BN;
-  rewardsDebt: BN;
-  rewardsDebtB: BN;
-  stakeTokenAccount: PublicKey;
-  rewardsTokenAccount: PublicKey;
-  rewardsTokenAccountB: PublicKey;
-}
-
-export function parseFarmerData(data: any, farmerId: PublicKey): FarmerInfo {
+export function parseFarmerData(data: any, farmerId: PublicKey): types.FarmerInfo {
   let buffer = Buffer.from(data);
   let rawFarm = FARMER_LAYOUT.decode(buffer);
   let {
@@ -368,38 +296,6 @@ export function parseFarmerData(data: any, farmerId: PublicKey): FarmerInfo {
   };
 }
 
-export async function getAllReserveWrappers(connection: Connection): Promise<ReserveInfoWrapper[]> {
-  let reserves = await getAllReserves(connection);
-
-  return reserves.map((reserveInfo) => new ReserveInfoWrapper(reserveInfo));
-}
-
-export async function getAllReserves(connection: Connection): Promise<ReserveInfo[]> {
-  const programIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 10,
-      //offset 10byte
-      bytes: LENDING_MARKET.toString(),
-    },
-  };
-  const dataSizeFilters: DataSizeFilter = {
-    dataSize: RESERVE_LAYOUT.span,
-  };
-
-  const filters = [programIdMemcmp, dataSizeFilters];
-
-  const config: GetProgramAccountsConfig = { filters };
-  const reserveAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_PROGRAM_ID, config);
-
-  return reserveAccounts.map((account) => parseReserveInfo(account.account.data, account.pubkey));
-}
-
-export async function getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
-  let reserveAccount = (await connection.getAccountInfo(reserveId)) as AccountInfo<Buffer>;
-
-  return parseReserveInfo(reserveAccount.data, reserveId);
-}
-
 export async function getAllFarms(connection: Connection) {
   const dataSizeFilters: DataSizeFilter = {
     dataSize: FARM_LAYOUT.span,
@@ -412,7 +308,7 @@ export async function getAllFarms(connection: Connection) {
   const currentSlot = new BN(await connection.getSlot());
 
   // TODO: Why use set instead of array?
-  let farmMap: Map<String, FarmInfo> = new Map();
+  let farmMap: Map<String, types.FarmInfo> = new Map();
 
   for (let account of farmAccounts) {
     let info = parseFarmData(account.account.data, account.pubkey);
@@ -426,13 +322,13 @@ export async function getAllFarms(connection: Connection) {
   return farmMap;
 }
 
-export async function getFarm(connection: Connection, farmId: PublicKey): Promise<FarmInfo> {
+export async function getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
   let farmAccount = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
 
   return parseFarmData(farmAccount.data, farmId);
 }
 
-export async function getFarmerPubkey(wallet: PublicKey, farmInfo: FarmInfo) {
+export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
   const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
   const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
     [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
@@ -441,62 +337,13 @@ export async function getFarmerPubkey(wallet: PublicKey, farmInfo: FarmInfo) {
   return { pda: farmInfoPub, bump: nonce };
 }
 
-export async function checkFarmerCreated(wallet: PublicKey, farmInfo: FarmInfo, connection: Connection) {
+export async function checkFarmerCreated(wallet: PublicKey, farmInfo: types.FarmInfo, connection: Connection) {
   const { pda, bump } = await getFarmerPubkey(wallet, farmInfo);
   const farmerAccount = (await connection.getAccountInfo(pda)) as AccountInfo<Buffer>;
   return farmerAccount.data.length > 0;
 }
 
-export interface RaydiumStrategyState {
-  infoPubkey: PublicKey;
-  protocolVersion: BN;
-  protocolSubVersion: BN;
-  lastUpdateSlot: BN;
-  totalLp: BN;
-  totalShares: BN;
-  totalBorrowed0: BN;
-  totalBorrowed1: BN;
-  pendingTkn0: BN;
-  pendingTkn1: BN;
-  pendingWithdrawLp: BN;
-  pendingRepay0: BN;
-  pendingRepay1: BN;
-  cumulatedBorrowRate0: BN;
-  cumulatedBorrowRate1: BN;
-  admin: PublicKey;
-  authority: PublicKey;
-  authorityNonce: BN;
-  tokenProgramId: PublicKey;
-  tknAccount0: PublicKey;
-  tknAccount1: PublicKey;
-  lpAccount: PublicKey;
-  rewardAccount: PublicKey;
-  rewardAccountB: PublicKey;
-  lendingProgramId: PublicKey;
-  lendingPool0: PublicKey;
-  strategyLendingCreditAccount0: PublicKey;
-  lendingPool1: PublicKey;
-  strategyLendingCreditAccount1: PublicKey;
-  platformRewardsEnable: BN;
-  rewardsStartSlot: BN;
-  rewardsEndSlot: BN;
-  rewardsPerSlot: BN;
-  platformRewardsTknMint: PublicKey;
-  platformRewardsTknAccount: PublicKey;
-  accumulatedRewardsPerShare: BN;
-  maxLeverage: BN;
-  liquidateLine: BN;
-  compoundRewardsRate: BN;
-  ammProgramId: PublicKey;
-  ammId: PublicKey;
-  ammIdForRewards: PublicKey;
-  ammIdForRewardsB: PublicKey;
-  stakeProgramId: PublicKey;
-  stakePoolId: PublicKey;
-  stakePoolTkn: PublicKey;
-}
-
-export function parseRaydiumStrategyStateData(data: any, infoPubkey: PublicKey): RaydiumStrategyState {
+export function parseRaydiumStrategyStateData(data: any, infoPubkey: PublicKey): types.RaydiumStrategyState {
   let bufferedData = Buffer.from(data).slice(8);
   let rawState = RAYDIUM_STRATEGY_STATE_LAYOUT.decode(bufferedData);
 
@@ -598,58 +445,7 @@ export function parseRaydiumStrategyStateData(data: any, infoPubkey: PublicKey):
   };
 }
 
-export interface OrcaStrategyState {
-  infoPubkey: PublicKey;
-  protocolVersion: BN;
-  protocolSubVersion: BN;
-  lastUpdateSlot: BN;
-  totalLp: BN;
-  totalShares: BN;
-  totalBorrowed0: BN;
-  totalBorrowed1: BN;
-  pendingTkn0: BN;
-  pendingTkn1: BN;
-  pendingWithdrawLp: BN;
-  pendingRepay0: BN;
-  pendingRepay1: BN;
-  cumulatedBorrowRate0: BN;
-  cumulatedBorrowRate1: BN;
-  maxLeverage: BN;
-  liquidateLine: BN;
-  compoundRewardsRate: BN;
-  admin: PublicKey;
-  authority: PublicKey;
-  authorityNonce: BN;
-  franciumRewardsEnable: BN;
-  franciumRewardsStartSlot: BN;
-  franciumRewardsEndSlot: BN;
-  franciumRewardsPerSlot: BN;
-  franciumAccumulatedRewardsPerShare: BN;
-  franciumRewardsTknAccount: PublicKey;
-  lendingProgramId: PublicKey;
-  ammProgramId: PublicKey;
-  stakeProgramId: PublicKey;
-  tknAccount0: PublicKey;
-  tknAccount1: PublicKey;
-  lpTknAccount: PublicKey;
-  rewardsTknAccount: PublicKey;
-  farmTknAccount: PublicKey;
-  lendingPool0: PublicKey;
-  strategyLendingCreditAccount0: PublicKey;
-  lendingPool1: PublicKey;
-  strategyLendingCreditAccount1: PublicKey;
-  doubleDipRewardsSwapPoolId: PublicKey;
-  doubleDipStrategyRewardsTknAccount: PublicKey;
-  swapPoolId: PublicKey;
-  rewardsSwapPoolId: PublicKey;
-  stakePoolFarmInfo: PublicKey;
-  strategyFarmInfo: PublicKey;
-  doubleDipFarmTknAccount: PublicKey;
-  doubleDipStakePoolFarmInfo: PublicKey;
-  doubleDipStrategyFarmInfo: PublicKey;
-}
-
-export function parseOrcaStrategyStateData(data: any, infoPubkey: PublicKey): OrcaStrategyState {
+export function parseOrcaStrategyStateData(data: any, infoPubkey: PublicKey): types.OrcaStrategyState {
   let bufferedData = Buffer.from(data).slice(8);
   let rawState = ORCA_STRATEGY_STATE_LAYOUT.decode(bufferedData);
 
@@ -760,7 +556,7 @@ export async function getOrcaStrategyState(strategyStateKey: PublicKey, connecti
   return parseOrcaStrategyStateData(accountInfo?.data, strategyStateKey);
 }
 
-export async function getAllOrcaStrategyStates(connection: Connection): Promise<OrcaStrategyState[]> {
+export async function getAllOrcaStrategyStates(connection: Connection): Promise<types.OrcaStrategyState[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 125,
@@ -781,12 +577,12 @@ export async function getAllOrcaStrategyStates(connection: Connection): Promise<
 export async function getRaydiumStrategyState(
   strategyStateKey: PublicKey,
   connection: Connection
-): Promise<RaydiumStrategyState> {
+): Promise<types.RaydiumStrategyState> {
   let accountInfo = await connection.getAccountInfo(strategyStateKey);
   return parseRaydiumStrategyStateData(accountInfo?.data, strategyStateKey);
 }
 
-export async function getAllRaydiumStrategyStates(connection: Connection): Promise<RaydiumStrategyState[]> {
+export async function getAllRaydiumStrategyStates(connection: Connection): Promise<types.RaydiumStrategyState[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 122,
@@ -804,34 +600,7 @@ export async function getAllRaydiumStrategyStates(connection: Connection): Promi
   return allAccountInfos.map((info) => parseRaydiumStrategyStateData(info.account.data, info.pubkey));
 }
 
-export interface RaydiumPosition {
-  infoPubkey: PublicKey;
-  version: BN;
-  lastUpdateSlot: BN;
-  strategyStateAccount: PublicKey;
-  userMainAccount: PublicKey;
-  pending0: BN;
-  pendingInvestFlag: BN;
-  stopLoss: BN;
-  tkn0: BN;
-  tkn1: BN;
-  borrowed0: BN;
-  borrowed1: BN;
-  principle0: BN;
-  principle1: BN;
-  investedLp: BN;
-  lpShares: BN;
-  pendingWithdrawLp: BN;
-  pendingRepay0: BN;
-  pendingRepay1: BN;
-  cumulatedBorrowRate0: BN;
-  cumulatedBorrowRate1: BN;
-  platformRewardsDebt: BN;
-  pendingWithdrawFlag: BN;
-  takeProfitLine: BN;
-}
-
-export function parseRaydiumPositionData(data: any, infoPubkey: PublicKey): RaydiumPosition {
+export function parseRaydiumPositionData(data: any, infoPubkey: PublicKey): types.RaydiumPosition {
   let bufferedData = Buffer.from(data).slice(8);
   let rawInfo = RAYDIUM_POSITION_LAYOUT.decode(bufferedData);
 
@@ -889,7 +658,10 @@ export function parseRaydiumPositionData(data: any, infoPubkey: PublicKey): Rayd
   };
 }
 
-export async function getAllRaydiumPositions(wallet: PublicKey, connection: Connection): Promise<RaydiumPosition[]> {
+export async function getAllRaydiumPositions(
+  wallet: PublicKey,
+  connection: Connection
+): Promise<types.RaydiumPosition[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 49,
@@ -924,37 +696,7 @@ export async function getRaydiumPositionKeySet(
   return { address: pda, nonce: new BN(nonce), bump: new BN(bump) };
 }
 
-export interface OrcaPosition {
-  infoPubkey: PublicKey;
-  version: BN;
-  lastUpdateSlot: BN;
-  strategyStateAccount: PublicKey;
-  userMainAccount: PublicKey;
-  pending0: BN;
-  pendingInvestFlag: BN;
-  stopLoss: BN;
-  tkn0: BN;
-  tkn1: BN;
-  borrowed0: BN;
-  borrowed1: BN;
-  principle0: BN;
-  principle1: BN;
-  investedLp: BN;
-  lpShares: BN;
-  pendingWithdrawLp: BN;
-  pendingRepay0: BN;
-  pendingRepay1: BN;
-  cumulatedBorrowRate0: BN;
-  cumulatedBorrowRate1: BN;
-  platformRewardsDebt: BN;
-  pendingWithdrawFlag: BN;
-  takeProfitLine: BN;
-  stableSwapComputeFlag: BN;
-  stableSwapDirection: BN;
-  stableSwapAmount: BN;
-}
-
-export function parseOrcaPositionData(data: any, infoPubkey: PublicKey): OrcaPosition {
+export function parseOrcaPositionData(data: any, infoPubkey: PublicKey): types.OrcaPosition {
   let bufferedData = Buffer.from(data).slice(8);
   let rawInfo = ORCA_POSITION_LAYOUT.decode(bufferedData);
 
@@ -1018,7 +760,7 @@ export function parseOrcaPositionData(data: any, infoPubkey: PublicKey): OrcaPos
   };
 }
 
-export async function getAllOrcaPositions(wallet: PublicKey, connection: Connection): Promise<OrcaPosition[]> {
+export async function getAllOrcaPositions(wallet: PublicKey, connection: Connection): Promise<types.OrcaPosition[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 49,

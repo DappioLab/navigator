@@ -1,26 +1,11 @@
-import {
-  PublicKey,
-  TransactionInstruction,
-  SYSVAR_CLOCK_PUBKEY,
-  SystemProgram,
-} from "@solana/web3.js";
+import { PublicKey, TransactionInstruction, SYSVAR_CLOCK_PUBKEY, SystemProgram } from "@solana/web3.js";
 import { struct, u64, u8, u32 } from "@project-serum/borsh";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import BN from "bn.js";
-import { ReserveInfo, RaydiumStrategyState } from "./infos";
+import { ReserveInfo, RaydiumStrategyState } from ".";
 import { Market } from "@project-serum/serum";
-import {
-  PoolInfo,
-  AMM_AUTHORITY,
-  POOL_PROGRAM_ID_V4,
-  FarmInfoWrapper,
-} from "../raydium";
-import {
-  FRANCIUM_LENDING_PROGRAM_ID,
-  LENDING_AUTHORITY,
-  LENDING_MARKET,
-  LFY_RAYDIUM_PROGRAM_ID,
-} from "./ids";
+import { PoolInfo, AMM_AUTHORITY, POOL_PROGRAM_ID_V4, FarmInfoWrapper } from "../raydium";
+import { FRANCIUM_LENDING_PROGRAM_ID, LENDING_AUTHORITY, LENDING_MARKET, LFY_RAYDIUM_PROGRAM_ID } from "./ids";
 
 // Raydium-specific
 export function initializeRaydiumPosition(
@@ -201,10 +186,7 @@ export async function swap(
   let hash = "f8c69e91e17587c80001000000000000000000000000000000";
   let data = Buffer.from(hash, "hex");
   let serumVaultSigner = await PublicKey.createProgramAddress(
-    [
-      serum.address.toBuffer(),
-      serum.decoded.vaultSignerNonce.toArrayLike(Buffer, "le", 8),
-    ],
+    [serum.address.toBuffer(), serum.decoded.vaultSignerNonce.toArrayLike(Buffer, "le", 8)],
     serum.programId
   );
   let keys = [
@@ -454,10 +436,7 @@ export async function removeLiquidity(
   let hash = "5055d14818ceb16c";
   let data = Buffer.from(hash, "hex");
   let serumVaultSigner = await PublicKey.createProgramAddress(
-    [
-      serum.address.toBuffer(),
-      serum.decoded.vaultSignerNonce.toArrayLike(Buffer, "le", 8),
-    ],
+    [serum.address.toBuffer(), serum.decoded.vaultSignerNonce.toArrayLike(Buffer, "le", 8)],
     serum.programId
   );
   let keys = [
@@ -521,10 +500,7 @@ export async function swapAndWithdraw(
   let datastring = "6f607d39534edca00".concat(datahex);
   data = Buffer.from(datastring, "hex");
   let serumVaultSigner = await PublicKey.createProgramAddress(
-    [
-      serum.address.toBuffer(),
-      serum.decoded.vaultSignerNonce.toArrayLike(Buffer, "le", 8),
-    ],
+    [serum.address.toBuffer(), serum.decoded.vaultSignerNonce.toArrayLike(Buffer, "le", 8)],
     serum.programId
   );
 
@@ -582,10 +558,7 @@ export async function swapAndWithdraw(
 }
 
 // Raydium-specific
-export function closeRaydiumPosition(
-  userInfoPubkey: PublicKey,
-  wallet: PublicKey
-): TransactionInstruction {
+export function closeRaydiumPosition(userInfoPubkey: PublicKey, wallet: PublicKey): TransactionInstruction {
   let keys = [
     { pubkey: wallet, isSigner: true, isWritable: true },
     { pubkey: userInfoPubkey, isSigner: false, isWritable: true },
