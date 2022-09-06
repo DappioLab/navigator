@@ -3,7 +3,7 @@ import BN from "bn.js";
 import { IInstanceMoneyMarket, IObligationInfo, IReserveInfo, IReserveInfoWrapper } from "../types";
 import { SOLEND_LENDING_MARKET_ID_ALL, SOLEND_LENDING_MARKET_ID_MAIN_POOL, SOLEND_PROGRAM_ID } from "./ids";
 import { COLLATERAL_LAYOUT, LOAN_LAYOUT, OBLIGATION_LAYOUT, RESERVE_LAYOUT } from "./layouts";
-import { getSlndPrice, isMining } from "./utils";
+import { ApiEndpoints, getSlndPrice, isMining } from "./utils";
 import { getTokenList, IServicesTokenInfo } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
@@ -63,29 +63,23 @@ infos = class InstanceSolend {
 
     const config: GetProgramAccountsConfig = { filters: filters };
     const reserveAccounts = await connection.getProgramAccounts(SOLEND_PROGRAM_ID, config);
-    let reserves = [] as ReserveInfo[];
-    for (let account of reserveAccounts) {
-      let info = this.parseReserve(account.account.data, account.pubkey);
-      reserves.push(info);
-    }
 
-    const allPartnersRewardData: ISolendAPIPartnerReward[] = await (
-      await axios.get("https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true")
-    ).data;
+    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+
+    const allPartnersRewardData: ISolendAPIPartnerReward[] = (await axios.get(ApiEndpoints.partnerReward)).data;
     const tokenList = await getTokenList();
 
     const reserveWithPartnerRewardData = reserves.map((reserve) => {
       const wrapper = new ReserveInfoWrapper(reserve);
 
-      let partnerRewards =
-        allPartnersRewardData.filter(
-          (item) =>
-            item.tokenMint === wrapper.supplyTokenMint().toBase58() &&
-            wrapper.reserveInfo.reserveId.toBase58() === item.reserveID
-        ) ?? null;
+      let partnerRewards = allPartnersRewardData.filter(
+        (item) =>
+          item.tokenMint === wrapper.supplyTokenMint().toBase58() &&
+          wrapper.reserveInfo.reserveId.toBase58() === item.reserveID
+      );
 
       let price = tokenList.find((t) => t.mint === wrapper.supplyTokenMint().toBase58())?.price;
-      let partnerRewardData: IPartnerReward[] | null = null;
+      let partnerRewardData: IPartnerReward[] = [];
 
       const poolTotalSupply = Number(wrapper.supplyAmount()) / 10 ** Number(wrapper.supplyTokenDecimal());
       const poolTotalSupplyValue = poolTotalSupply * price!;
@@ -106,7 +100,7 @@ infos = class InstanceSolend {
           })
           .filter((p) => p) as IPartnerReward[];
       } else {
-        partnerRewardData = null;
+        partnerRewardData = [];
       }
       return { ...reserve, partnerRewardData };
     });
@@ -131,25 +125,21 @@ infos = class InstanceSolend {
       liquidity,
       collateral,
       config,
-      partnerRewardData: null,
+      partnerRewardData: [],
     };
   }
 
   static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<ObligationInfo[]> {
-    let allObligationAddress: PublicKey[] = [];
-    let allObligationInfos: ObligationInfo[] = [];
-    for (let lendingMarket of SOLEND_LENDING_MARKET_ID_ALL) {
-      allObligationAddress.push(await getObligationPublicKey(userKey, lendingMarket));
-    }
-    let allAccountInfo = await connection.getMultipleAccountsInfo(allObligationAddress);
-
-    allAccountInfo.map((accountInfo, index) => {
-      if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
-        let obligationInfo = this.parseObligation(accountInfo.data, allObligationAddress[index]);
-        allObligationInfos.push(obligationInfo);
-      }
-    });
-    return allObligationInfos;
+    const obligationKeys = await Promise.all(
+      SOLEND_LENDING_MARKET_ID_ALL.map(async (lendingMarket) => await getObligationPublicKey(userKey, lendingMarket))
+    );
+    const obligationAccounts = await connection.getMultipleAccountsInfo(obligationKeys);
+    const obligationInfos = obligationAccounts
+      .filter((accountInfo) => accountInfo)
+      .map((accountInfo, index) => {
+        return this.parseObligation(accountInfo!.data, obligationKeys[index]);
+      });
+    return obligationInfos;
   }
 
   static async getObligation(
@@ -158,12 +148,9 @@ infos = class InstanceSolend {
     version?: number
   ): Promise<ObligationInfo> {
     let accountInfo = await connection.getAccountInfo(obligationId);
-    if (accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
-      let obligationInfo = this.parseObligation(accountInfo?.data, obligationId) as ObligationInfo;
-      return obligationInfo;
-    } else {
-      return defaultObligationWrapper.obligationInfo;
-    }
+    return accountInfo?.owner.equals(SOLEND_PROGRAM_ID)
+      ? this.parseObligation(accountInfo?.data, obligationId)
+      : defaultObligationWrapper.obligationInfo;
   }
 
   static parseObligation(data: Buffer, obligationId: PublicKey): ObligationInfo {
@@ -190,7 +177,7 @@ infos = class InstanceSolend {
       depositsBuffer.length,
       depositsLen * COLLATERAL_LAYOUT.span + borrowsLen * LOAN_LAYOUT.span
     );
-    const obligationLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as ObligationLoan[];
+    const obligationLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer);
 
     const obligationInfo = {
       version,
@@ -215,9 +202,6 @@ export { infos };
 // Obligation related types
 //all from https://docs.solend.fi/protocol/addresses
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  // TODO: will be empty partnerReward when init class directly (can only be got from getAllReserveWrapper). Needs refactor.
-  // CONCERN: Increasing Solend API querying (internet traffic)
-  // partnerRewardData: IPartnerReward[] | null = null;
   constructor(public reserveInfo: ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
@@ -399,7 +383,7 @@ export interface ReserveInfo extends IReserveInfo {
   liquidity: ReserveLiquidity;
   collateral: ReserveCollateral;
   config: ReserveConfig;
-  partnerRewardData: IPartnerReward[] | null;
+  partnerRewardData: IPartnerReward[];
 }
 
 export interface LastUpdate {

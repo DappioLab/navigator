@@ -14,10 +14,11 @@ export async function isMining(reserveId: PublicKey) {
 }
 
 export async function getSlndPrice(connection: Connection) {
-  let priceFeed = await parseAggregatorAccountData(
-    connection,
-    SLND_PRICE_ORACLE
-  );
+  let priceFeed = await parseAggregatorAccountData(connection, SLND_PRICE_ORACLE);
   let price = priceFeed.lastRoundResult?.result as number;
   return new BN(price * 1000);
+}
+
+export enum ApiEndpoints {
+  partnerReward = "https://api.solend.fi/liquidity-mining/external-reward-stats-v2?flat=true",
 }
