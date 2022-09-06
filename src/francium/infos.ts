@@ -43,17 +43,15 @@ import { utils } from "..";
 let infos: IInstanceMoneyMarket;
 
 infos = class InstanceFrancium {
-  static async getAllReserves(
-    connection: Connection,
-    marketId?: PublicKey
-  ): Promise<IReserveInfo[]> {
+  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<IReserveInfo[]> {
     return [];
   }
 
-  static async getReserve(
-    connection: Connection,
-    reserveId: PublicKey
-  ): Promise<IReserveInfo> {
+  static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<IReserveInfoWrapper[]> {
+    return [];
+  }
+
+  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<IReserveInfo> {
     return {} as IReserveInfo;
   }
 
@@ -61,10 +59,7 @@ infos = class InstanceFrancium {
     return {} as IReserveInfo;
   }
 
-  static async getAllObligations(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<IObligationInfo[]> {
+  static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<IObligationInfo[]> {
     return [];
   }
 
@@ -76,10 +71,7 @@ infos = class InstanceFrancium {
     return {} as IObligationInfo;
   }
 
-  static parseObligation(
-    data: Buffer,
-    obligationId: PublicKey
-  ): IObligationInfo {
+  static parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo {
     return {} as IObligationInfo;
   }
 };
@@ -141,9 +133,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   supplyAmount() {
-    return this.reserveInfo.liquidityAvailableAmount.add(
-      this.reserveInfo.liquidityBorrowedAmount
-    );
+    return this.reserveInfo.liquidityAvailableAmount.add(this.reserveInfo.liquidityBorrowedAmount);
   }
 
   borrowedAmount() {
@@ -155,29 +145,15 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   rates() {
-    const {
-      threshold1,
-      threshold2,
-      base1,
-      factor1,
-      base2,
-      factor2,
-      base3,
-      factor3,
-    } = { ...this.reserveInfo };
+    const { threshold1, threshold2, base1, factor1, base2, factor2, base3, factor3 } = { ...this.reserveInfo };
     let borrowInterest = 0;
     let utilization = this.calculateUtilizationRatio();
     if (utilization > 0 && utilization <= threshold1 / 100) {
       borrowInterest = base1 / 100 + (factor1 / 100) * utilization;
-    } else if (
-      utilization > threshold1 / 100 &&
-      utilization <= threshold2 / 100
-    ) {
-      borrowInterest =
-        base2 / 100 + (factor2 / 100) * (utilization - threshold1 / 100);
+    } else if (utilization > threshold1 / 100 && utilization <= threshold2 / 100) {
+      borrowInterest = base2 / 100 + (factor2 / 100) * (utilization - threshold1 / 100);
     } else if (utilization > threshold2 / 100) {
-      borrowInterest =
-        base3 / 100 + (factor3 / 100) * (utilization - threshold2 / 100);
+      borrowInterest = base3 / 100 + (factor3 / 100) * (utilization - threshold2 / 100);
     }
     const apr = utilization * borrowInterest * 100;
     const apy = ((1 + apr / 100 / 365) ** 365 - 1) * 100;
@@ -199,10 +175,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 }
 
-export function parseReserveInfo(
-  data: any,
-  infoPubkey: PublicKey
-): ReserveInfo {
+export function parseReserveInfo(data: any, infoPubkey: PublicKey): ReserveInfo {
   let buffer = Buffer.from(data);
   let rawLending = RESERVE_LAYOUT.decode(buffer);
 
@@ -250,9 +223,7 @@ export function parseReserveInfo(
     market: lendingMarket,
     decimal: new BN(liquidityMint_decimals),
     liquidityAvailableAmount: new BN(liquidity_available_amount),
-    liquidityBorrowedAmount: new BN(liquidity_borrowed_amount_wads).div(
-      new BN(`1${"".padEnd(18, "0")}`)
-    ),
+    liquidityBorrowedAmount: new BN(liquidity_borrowed_amount_wads).div(new BN(`1${"".padEnd(18, "0")}`)),
     marketPrice: new BN(liquidityMarketPrice),
     shareMintTotalSupply: new BN(shareMintTotalSupply),
     creditMintTotalSupply: new BN(creditMintTotalSupply),
@@ -397,17 +368,13 @@ export function parseFarmerData(data: any, farmerId: PublicKey): FarmerInfo {
   };
 }
 
-export async function getAllReserveWrappers(
-  connection: Connection
-): Promise<ReserveInfoWrapper[]> {
+export async function getAllReserveWrappers(connection: Connection): Promise<ReserveInfoWrapper[]> {
   let reserves = await getAllReserves(connection);
 
   return reserves.map((reserveInfo) => new ReserveInfoWrapper(reserveInfo));
 }
 
-export async function getAllReserves(
-  connection: Connection
-): Promise<ReserveInfo[]> {
+export async function getAllReserves(connection: Connection): Promise<ReserveInfo[]> {
   const programIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 10,
@@ -422,23 +389,13 @@ export async function getAllReserves(
   const filters = [programIdMemcmp, dataSizeFilters];
 
   const config: GetProgramAccountsConfig = { filters };
-  const reserveAccounts = await connection.getProgramAccounts(
-    FRANCIUM_LENDING_PROGRAM_ID,
-    config
-  );
+  const reserveAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_PROGRAM_ID, config);
 
-  return reserveAccounts.map((account) =>
-    parseReserveInfo(account.account.data, account.pubkey)
-  );
+  return reserveAccounts.map((account) => parseReserveInfo(account.account.data, account.pubkey));
 }
 
-export async function getReserve(
-  connection: Connection,
-  reserveId: PublicKey
-): Promise<ReserveInfo> {
-  let reserveAccount = (await connection.getAccountInfo(
-    reserveId
-  )) as AccountInfo<Buffer>;
+export async function getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
+  let reserveAccount = (await connection.getAccountInfo(reserveId)) as AccountInfo<Buffer>;
 
   return parseReserveInfo(reserveAccount.data, reserveId);
 }
@@ -450,10 +407,7 @@ export async function getAllFarms(connection: Connection) {
   const filters = [dataSizeFilters];
   const config: GetProgramAccountsConfig = { filters };
 
-  const farmAccounts = await connection.getProgramAccounts(
-    FRANCIUM_LENDING_REWARD_PROGRAM_ID,
-    config
-  );
+  const farmAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_REWARD_PROGRAM_ID, config);
 
   const currentSlot = new BN(await connection.getSlot());
 
@@ -472,22 +426,14 @@ export async function getAllFarms(connection: Connection) {
   return farmMap;
 }
 
-export async function getFarm(
-  connection: Connection,
-  farmId: PublicKey
-): Promise<FarmInfo> {
-  let farmAccount = (await connection.getAccountInfo(
-    farmId
-  )) as AccountInfo<Buffer>;
+export async function getFarm(connection: Connection, farmId: PublicKey): Promise<FarmInfo> {
+  let farmAccount = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
 
   return parseFarmData(farmAccount.data, farmId);
 }
 
 export async function getFarmerPubkey(wallet: PublicKey, farmInfo: FarmInfo) {
-  const ata = await utils.findAssociatedTokenAddress(
-    wallet,
-    farmInfo.stakedTokenMint
-  );
+  const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
   const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
     [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
     FRANCIUM_LENDING_REWARD_PROGRAM_ID
@@ -495,15 +441,9 @@ export async function getFarmerPubkey(wallet: PublicKey, farmInfo: FarmInfo) {
   return { pda: farmInfoPub, bump: nonce };
 }
 
-export async function checkFarmerCreated(
-  wallet: PublicKey,
-  farmInfo: FarmInfo,
-  connection: Connection
-) {
+export async function checkFarmerCreated(wallet: PublicKey, farmInfo: FarmInfo, connection: Connection) {
   const { pda, bump } = await getFarmerPubkey(wallet, farmInfo);
-  const farmerAccount = (await connection.getAccountInfo(
-    pda
-  )) as AccountInfo<Buffer>;
+  const farmerAccount = (await connection.getAccountInfo(pda)) as AccountInfo<Buffer>;
   return farmerAccount.data.length > 0;
 }
 
@@ -556,10 +496,7 @@ export interface RaydiumStrategyState {
   stakePoolTkn: PublicKey;
 }
 
-export function parseRaydiumStrategyStateData(
-  data: any,
-  infoPubkey: PublicKey
-): RaydiumStrategyState {
+export function parseRaydiumStrategyStateData(data: any, infoPubkey: PublicKey): RaydiumStrategyState {
   let bufferedData = Buffer.from(data).slice(8);
   let rawState = RAYDIUM_STRATEGY_STATE_LAYOUT.decode(bufferedData);
 
@@ -712,10 +649,7 @@ export interface OrcaStrategyState {
   doubleDipStrategyFarmInfo: PublicKey;
 }
 
-export function parseOrcaStrategyStateData(
-  data: any,
-  infoPubkey: PublicKey
-): OrcaStrategyState {
+export function parseOrcaStrategyStateData(data: any, infoPubkey: PublicKey): OrcaStrategyState {
   let bufferedData = Buffer.from(data).slice(8);
   let rawState = ORCA_STRATEGY_STATE_LAYOUT.decode(bufferedData);
 
@@ -821,17 +755,12 @@ export function parseOrcaStrategyStateData(
   };
 }
 
-export async function getOrcaStrategyState(
-  strategyStateKey: PublicKey,
-  connection: Connection
-) {
+export async function getOrcaStrategyState(strategyStateKey: PublicKey, connection: Connection) {
   let accountInfo = await connection.getAccountInfo(strategyStateKey);
   return parseOrcaStrategyStateData(accountInfo?.data, strategyStateKey);
 }
 
-export async function getAllOrcaStrategyStates(
-  connection: Connection
-): Promise<OrcaStrategyState[]> {
+export async function getAllOrcaStrategyStates(connection: Connection): Promise<OrcaStrategyState[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 125,
@@ -844,14 +773,9 @@ export async function getAllOrcaStrategyStates(
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters };
 
-  const allAccountInfos = await connection.getProgramAccounts(
-    LYF_ORCA_PROGRAM_ID,
-    config
-  );
+  const allAccountInfos = await connection.getProgramAccounts(LYF_ORCA_PROGRAM_ID, config);
 
-  return allAccountInfos.map((info) =>
-    parseOrcaStrategyStateData(info.account.data, info.pubkey)
-  );
+  return allAccountInfos.map((info) => parseOrcaStrategyStateData(info.account.data, info.pubkey));
 }
 
 export async function getRaydiumStrategyState(
@@ -862,9 +786,7 @@ export async function getRaydiumStrategyState(
   return parseRaydiumStrategyStateData(accountInfo?.data, strategyStateKey);
 }
 
-export async function getAllRaydiumStrategyStates(
-  connection: Connection
-): Promise<RaydiumStrategyState[]> {
+export async function getAllRaydiumStrategyStates(connection: Connection): Promise<RaydiumStrategyState[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 122,
@@ -877,14 +799,9 @@ export async function getAllRaydiumStrategyStates(
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters };
 
-  const allAccountInfos = await connection.getProgramAccounts(
-    LFY_RAYDIUM_PROGRAM_ID,
-    config
-  );
+  const allAccountInfos = await connection.getProgramAccounts(LFY_RAYDIUM_PROGRAM_ID, config);
 
-  return allAccountInfos.map((info) =>
-    parseRaydiumStrategyStateData(info.account.data, info.pubkey)
-  );
+  return allAccountInfos.map((info) => parseRaydiumStrategyStateData(info.account.data, info.pubkey));
 }
 
 export interface RaydiumPosition {
@@ -914,10 +831,7 @@ export interface RaydiumPosition {
   takeProfitLine: BN;
 }
 
-export function parseRaydiumPositionData(
-  data: any,
-  infoPubkey: PublicKey
-): RaydiumPosition {
+export function parseRaydiumPositionData(data: any, infoPubkey: PublicKey): RaydiumPosition {
   let bufferedData = Buffer.from(data).slice(8);
   let rawInfo = RAYDIUM_POSITION_LAYOUT.decode(bufferedData);
 
@@ -975,10 +889,7 @@ export function parseRaydiumPositionData(
   };
 }
 
-export async function getAllRaydiumPositions(
-  wallet: PublicKey,
-  connection: Connection
-): Promise<RaydiumPosition[]> {
+export async function getAllRaydiumPositions(wallet: PublicKey, connection: Connection): Promise<RaydiumPosition[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 49,
@@ -991,14 +902,9 @@ export async function getAllRaydiumPositions(
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters };
 
-  const allPositionInfos = await connection.getProgramAccounts(
-    LFY_RAYDIUM_PROGRAM_ID,
-    config
-  );
+  const allPositionInfos = await connection.getProgramAccounts(LFY_RAYDIUM_PROGRAM_ID, config);
 
-  return allPositionInfos.map((info) =>
-    parseRaydiumPositionData(info.account.data, info.pubkey)
-  );
+  return allPositionInfos.map((info) => parseRaydiumPositionData(info.account.data, info.pubkey));
 }
 
 export async function getRaydiumPositionKeySet(
@@ -1048,10 +954,7 @@ export interface OrcaPosition {
   stableSwapAmount: BN;
 }
 
-export function parseOrcaPositionData(
-  data: any,
-  infoPubkey: PublicKey
-): OrcaPosition {
+export function parseOrcaPositionData(data: any, infoPubkey: PublicKey): OrcaPosition {
   let bufferedData = Buffer.from(data).slice(8);
   let rawInfo = ORCA_POSITION_LAYOUT.decode(bufferedData);
 
@@ -1115,10 +1018,7 @@ export function parseOrcaPositionData(
   };
 }
 
-export async function getAllOrcaPositions(
-  wallet: PublicKey,
-  connection: Connection
-): Promise<OrcaPosition[]> {
+export async function getAllOrcaPositions(wallet: PublicKey, connection: Connection): Promise<OrcaPosition[]> {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 49,
@@ -1131,12 +1031,7 @@ export async function getAllOrcaPositions(
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters };
 
-  const allPositionInfos = await connection.getProgramAccounts(
-    LYF_ORCA_PROGRAM_ID,
-    config
-  );
+  const allPositionInfos = await connection.getProgramAccounts(LYF_ORCA_PROGRAM_ID, config);
 
-  return allPositionInfos.map((info) =>
-    parseOrcaPositionData(info.account.data, info.pubkey)
-  );
+  return allPositionInfos.map((info) => parseOrcaPositionData(info.account.data, info.pubkey));
 }

@@ -6,19 +6,9 @@ import {
   MemcmpFilter,
   PublicKey,
 } from "@solana/web3.js";
-import { getTokenAccount, TokenAccount } from "../utils";
-import {
-  POOL_PROGRAM_ID_V4,
-  FARM_PROGRAM_ID_V3,
-  FARM_PROGRAM_ID_V5,
-} from "./ids";
-import {
-  POOL_LAYOUT_V4,
-  FARMER_LAYOUT_V3_2,
-  FARMER_LAYOUT_V5_2,
-  FARM_LAYOUT_V3,
-  FARM_LAYOUT_V5,
-} from "./layouts";
+import { getTokenAccount } from "../utils";
+import { POOL_PROGRAM_ID_V4, FARM_PROGRAM_ID_V3, FARM_PROGRAM_ID_V5 } from "./ids";
+import { POOL_LAYOUT_V4, FARMER_LAYOUT_V3_2, FARMER_LAYOUT_V5_2, FARM_LAYOUT_V3, FARM_LAYOUT_V5 } from "./layouts";
 import { OpenOrders } from "@project-serum/serum";
 import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
@@ -34,10 +24,7 @@ import {
 } from "../types";
 import { getBigNumber, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
+import { FarmerInfo, FarmInfo, PoolInfo } from ".";
 
 let infos: IInstancePool & IInstanceFarm;
 
@@ -50,19 +37,10 @@ infos = class InstanceRaydium {
     };
     const v4Filters = [v4SizeFilter];
     const v4config: GetProgramAccountsConfig = { filters: v4Filters };
-    const allV4AMMAccount = await connection.getProgramAccounts(
-      POOL_PROGRAM_ID_V4,
-      v4config
-    );
+    const allV4AMMAccount = await connection.getProgramAccounts(POOL_PROGRAM_ID_V4, v4config);
     for (let v4Account of allV4AMMAccount) {
-      let poolInfo = this.parsePool(
-        v4Account.account.data,
-        v4Account.pubkey
-      ) as PoolInfo;
-      if (
-        !(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) &&
-        poolInfo.status.toNumber() != 4
-      ) {
+      let poolInfo = this.parsePool(v4Account.account.data, v4Account.pubkey) as PoolInfo;
+      if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
         allPool.push(poolInfo);
       }
     }
@@ -70,22 +48,17 @@ infos = class InstanceRaydium {
     return allPool;
   }
 
-  static async getPool(
-    connection: Connection,
-    poolId: PublicKey
-  ): Promise<IPoolInfo> {
+  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
+    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo as PoolInfo));
+  }
+
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
     let pool = null as unknown as PoolInfo;
     const poolInfoAccount = await connection.getAccountInfo(poolId);
 
-    let poolInfo = this.parsePool(
-      poolInfoAccount?.data as Buffer,
-      poolId
-    ) as PoolInfo;
+    let poolInfo = this.parsePool(poolInfoAccount?.data as Buffer, poolId) as PoolInfo;
 
-    if (
-      !(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) &&
-      poolInfo.status.toNumber() != 4
-    ) {
+    if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
       pool = poolInfo;
     }
 
@@ -147,7 +120,7 @@ infos = class InstanceRaydium {
       pnlOwner,
     } = rawPoolData;
 
-    return {
+    const poolInfo: PoolInfo = {
       poolId: infoPubkey,
       version: 4,
       status,
@@ -185,7 +158,9 @@ infos = class InstanceRaydium {
       poolTempLpTokenAccount,
       ammOwner,
       pnlOwner,
-    } as IPoolInfo;
+    };
+
+    return poolInfo;
   }
 
   static async getAllFarms(connection: Connection): Promise<IFarmInfo[]> {
@@ -195,10 +170,7 @@ infos = class InstanceRaydium {
     };
     const v1Filters = [v1SizeFilter];
     const v1Config: GetProgramAccountsConfig = { filters: v1Filters };
-    const allV1FarmAccount = await connection.getProgramAccounts(
-      FARM_PROGRAM_ID_V3,
-      v1Config
-    );
+    const allV1FarmAccount = await connection.getProgramAccounts(FARM_PROGRAM_ID_V3, v1Config);
     for (let v1Account of allV1FarmAccount) {
       let farm = this._parseFarmV3(v1Account.account.data, v1Account.pubkey);
       if (farm.state.toNumber() == 1) {
@@ -210,10 +182,7 @@ infos = class InstanceRaydium {
     };
     const v5Filters = [v5SizeFilter];
     const v5Config: GetProgramAccountsConfig = { filters: v5Filters };
-    const allV5FarmAccount = await connection.getProgramAccounts(
-      FARM_PROGRAM_ID_V5,
-      v5Config
-    );
+    const allV5FarmAccount = await connection.getProgramAccounts(FARM_PROGRAM_ID_V5, v5Config);
     for (let v5Account of allV5FarmAccount) {
       let farm = this._parseFarmV5(v5Account.account.data, v5Account.pubkey, 5);
       if (farm.state.toNumber() == 1) {
@@ -231,15 +200,13 @@ infos = class InstanceRaydium {
     return allFarm;
   }
 
-  static async getFarm(
-    connection: Connection,
-    farmId: PublicKey
-  ): Promise<FarmInfo> {
+  static async getAllFarmWrappers(connection: Connection): Promise<IFarmInfoWrapper[]> {
+    return (await this.getAllFarms(connection)).map((farmInfo) => new FarmInfoWrapper(farmInfo as FarmInfo));
+  }
+
+  static async getFarm(connection: Connection, farmId: PublicKey): Promise<FarmInfo> {
     const farmInfoAccount = await connection.getAccountInfo(farmId);
-    const farm = this.parseFarm(
-      farmInfoAccount?.data as Buffer,
-      farmId
-    ) as FarmInfo;
+    const farm = this.parseFarm(farmInfoAccount?.data as Buffer, farmId) as FarmInfo;
 
     return farm;
   }
@@ -248,10 +215,7 @@ infos = class InstanceRaydium {
     // v3 size = 200
     // v5 size = 224
     const version = data.length == 200 ? 3 : 5;
-    const parsedFarm =
-      version == 3
-        ? this._parseFarmV3(data, farmId)
-        : this._parseFarmV5(data, farmId, version);
+    const parsedFarm = version == 3 ? this._parseFarmV3(data, farmId) : this._parseFarmV5(data, farmId, version);
 
     let farm = null as unknown as FarmInfo;
     if (parsedFarm.state.toNumber() == 1) {
@@ -261,10 +225,7 @@ infos = class InstanceRaydium {
     return farm;
   }
 
-  static async getAllFarmers(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<IFarmerInfo[]> {
+  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]> {
     let memcmpFilter: MemcmpFilter = {
       memcmp: {
         offset: 8 + 32,
@@ -279,62 +240,32 @@ infos = class InstanceRaydium {
 
     let filters_v5_2 = [memcmpFilter, dataSizeFilter(FARMER_LAYOUT_V5_2.span)];
 
-    let allFarmersInV3_2 = await connection.getProgramAccounts(
-      FARM_PROGRAM_ID_V3,
-      {
-        filters: filters_v3_2,
-      }
-    );
+    let allFarmersInV3_2 = await connection.getProgramAccounts(FARM_PROGRAM_ID_V3, {
+      filters: filters_v3_2,
+    });
 
-    let allFarmersInV5_2 = await connection.getProgramAccounts(
-      FARM_PROGRAM_ID_V5,
-      { filters: filters_v5_2 }
-    );
+    let allFarmersInV5_2 = await connection.getProgramAccounts(FARM_PROGRAM_ID_V5, { filters: filters_v5_2 });
 
-    let farmerInfoV3_2 = await this._getFarmerInfos(
-      connection,
-      allFarmersInV3_2,
-      FARMER_LAYOUT_V3_2,
-      3
-    );
+    let farmerInfoV3_2 = await this._getFarmerInfos(connection, allFarmersInV3_2, FARMER_LAYOUT_V3_2, 3);
 
-    let farmerInfoV5_2 = await this._getFarmerInfos(
-      connection,
-      allFarmersInV5_2,
-      FARMER_LAYOUT_V5_2,
-      5
-    );
+    let farmerInfoV5_2 = await this._getFarmerInfos(connection, allFarmersInV5_2, FARMER_LAYOUT_V5_2, 5);
 
     return [...farmerInfoV3_2, ...farmerInfoV5_2];
   }
 
-  static async getFarmerId(
-    farmId: PublicKey,
-    userKey: PublicKey,
-    version: number
-  ): Promise<PublicKey> {
+  static async getFarmerId(farmId: PublicKey, userKey: PublicKey, version: number): Promise<PublicKey> {
     const programId = version === 3 ? FARM_PROGRAM_ID_V3 : FARM_PROGRAM_ID_V5;
 
     const [farmerId, _] = await PublicKey.findProgramAddress(
-      [
-        farmId.toBuffer(),
-        userKey.toBuffer(),
-        Buffer.from("staker_info_v2_associated_seed", "utf-8"),
-      ],
+      [farmId.toBuffer(), userKey.toBuffer(), Buffer.from("staker_info_v2_associated_seed", "utf-8")],
       programId
     );
 
     return farmerId;
   }
 
-  static async getFarmer(
-    connection: Connection,
-    farmerId: PublicKey,
-    version: number
-  ): Promise<IFarmerInfo> {
-    const farmerAcccountInfo = (await connection.getAccountInfo(
-      farmerId
-    )) as AccountInfo<Buffer>;
+  static async getFarmer(connection: Connection, farmerId: PublicKey, version: number): Promise<IFarmerInfo> {
+    const farmerAcccountInfo = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
     const info =
       farmerAcccountInfo &&
       (await this._getFarmer(
@@ -381,11 +312,7 @@ infos = class InstanceRaydium {
     };
   }
 
-  private static _parseFarmV5(
-    data: any,
-    farmId: PublicKey,
-    version: number
-  ): FarmInfo {
+  private static _parseFarmV5(data: any, farmId: PublicKey, version: number): FarmInfo {
     let farmData = Buffer.from(data);
     let rawFarmData = FARM_LAYOUT_V5.decode(farmData);
     let {
@@ -424,28 +351,21 @@ infos = class InstanceRaydium {
     };
   }
 
-  private static async _updateAllFarmToken(
-    farms: FarmInfo[],
-    connection: Connection
-  ) {
+  private static async _updateAllFarmToken(farms: FarmInfo[], connection: Connection) {
     let allLPPubkey: PublicKey[] = [];
     let allAccountInfo: AccountInfo<Buffer>[] = [];
     for (let index = 0; index < farms.length; index++) {
       allLPPubkey.push(farms[index].poolLpTokenAccountPubkey);
 
       if (index % 99 == 98) {
-        let accounts = (await connection.getMultipleAccountsInfo(
-          allLPPubkey
-        )) as AccountInfo<Buffer>[];
+        let accounts = (await connection.getMultipleAccountsInfo(allLPPubkey)) as AccountInfo<Buffer>[];
         allAccountInfo = allAccountInfo.concat(accounts);
         allLPPubkey = [];
       }
     }
 
     allAccountInfo = allAccountInfo.concat(
-      (await connection.getMultipleAccountsInfo(
-        allLPPubkey
-      )) as AccountInfo<Buffer>[]
+      (await connection.getMultipleAccountsInfo(allLPPubkey)) as AccountInfo<Buffer>[]
     );
 
     for (let index = 0; index < farms.length; index++) {
@@ -461,32 +381,19 @@ infos = class InstanceRaydium {
   }
 
   // Inner fucntions used by getFarmerInfos
-  private static async _getFarmRelatedMints(
-    connection: Connection,
-    decoded: any,
-    farmVersion: 3 | 5
-  ) {
+  private static async _getFarmRelatedMints(connection: Connection, decoded: any, farmVersion: 3 | 5) {
     let farmIdPubkey = new PublicKey(decoded.id.toBase58());
     let farmAccInfo = await connection.getAccountInfo(farmIdPubkey);
     let farmInfo: FarmInfo =
       farmVersion === 3
         ? this._parseFarmV3(farmAccInfo?.data, farmIdPubkey)
         : this._parseFarmV5(farmAccInfo?.data, farmIdPubkey, farmVersion);
-    let stakedTokenMint = (
-      await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)
-    ).mint.toBase58();
+    let stakedTokenMint = (await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)).mint.toBase58();
 
-    let rewardAMint = (
-      await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkey)
-    ).mint.toBase58();
+    let rewardAMint = (await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkey)).mint.toBase58();
     let rewardBMint =
       farmVersion !== 3
-        ? (
-            await getTokenAccount(
-              connection,
-              farmInfo.poolRewardTokenAccountPubkeyB!
-            )
-          ).mint.toBase58()
+        ? (await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkeyB!)).mint.toBase58()
         : undefined;
     return { stakedTokenMint, rewardAMint, rewardBMint };
   }
@@ -501,11 +408,7 @@ infos = class InstanceRaydium {
     farmVersion: 3 | 5
   ): Promise<FarmerInfo> {
     let decoded = layout.decode(farmer.account.data);
-    let relatedMints = await this._getFarmRelatedMints(
-      connection,
-      decoded,
-      farmVersion
-    );
+    let relatedMints = await this._getFarmRelatedMints(connection, decoded, farmVersion);
 
     return {
       farmerId: farmer.pubkey,
@@ -514,9 +417,7 @@ infos = class InstanceRaydium {
       amount: decoded.deposited.toNumber(),
       farmVersion: farmVersion,
       mints: relatedMints,
-      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
-        rewardDebt.toNumber()
-      ),
+      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
     };
   }
 
@@ -533,11 +434,7 @@ infos = class InstanceRaydium {
     return await Promise.all(
       farmers.map(async (farmer) => {
         let decoded = layout.decode(farmer.account.data);
-        let relatedMints = await this._getFarmRelatedMints(
-          connection,
-          decoded,
-          farmVersion
-        );
+        let relatedMints = await this._getFarmRelatedMints(connection, decoded, farmVersion);
 
         return {
           farmerId: farmer.pubkey,
@@ -546,9 +443,7 @@ infos = class InstanceRaydium {
           amount: decoded.deposited.toNumber(),
           farmVersion: farmVersion,
           mints: relatedMints,
-          rewardDebts: decoded.rewardDebts.map((rewardDebt: any) =>
-            rewardDebt.toNumber()
-          ),
+          rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
         } as FarmerInfo;
       })
     );
@@ -557,52 +452,6 @@ infos = class InstanceRaydium {
 
 export { infos };
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-export interface PoolInfo extends IPoolInfo {
-  version: number;
-  status: BN;
-  nonce: BN;
-  orderNum: BN;
-  depth: BN;
-  coinDecimals: BN;
-  pcDecimals: BN;
-  state: BN;
-  resetFlag: BN;
-  minSize: BN;
-  volMaxCutRatio: BN;
-  amountWaveRatio: BN;
-  coinLotSize: BN;
-  pcLotSize: BN;
-  minPriceMultiplier: BN;
-  maxPriceMultiplier: BN;
-  needTakePnlCoin: BN;
-  needTakePnlPc: BN;
-  totalPnlPc: BN;
-  totalPnlCoin: BN;
-  poolTotalDepositPc: BN;
-  poolTotalDepositCoin: BN;
-  systemDecimalsValue: BN;
-  poolCoinTokenAccount: PublicKey;
-  poolPcTokenAccount: PublicKey;
-  ammOpenOrders: PublicKey;
-  serumMarket: PublicKey;
-  serumProgramId: PublicKey;
-  ammTargetOrders: PublicKey;
-  poolWithdrawQueue: PublicKey;
-  poolTempLpTokenAccount: PublicKey;
-  ammOwner: PublicKey;
-  pnlOwner: PublicKey;
-  coinAccountAmount?: BN;
-  pcAccountAmount?: BN;
-  srmTokenAccount?: PublicKey;
-  ammQuantities?: PublicKey;
-  ammOrderbaseTokenTotal?: BN;
-  ammOrderquoteTokenTotal?: BN;
-}
-
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
 
@@ -610,11 +459,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   // - Make all functinos pure (which means the function will not mutate the poolInfo)
   // - use "get" as prefix instead of "calculate" or "update"
 
-  async calculateSwapOutAmount(
-    fromSide: string,
-    amountIn: BN,
-    connection: Connection
-  ) {
+  async calculateSwapOutAmount(fromSide: string, amountIn: BN, connection: Connection) {
     let poolInfoWrapper = await this.updatePoolAmount(connection);
     if (fromSide == "coin") {
       let x1 = poolInfoWrapper.poolInfo.coinAccountAmount
@@ -652,19 +497,13 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     accounts.push(this.poolInfo.poolPcTokenAccount);
     accounts.push(this.poolInfo.poolCoinTokenAccount);
     accounts.push(this.poolInfo.ammOpenOrders);
-    let infos = (await connection.getMultipleAccountsInfo(
-      accounts
-    )) as AccountInfo<Buffer>[];
+    let infos = (await connection.getMultipleAccountsInfo(accounts)) as AccountInfo<Buffer>[];
 
     let pc = parseTokenAccount(infos[0].data, accounts[0]);
     this.poolInfo.pcAccountAmount = pc.amount;
     let coin = parseTokenAccount(infos[1].data, accounts[1]);
     this.poolInfo.coinAccountAmount = coin.amount;
-    let ammOrder = OpenOrders.fromAccountInfo(
-      accounts[2],
-      infos[2],
-      this.poolInfo.serumProgramId
-    );
+    let ammOrder = OpenOrders.fromAccountInfo(accounts[2], infos[2], this.poolInfo.serumProgramId);
     this.poolInfo.ammOrderquoteTokenTotal = ammOrder.quoteTokenTotal;
     this.poolInfo.ammOrderbaseTokenTotal = ammOrder.baseTokenTotal;
     return this;
@@ -723,15 +562,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       .getAccountInfo(this.poolInfo.ammOpenOrders)
       .then((accountInfo) => _OPEN_ORDERS_LAYOUT_V2.decode(accountInfo?.data));
     const [parsedPoolCoinTokenAccount, parsedPoolPcTokenAccount] = await conn
-      .getMultipleAccountsInfo([
-        this.poolInfo.poolCoinTokenAccount,
-        this.poolInfo.poolPcTokenAccount,
-      ])
-      .then((accountInfos) =>
-        accountInfos.map((accountInfo) =>
-          AccountLayout.decode(accountInfo?.data as Buffer)
-        )
-      );
+      .getMultipleAccountsInfo([this.poolInfo.poolCoinTokenAccount, this.poolInfo.poolPcTokenAccount])
+      .then((accountInfos) => accountInfos.map((accountInfo) => AccountLayout.decode(accountInfo?.data as Buffer)));
 
     const swapFeeNumerator = getBigNumber(parsedAmmId.swapFeeNumerator);
     const swapFeeDenominator = getBigNumber(parsedAmmId.swapFeeDenominator);
@@ -777,9 +609,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const pcDecimals = poolBalances.pc.decimals;
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) =>
-        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
-      );
+      .then((accountInfo) => Number(MintLayout.decode(accountInfo?.data as Buffer).supply));
 
     const coinAmount = coinBalance.toWei().toNumber() * (lpAmount / lpSupply);
     const pcAmount = pcBalance.toWei().toNumber() * (lpAmount / lpSupply);
@@ -795,10 +625,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     tokenAmount: number,
     tokenMint: PublicKey // the mint of tokenAmount
   ) {
-    if (
-      !tokenMint.equals(this.poolInfo.tokenAMint) &&
-      !tokenMint.equals(this.poolInfo.tokenBMint)
-    ) {
+    if (!tokenMint.equals(this.poolInfo.tokenAMint) && !tokenMint.equals(this.poolInfo.tokenBMint)) {
       throw new Error("Wrong token mint");
     }
 
@@ -807,15 +634,10 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const pcBalance = poolBalances.pc.balance;
     const lpSupply = await conn
       .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) =>
-        Number(MintLayout.decode(accountInfo?.data as Buffer).supply)
-      );
+      .then((accountInfo) => Number(MintLayout.decode(accountInfo?.data as Buffer).supply));
 
-    const balance = tokenMint.equals(this.poolInfo.tokenAMint)
-      ? coinBalance
-      : pcBalance;
-    const sharePercent =
-      tokenAmount / (balance.toWei().toNumber() + tokenAmount);
+    const balance = tokenMint.equals(this.poolInfo.tokenAMint) ? coinBalance : pcBalance;
+    const sharePercent = tokenAmount / (balance.toWei().toNumber() + tokenAmount);
 
     return sharePercent * lpSupply;
   }
@@ -826,14 +648,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const coinDecimals = poolBalances.coin.decimals;
     const pcBalance = poolBalances.pc.balance;
     const pcDecimals = poolBalances.pc.decimals;
-    const [lpSupply, lpDecimals] = await conn
-      .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) => {
-        const mintInfo = MintLayout.decode(accountInfo?.data as Buffer);
-        const supply = Number(mintInfo.supply);
-        const decimals = mintInfo.decimals;
-        return [supply, decimals];
-      });
+    const [lpSupply, lpDecimals] = await conn.getAccountInfo(this.poolInfo.lpMint).then((accountInfo) => {
+      const mintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+      const supply = Number(mintInfo.supply);
+      const decimals = mintInfo.decimals;
+      return [supply, decimals];
+    });
 
     const coinPrice = tokenAPrice;
     const pcPrice = tokenBPrice;
@@ -848,76 +668,39 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  async getApr(
-    conn: Connection,
-    tradingVolumeIn24Hours: number,
-    lpPrice: number
-  ) {
+  async getApr(conn: Connection, tradingVolumeIn24Hours: number, lpPrice: number) {
     const poolBalances = await this.getPoolBalances(conn);
     const feeNumerator = poolBalances.fees.numerator;
     const feeDenominator = poolBalances.fees.denominator;
     const feeRate =
-      feeDenominator > 0 &&
-      feeNumerator > 0 &&
-      feeNumerator / feeDenominator > 0.0003
+      feeDenominator > 0 && feeNumerator > 0 && feeNumerator / feeDenominator > 0.0003
         ? feeNumerator / feeDenominator - 0.0003
         : 0; // 0.03% out of 0.25%(radium swap fee) will deposit into stake
 
-    const [lpSupply, lpDecimals] = await conn
-      .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) => {
-        const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
-        const supply = Number(lpMintInfo.supply);
-        const decimals = lpMintInfo.decimals;
-        return [supply, decimals];
-      });
+    const [lpSupply, lpDecimals] = await conn.getAccountInfo(this.poolInfo.lpMint).then((accountInfo) => {
+      const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
+      const supply = Number(lpMintInfo.supply);
+      const decimals = lpMintInfo.decimals;
+      return [supply, decimals];
+    });
 
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
-    const apr =
-      lpValue > 0
-        ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100
-        : 0;
+    const apr = lpValue > 0 ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100 : 0;
 
     return apr;
   }
-}
-
-export interface FarmInfo extends IFarmInfo {
-  version: number;
-  state: BN;
-  nonce: BN;
-  poolLpTokenAccountPubkey: PublicKey;
-  poolRewardTokenAccountPubkey: PublicKey;
-  owner: PublicKey;
-  totalReward: BN;
-  perShare: BN;
-  perBlock: BN;
-  lastBlock: BN;
-  totalRewardB?: BN;
-  perShareB?: BN;
-  perBlockB?: BN;
-  poolRewardTokenAccountPubkeyB?: PublicKey;
-  poolLpTokenAccount?: TokenAccount;
-  poolRewardTokenAccount?: TokenAccount;
-  poolRewardTokenAccountB?: TokenAccount;
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
 
   async updateAllTokenAccount(connection: Connection) {
-    let pubkeys: PublicKey[] = [
-      this.farmInfo.poolLpTokenAccountPubkey,
-      this.farmInfo.poolRewardTokenAccountPubkey,
-    ];
+    let pubkeys: PublicKey[] = [this.farmInfo.poolLpTokenAccountPubkey, this.farmInfo.poolRewardTokenAccountPubkey];
     if (this.farmInfo.poolRewardTokenAccountPubkeyB) {
       pubkeys.push(this.farmInfo.poolRewardTokenAccountPubkeyB);
     }
     let allToken = await connection.getMultipleAccountsInfo(pubkeys);
-    this.farmInfo.poolLpTokenAccount = parseTokenAccount(
-      allToken[0]?.data,
-      this.farmInfo.poolLpTokenAccountPubkey
-    );
+    this.farmInfo.poolLpTokenAccount = parseTokenAccount(allToken[0]?.data, this.farmInfo.poolLpTokenAccountPubkey);
     this.farmInfo.poolRewardTokenAccount = parseTokenAccount(
       allToken[1]?.data,
       this.farmInfo.poolRewardTokenAccountPubkey
@@ -949,12 +732,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return this.farmInfo.poolLpTokenAccount?.amount ?? new BN(0);
   }
 
-  async getApr(
-    conn: Connection,
-    lpPrice: number,
-    rewardPrice: number,
-    rewardPriceB?: number
-  ) {
+  async getApr(conn: Connection, lpPrice: number, rewardPrice: number, rewardPriceB?: number) {
     await this.updateAllTokenAccount(conn);
     const tokenMintList: PublicKey[] = [
       this.farmInfo.poolLpTokenAccount?.mint!,
@@ -969,43 +747,22 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     const lpDecimals = MintLayout.decode(allData[0]?.data as Buffer).decimals;
     const lpValue = lpAmount * lpPrice;
 
-    const rewardDecimals = MintLayout.decode(
-      allData[1]?.data as Buffer
-    ).decimals;
+    const rewardDecimals = MintLayout.decode(allData[1]?.data as Buffer).decimals;
     const annualRewardAmount =
-      (Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365)) /
-      10 ** (rewardDecimals - lpDecimals);
+      (Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365)) / 10 ** (rewardDecimals - lpDecimals);
 
-    const apr =
-      lpValue > 0
-        ? Math.round(((annualRewardAmount * rewardPrice) / lpValue) * 10000) /
-          100
-        : 0;
+    const apr = lpValue > 0 ? Math.round(((annualRewardAmount * rewardPrice) / lpValue) * 10000) / 100 : 0;
 
     if (rewardPriceB != undefined && allData[2]) {
-      const rewardBDecimals = MintLayout.decode(
-        allData[2]?.data as Buffer
-      ).decimals;
+      const rewardBDecimals = MintLayout.decode(allData[2]?.data as Buffer).decimals;
       const annualRewardAmountB = this.farmInfo.perBlockB
-        ? (Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)) /
-          10 ** (rewardBDecimals - lpDecimals)
+        ? (Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)) / 10 ** (rewardBDecimals - lpDecimals)
         : 0;
 
-      const aprB =
-        lpValue > 0
-          ? Math.round(
-              ((annualRewardAmountB * rewardPriceB) / lpValue) * 10000
-            ) / 100
-          : 0;
+      const aprB = lpValue > 0 ? Math.round(((annualRewardAmountB * rewardPriceB) / lpValue) * 10000) / 100 : 0;
       return [apr, aprB];
     }
 
     return [apr];
   }
-}
-
-export interface FarmerInfo extends IFarmerInfo {
-  farmVersion: number;
-  rewardDebts: number[];
-  mints: { stakedTokenMint: string; rewardAMint: string; rewardBMint?: string };
 }

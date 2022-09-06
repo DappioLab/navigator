@@ -1,11 +1,5 @@
 import { getMint } from "@solana/spl-token-v2";
-import {
-  Connection,
-  PublicKey,
-  GetProgramAccountsConfig,
-  MemcmpFilter,
-  DataSizeFilter,
-} from "@solana/web3.js";
+import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
 import {
   IDepositorInfo,
@@ -28,17 +22,15 @@ import { RESERVE_LAYOUT } from "./layout";
 let infos: IInstanceMoneyMarket & IInstanceVault;
 
 infos = class InstanceSolend {
-  static async getAllReserves(
-    connection: Connection,
-    marketId?: PublicKey
-  ): Promise<IReserveInfo[]> {
+  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<IReserveInfo[]> {
     return [];
   }
 
-  static async getReserve(
-    connection: Connection,
-    reserveId: PublicKey
-  ): Promise<IReserveInfo> {
+  static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<IReserveInfoWrapper[]> {
+    return [];
+  }
+
+  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<IReserveInfo> {
     return {} as IReserveInfo;
   }
 
@@ -46,10 +38,7 @@ infos = class InstanceSolend {
     return {} as IReserveInfo;
   }
 
-  static async getAllObligations(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<IObligationInfo[]> {
+  static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<IObligationInfo[]> {
     return [];
   }
 
@@ -61,10 +50,7 @@ infos = class InstanceSolend {
     return {} as IObligationInfo;
   }
 
-  static parseObligation(
-    data: Buffer,
-    obligationId: PublicKey
-  ): IObligationInfo {
+  static parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo {
     return {} as IObligationInfo;
   }
 
@@ -72,10 +58,7 @@ infos = class InstanceSolend {
     return [];
   }
 
-  static async getVault(
-    connection: Connection,
-    vaultId: PublicKey
-  ): Promise<IVaultInfo> {
+  static async getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo> {
     return {} as IVaultInfo;
   }
 
@@ -83,17 +66,11 @@ infos = class InstanceSolend {
     return {} as IVaultInfo;
   }
 
-  static async getAllDepositors(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<IDepositorInfo[]> {
+  static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]> {
     return [];
   }
 
-  static async getDepositor(
-    connection: Connection,
-    depositorId: PublicKey
-  ): Promise<IDepositorInfo> {
+  static async getDepositor(connection: Connection, depositorId: PublicKey): Promise<IDepositorInfo> {
     return {} as IDepositorInfo;
   }
 
@@ -187,18 +164,12 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return this.reserveInfo.collateral.mintTotalSupply;
   }
 
-  async calculateCollateralAmount(
-    connection: Connection,
-    amount: BN
-  ): Promise<BN> {
+  async calculateCollateralAmount(connection: Connection, amount: BN): Promise<BN> {
     const availableAmount = this.reserveInfo.liquidity.availableAmount;
     const platformAmountWads = this.reserveInfo.liquidity.platformAmountWads;
     const borrowedAmountWads = this.reserveInfo.liquidity.borrowedAmount;
 
-    const collateralMintInfo = await getMint(
-      connection,
-      this.reserveInfo.collateral.reserveTokenMint
-    );
+    const collateralMintInfo = await getMint(connection, this.reserveInfo.collateral.reserveTokenMint);
     const supply = new BN(Number(collateralMintInfo.supply));
 
     const borrowedAmount = borrowedAmountWads.div(WAD);
@@ -225,10 +196,7 @@ export async function getAllReserveWrappers(
   return allReservesWrapper;
 }
 
-export async function getAllReserves(
-  connection: Connection,
-  lendingMarket?: PublicKey
-): Promise<ReserveInfo[]> {
+export async function getAllReserves(connection: Connection, lendingMarket?: PublicKey): Promise<ReserveInfo[]> {
   const dataSizeFilters: DataSizeFilter = {
     dataSize: RESERVE_LAYOUT_SPAN,
   };
@@ -246,10 +214,7 @@ export async function getAllReserves(
   }
 
   const config: GetProgramAccountsConfig = { filters: filters };
-  const reserveAccounts = await connection.getProgramAccounts(
-    TULIP_PROGRAM_ID,
-    config
-  );
+  const reserveAccounts = await connection.getProgramAccounts(TULIP_PROGRAM_ID, config);
   let reserves = [] as ReserveInfo[];
   for (let account of reserveAccounts) {
     let info = parseReserveData(account.account.data, account.pubkey);
@@ -259,38 +224,20 @@ export async function getAllReserves(
   return reserves;
 }
 
-export async function getReserve(
-  connection: Connection,
-  reserveId: PublicKey
-): Promise<ReserveInfo> {
+export async function getReserve(connection: Connection, reserveId: PublicKey): Promise<ReserveInfo> {
   const reserveAccountInfo = await connection.getAccountInfo(reserveId);
   return parseReserveData(reserveAccountInfo?.data, reserveId);
 }
 
-export async function getLendingMarketAuthority(
-  lendingMarket: PublicKey
-): Promise<PublicKey> {
-  const authority = (
-    await PublicKey.findProgramAddress(
-      [lendingMarket.toBuffer()],
-      TULIP_PROGRAM_ID
-    )
-  )[0];
+export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
+  const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], TULIP_PROGRAM_ID))[0];
 
   return authority;
 }
 
 export function parseReserveData(data: any, pubkey: PublicKey): ReserveInfo {
   const decodedData = RESERVE_LAYOUT.decode(data);
-  let {
-    version,
-    lastUpdate,
-    lendingMarket,
-    borrowAuthorizer,
-    liquidity,
-    collateral,
-    config,
-  } = decodedData;
+  let { version, lastUpdate, lendingMarket, borrowAuthorizer, liquidity, collateral, config } = decodedData;
 
   return {
     reserveId: pubkey,

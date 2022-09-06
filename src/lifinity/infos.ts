@@ -17,10 +17,11 @@ infos = class InstanceLifinity {
     return [];
   }
 
-  static async getPool(
-    connection: Connection,
-    poolId: PublicKey
-  ): Promise<IPoolInfo> {
+  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
+    return [];
+  }
+
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
     return {} as IPoolInfo;
   }
 
@@ -91,32 +92,22 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 }
 
 export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
-  const allLifinityAccount = await connection.getMultipleAccountsInfo(
-    LIFINITY_ALL_AMM_ID
-  );
+  const allLifinityAccount = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
 
   let poolConfigArray: PublicKey[] = [];
   let poolInfoArray: PoolInfo[] = [];
 
   for (let index in allLifinityAccount) {
     const lifinityAccount = allLifinityAccount[index];
-    const poolInfo = parsePoolInfo(
-      lifinityAccount?.data,
-      LIFINITY_ALL_AMM_ID[index]
-    );
+    const poolInfo = parsePoolInfo(lifinityAccount?.data, LIFINITY_ALL_AMM_ID[index]);
     poolInfoArray.push(poolInfo);
     poolConfigArray.push(poolInfo.poolConfig.key);
   }
 
-  const allpoolConfigInfo = await connection.getMultipleAccountsInfo(
-    poolConfigArray
-  );
+  const allpoolConfigInfo = await connection.getMultipleAccountsInfo(poolConfigArray);
 
   poolInfoArray.forEach((poolInfo, index) => {
-    const poolConfig = parsePoolConfig(
-      allpoolConfigInfo[index]?.data,
-      poolConfigArray[index]
-    );
+    const poolConfig = parsePoolConfig(allpoolConfigInfo[index]?.data, poolConfigArray[index]);
     poolInfoArray[index] = {
       ...poolInfo,
       poolConfig,
@@ -126,20 +117,12 @@ export async function getAllPools(connection: Connection): Promise<PoolInfo[]> {
   return poolInfoArray;
 }
 
-export async function getPool(
-  connection: Connection,
-  poolInfoKey: PublicKey
-): Promise<PoolInfo> {
+export async function getPool(connection: Connection, poolInfoKey: PublicKey): Promise<PoolInfo> {
   const lifinityAccount = await connection.getAccountInfo(poolInfoKey);
 
   let poolInfo = parsePoolInfo(lifinityAccount?.data, poolInfoKey);
-  const poolConfigInfo = await connection.getAccountInfo(
-    poolInfo.poolConfig.key
-  );
-  const poolConfig = parsePoolConfig(
-    poolConfigInfo?.data,
-    poolInfo.poolConfig.key
-  );
+  const poolConfigInfo = await connection.getAccountInfo(poolInfo.poolConfig.key);
+  const poolConfig = parsePoolConfig(poolConfigInfo?.data, poolInfo.poolConfig.key);
 
   poolInfo = {
     ...poolInfo,

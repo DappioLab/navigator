@@ -7,7 +7,15 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmerInfo, IFarmInfo, IInstanceFarm, IInstancePool, IPoolInfo, IPoolInfoWrapper } from "../types";
+import {
+  IFarmerInfo,
+  IFarmInfo,
+  IFarmInfoWrapper,
+  IInstanceFarm,
+  IInstancePool,
+  IPoolInfo,
+  IPoolInfoWrapper,
+} from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
@@ -70,6 +78,10 @@ infos = class InstanceOrca {
         return newItem;
       })
       .filter((item) => item.lpSupply.cmpn(0));
+  }
+
+  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
+    return [];
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
@@ -137,6 +149,10 @@ infos = class InstanceOrca {
       .filter((item) => {
         return !item.emissionsPerSecondNumerator.cmpn(0);
       });
+  }
+
+  static async getAllFarmWrappers(connection: Connection): Promise<IFarmInfoWrapper[]> {
+    return [];
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<IFarmInfo> {

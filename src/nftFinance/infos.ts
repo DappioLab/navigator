@@ -1,11 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import {
-  INFTPoolInfo,
-  INFTFarmInfo,
-  IInstanceNFTPool,
-  IInstanceNFTFarm,
-} from "../types";
+import { INFTPoolInfo, INFTFarmInfo, IInstanceNFTPool, IInstanceNFTFarm } from "../types";
 import { POOL_LAYOUT, FARM_LAYOUT } from "./layout";
 
 ////////////////////////////////////////////////////////////
@@ -21,10 +16,7 @@ infos = class InstanceNFTFinance {
     return [];
   }
 
-  static async getPool(
-    connection: Connection,
-    poolId: PublicKey
-  ): Promise<INFTPoolInfo> {
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<INFTPoolInfo> {
     return {} as INFTPoolInfo;
   }
 
@@ -36,10 +28,7 @@ infos = class InstanceNFTFinance {
     return [];
   }
 
-  static async getFarm(
-    connection: Connection,
-    farmId: PublicKey
-  ): Promise<INFTFarmInfo> {
+  static async getFarm(connection: Connection, farmId: PublicKey): Promise<INFTFarmInfo> {
     return {} as INFTFarmInfo;
   }
 
@@ -72,20 +61,14 @@ export interface NFTFarmInfo extends INFTFarmInfo {
   totalProveTokenDeposited: BN;
 }
 
-export async function getPool(
-  connection: Connection,
-  poolId: PublicKey
-): Promise<NFTPoolInfo> {
+export async function getPool(connection: Connection, poolId: PublicKey): Promise<NFTPoolInfo> {
   const poolAccountInfo = await connection.getAccountInfo(poolId);
   const nftPoolInfo = parsePool(poolAccountInfo?.data, poolId);
 
   return nftPoolInfo;
 }
 
-export async function getFarm(
-  connection: Connection,
-  farmId: PublicKey
-): Promise<NFTFarmInfo> {
+export async function getFarm(connection: Connection, farmId: PublicKey): Promise<NFTFarmInfo> {
   const farmAccountInfo = await connection.getAccountInfo(farmId);
   const nftFarmInfo = parseFarm(farmAccountInfo?.data, farmId);
 
