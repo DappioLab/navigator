@@ -18,7 +18,7 @@ const connection = new Connection("https://api.mainnet-beta.solana.com", {
 
 // Fetch all pools
 const pools = await raydium.infos.getAllPools(connection);
-
+z;
 // Fetch pool (RAY-USDC)
 const poolId = new PublicKey("6UmmUiYoBjSrhakAobJw8BvkmJtDVxaeBtbt7rxWo1mg");
 const pool = await raydium.infos.getPool(connection, poolId);
