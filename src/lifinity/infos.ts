@@ -4,10 +4,6 @@ import { IInstancePool, IPoolInfo, IPoolInfoWrapper } from "../types";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
 let infos: IInstancePool;
 
 infos = class InstanceLifinity {
@@ -29,8 +25,9 @@ infos = class InstanceLifinity {
     }));
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
-    return [];
+  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
+    const pools = await this.getAllPools(connection);
+    return pools.map((pool) => new PoolInfoWrapper(pool));
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
@@ -162,10 +159,6 @@ infos = class InstanceLifinity {
 };
 
 export { infos };
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
 
 export interface PoolInfo extends IPoolInfo {
   index: BN; // discriminator

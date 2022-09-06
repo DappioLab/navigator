@@ -31,6 +31,17 @@ describe("Solend", () => {
     console.log(`Fetched ${reserves.length} reserves`);
     console.log(`reserves with partner rewards: ${reserves.filter((r) => r.partnerRewardData.length > 0).length}`);
   });
+  it(" Can get all reserveWrappers", async () => {
+    const wrappers = (await solend.infos.getAllReserveWrappers(connection)) as solend.ReserveInfoWrapper[];
+    const miningAPYs = await Promise.all(wrappers.map(async (w) => await w.miningApy(connection)));
+    const supplyAPYs = await Promise.all(wrappers.map(async (w) => await w.supplyApy()));
+    console.log(`Fetched ${wrappers.length} reserveInfoWrapper`);
+    console.log(`Pool with miningAPY count: ${miningAPYs.filter((a) => a).length}`);
+    console.log(`Pool with supplyAPY count: ${supplyAPYs.filter((a) => a).length} `);
+    console.log(
+      `reserves with partner rewards: ${wrappers.filter((w) => w.reserveInfo.partnerRewardData.length > 0).length}`
+    );
+  });
   it(" Can get reserve", async () => {
     const reserve = (await solend.infos.getReserve(connection, solReserveId)) as solend.ReserveInfo;
     console.log(

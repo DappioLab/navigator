@@ -31,12 +31,20 @@ describe("Lifinity", () => {
     console.log(`Fetched ${pools.length} pools`);
     console.log(`First poolId: ${pools[0].poolId.toBase58()}`);
     const allPoolSymbols = pools.map((p) => {
-      const symbolA = tokenList.find(
-        (t) => t.mint === p.tokenAMint.toBase58()
-      )?.symbol;
-      const symbolB = tokenList.find(
-        (t) => t.mint === p.tokenBMint.toBase58()
-      )?.symbol;
+      const symbolA = tokenList.find((t) => t.mint === p.tokenAMint.toBase58())?.symbol;
+      const symbolB = tokenList.find((t) => t.mint === p.tokenBMint.toBase58())?.symbol;
+      return `${symbolA}-${symbolB}`;
+    });
+    console.log(`All pool symbols: ${JSON.stringify(allPoolSymbols)}`);
+  });
+  it("Can fetch all poolWrappers", async () => {
+    const wrappers = (await lifinity.infos.getAllPoolWrappers(connection)) as lifinity.PoolInfoWrapper[];
+    const tokenList = await getTokenList();
+    console.log(`Fetched ${wrappers.length} wrappers`);
+    console.log(`First poolId: ${wrappers[0].poolInfo.poolId.toBase58()}`);
+    const allPoolSymbols = wrappers.map((w) => {
+      const symbolA = tokenList.find((t) => t.mint === w.poolInfo.tokenAMint.toBase58())?.symbol;
+      const symbolB = tokenList.find((t) => t.mint === w.poolInfo.tokenBMint.toBase58())?.symbol;
       return `${symbolA}-${symbolB}`;
     });
     console.log(`All pool symbols: ${JSON.stringify(allPoolSymbols)}`);
