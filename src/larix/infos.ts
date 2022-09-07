@@ -201,23 +201,9 @@ infos = class InstanceLarix {
   }
 
   static async getAllFarmWrappers(connection: Connection, rewardMint?: PublicKey): Promise<types.FarmInfoWrapper[]> {
-    const programIdMemcmp: MemcmpFilter = {
-      memcmp: {
-        offset: 10,
-        //offset 10byte
-        bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
-      },
-    };
-    const dataSizeFilters: DataSizeFilter = {
-      dataSize: RESERVE_LAYOUT_SPAN,
-    };
-    const filters = [programIdMemcmp, dataSizeFilters];
-    const config: GetProgramAccountsConfig = { filters: filters };
-
-    const farmAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
-    return farmAccounts.map((farm) => {
-      let info = this.parseFarm(farm.account.data, farm.pubkey);
-      return new FarmInfoWrapper(info);
+    let farms = await this.getAllFarms(connection);
+    return farms.map((farm) => {
+      return new FarmInfoWrapper(farm);
     });
   }
 

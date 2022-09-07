@@ -1,6 +1,6 @@
 import { PublicKey, Connection } from "@solana/web3.js";
 import { larix } from "../src";
-import { ReserveInfo, ReserveInfoWrapper } from "../src/larix";
+import { FarmInfoWrapper, ReserveInfo, ReserveInfoWrapper } from "../src/larix";
 
 describe("Larix", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
@@ -47,5 +47,10 @@ describe("Larix", () => {
     const reserveWrappers = (await larix.infos.getAllReserveWrappers(connection)) as ReserveInfoWrapper[];
     const reserveInfo = reserveWrappers[0];
     console.log(reserveInfo.supplyApy());
+  });
+
+  it("fetches farm wrapper", async () => {
+    const farms = (await larix.infos.getAllFarmWrappers(connection)) as FarmInfoWrapper[];
+    console.log(farms[0].farmInfo);
   });
 });
