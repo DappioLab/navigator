@@ -276,11 +276,6 @@ infos = class InstanceLarix {
       indexs: farmerIndices,
     };
   }
-
-  static async getObligationId(userKey: PublicKey) {
-    let newObligation = await PublicKey.createWithSeed(userKey, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
-    return newObligation;
-  }
 };
 
 export { infos };
@@ -599,19 +594,6 @@ export class ObligationInfoWrapper {
     });
     return limits.length > 0 ? limits.reduce((a, b) => a + b) : 0;
   }
-}
-
-export function parseCollateralData(data: any) {
-  let collateralInfo = COLLATERAL_LAYOUT.decode(data);
-  let { reserveId, depositedAmount, marketValue, index } = collateralInfo;
-  let collateral: types.ObligationCollateral = {
-    index,
-    reserveId,
-    depositedAmount,
-    marketValue,
-  };
-
-  return collateral;
 }
 
 export async function getAllOracleBridges(connection: Connection) {
