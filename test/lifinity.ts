@@ -1,5 +1,6 @@
-import { Connection } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { lifinity } from "../src";
+import { getTokenList } from "../src/utils";
 
 describe("Lifinity", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
@@ -14,22 +15,50 @@ describe("Lifinity", () => {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
   // });
-  // const connection = new Connection("https:////api.mainnet-beta.solana.com", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  // });
-  const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
+  const connection = new Connection("https:////api.mainnet-beta.solana.com", {
     commitment: "confirmed",
     confirmTransactionInitialTimeout: 180 * 1000,
-    wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   });
+  // const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
+  // });
 
-  it("fetches pool data", async () => {
+  it("Can fetch all pools", async () => {
     const pools = await lifinity.infos.getAllPools(connection);
-    const poolId = pools[0].poolId;
-    console.log(poolId.toString());
-
+    const tokenList = await getTokenList();
+    console.log(`Fetched ${pools.length} pools`);
+    console.log(`First poolId: ${pools[0].poolId.toBase58()}`);
+    const allPoolSymbols = pools.map((p) => {
+      const symbolA = tokenList.find((t) => t.mint === p.tokenAMint.toBase58())?.symbol;
+      const symbolB = tokenList.find((t) => t.mint === p.tokenBMint.toBase58())?.symbol;
+      return `${symbolA}-${symbolB}`;
+    });
+    console.log(`All pool symbols: ${JSON.stringify(allPoolSymbols)}`);
+  });
+  it("Can fetch all poolWrappers", async () => {
+    const wrappers = (await lifinity.infos.getAllPoolWrappers(connection)) as lifinity.PoolInfoWrapper[];
+    const tokenList = await getTokenList();
+    console.log(`Fetched ${wrappers.length} wrappers`);
+    console.log(`First poolId: ${wrappers[0].poolInfo.poolId.toBase58()}`);
+    const allPoolSymbols = wrappers.map((w) => {
+      const symbolA = tokenList.find((t) => t.mint === w.poolInfo.tokenAMint.toBase58())?.symbol;
+      const symbolB = tokenList.find((t) => t.mint === w.poolInfo.tokenBMint.toBase58())?.symbol;
+      return `${symbolA}-${symbolB}`;
+    });
+    console.log(`All pool symbols: ${JSON.stringify(allPoolSymbols)}`);
+  });
+  it("Can fetch pool", async () => {
+    const poolId = new PublicKey("amgK1WE8Cvae4mVdj4AhXSsknWsjaGgo1coYicasBnM");
     const pool = await lifinity.infos.getPool(connection, poolId);
-    console.log(pool);
+    console.log(
+      `Fetched pool: ${JSON.stringify({
+        id: pool.poolId.toBase58(),
+        mint: pool.lpMint.toBase58(),
+        coin: pool.tokenAMint.toBase58(),
+        pc: pool.tokenBMint.toBase58(),
+      })}`
+    );
   });
 });

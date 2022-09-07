@@ -9,7 +9,9 @@
     "testSaber": "mocha --require ts-node/register --timeout 10000000 ./test/saber.ts",
     "testFrancium": "mocha --require ts-node/register --timeout 10000000 ./test/francium.ts",
     "testLarix": "mocha --require ts-node/register --timeout 10000000 ./test/larix.ts",
-    "testOrca": "mocha --require ts-node/register --timeout 10000000 ./test/orca.ts"
+    "testOrca": "mocha --require ts-node/register --timeout 10000000 ./test/orca.ts",
+    "testSolend": "mocha --require ts-node/register --timeout 10000000 ./test/solend.ts",
+    "testLifinity": "mocha --require ts-node/register --timeout 10000000 ./test/lifinity.ts"
   },
   "keywords": [],
   "author": "",
