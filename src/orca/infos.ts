@@ -34,7 +34,7 @@ infos = class InstanceOrca {
     const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
     for (const accountInfo of allOrcaPool) {
-      let poolData = (await this.parsePool(accountInfo.account.data, accountInfo.pubkey)) as types.PoolInfo;
+      let poolData = await this.parsePool(accountInfo.account.data, accountInfo.pubkey);
 
       allPools.push(poolData);
       pubKeys.push(poolData.tokenAccountA);
@@ -79,7 +79,7 @@ infos = class InstanceOrca {
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {
     let data = (await connection.getAccountInfo(poolId)) as AccountInfo<Buffer>;
-    let pool = (await this.parsePool(data.data, poolId)) as types.PoolInfo;
+    let pool = await this.parsePool(data.data, poolId);
 
     let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
     let balanceAccounts = (await connection.getMultipleAccountsInfo(accounts)) as AccountInfo<Buffer>[];
