@@ -134,11 +134,12 @@ infos = class InstanceFrancium {
     connection: Connection,
     obligationId: PublicKey,
     version?: number
-  ): Promise<IObligationInfo> {
-    return {} as IObligationInfo;
+  ): Promise<types.ObligationInfo> {
+    let obligationInfo = await connection.getAccountInfo(obligationId);
+    return this.parseObligation(obligationInfo?.data, obligationId);
   }
 
-  static parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo {
+  static parseObligation(data: Buffer | undefined, obligationId: PublicKey): IObligationInfo {
     return {} as IObligationInfo;
   }
 
@@ -229,15 +230,18 @@ infos = class InstanceFrancium {
     };
   }
 
-  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<types.FarmerInfo[]> {}
+  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<types.FarmerInfo[]> {
+    return [];
+  }
 
   static async getFarmerId(farmId: PublicKey, userKey: PublicKey, version?: number): Promise<PublicKey> {
-    const ata = await utils.findAssociatedTokenAddress(userKey, farmInfo.stakedTokenMint);
-    const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
-      [userKey.toBuffer(), farmId.toBuffer(), ata.toBuffer()],
-      FRANCIUM_LENDING_REWARD_PROGRAM_ID
-    );
-    return { pda: farmInfoPub, bump: nonce };
+    // const ata = await utils.findAssociatedTokenAddress(userKey, farmInfo.stakedTokenMint);
+    // const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
+    //   [userKey.toBuffer(), farmId.toBuffer(), ata.toBuffer()],
+    //   FRANCIUM_LENDING_REWARD_PROGRAM_ID
+    // );
+    // return { pda: farmInfoPub, bump: nonce };
+    return PublicKey.default;
   }
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
@@ -465,14 +469,14 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 // return parseFarmData(farmAccount.data, farmId);
 // }
 
-// export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
-// const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
-// const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
-//   [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
-//   FRANCIUM_LENDING_REWARD_PROGRAM_ID
-// );
-// return { pda: farmInfoPub, bump: nonce };
-// }
+export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
+  const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
+  const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
+    [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
+    FRANCIUM_LENDING_REWARD_PROGRAM_ID
+  );
+  return { pda: farmInfoPub, bump: nonce };
+}
 
 export async function checkFarmerCreated(wallet: PublicKey, farmInfo: types.FarmInfo, connection: Connection) {
   const { pda, bump } = await getFarmerPubkey(wallet, farmInfo);

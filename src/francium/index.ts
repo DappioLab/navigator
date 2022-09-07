@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { PublicKey } from "@solana/web3.js";
-import { IFarmerInfo, IFarmInfo, IReserveInfo } from "../types";
+import { IFarmerInfo, IFarmInfo, IObligationInfo, IReserveInfo } from "../types";
 export * from "./ids";
 export * from "./infos";
 export * from "./layouts";
@@ -232,3 +232,5 @@ export interface FarmInfo extends IFarmInfo {
   accumulatedRewardsPerShare: BN;
   accumulatedRewardsPerShareB: BN;
 }
+
+export interface ObligationInfo extends IObligationInfo {}
