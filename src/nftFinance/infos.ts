@@ -1,14 +1,14 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
-import { IInstanceNFTPool, IInstanceNFTFarm, IInstanceNFTVault, IInstanceNFTMiner } from "../types";
+import { IInstanceNFTPool, IInstanceNFTFarm, IInstanceNFTVault, IInstanceNFTFarmer } from "../types";
 import { NFT_MINING_PROGRAM_ID, NFT_RARITY_PROGRAM_ID, NFT_STAKING_PROGRAM_ID } from "./ids";
-import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_VAULT_LAYOUT, MINER_LAYOUT } from "./layout";
-import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, AllInfo, NFTVaultInfo, NFTMinerInfo, UserNFTInfo } from ".";
+import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_VAULT_LAYOUT, FARMER_LAYOUT } from "./layout";
+import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, AllInfo, NFTVaultInfo, NFTFarmerInfo, UserNFTInfo } from ".";
 
 const RARITY_LAYOUT_SPAN = 16460;
 const POOL_LAYOUT_SPAN = 184;
 const FARM_LAYOUT_SPAN = 217;
 const NFT_VAULT_LAYOUT_SPAN = 104;
-const MINER_LAYOUT_SPAN = 129;
+const FARMER_LAYOUT_SPAN = 129;
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -16,7 +16,7 @@ const MINER_LAYOUT_SPAN = 129;
 
 // TODO: Implement InstanceNFTFinance
 
-let infos: IInstanceNFTPool & IInstanceNFTFarm & IInstanceNFTVault & IInstanceNFTMiner;
+let infos: IInstanceNFTPool & IInstanceNFTFarm & IInstanceNFTVault & IInstanceNFTFarmer;
 
 infos = class InstanceNFTFinance {
   // fetchAll (deprecated)
@@ -52,12 +52,12 @@ infos = class InstanceNFTFinance {
   // fetchUser (deprecated)
   static async getUserNFTInfo(connection: Connection, userKey: PublicKey): Promise<UserNFTInfo> {
     const allNFTVaults = await this.getAllNFTVaults(connection, userKey);
-    const allNFTMiners = await this.getAllNFTMiners(connection, userKey);
+    const allNFTFarmers = await this.getAllNFTFarmers(connection, userKey);
 
     return {
       userKey,
       vaults: allNFTVaults,
-      miners: allNFTMiners,
+      farmers: allNFTFarmers,
     };
   }
 
@@ -295,11 +295,11 @@ infos = class InstanceNFTFinance {
     };
   }
 
-  static async getAllNFTMiners(connection: Connection, userKey?: PublicKey): Promise<NFTMinerInfo[]> {
+  static async getAllNFTFarmers(connection: Connection, userKey?: PublicKey): Promise<NFTFarmerInfo[]> {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
-      dataSize: MINER_LAYOUT_SPAN,
+      dataSize: FARMER_LAYOUT_SPAN,
     };
     filters = [dataSizeFilters];
 
@@ -315,38 +315,46 @@ infos = class InstanceNFTFinance {
     }
 
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allNFTMinerAccounts = await connection.getProgramAccounts(NFT_MINING_PROGRAM_ID, config);
+    const allNFTFarmerAccounts = await connection.getProgramAccounts(NFT_MINING_PROGRAM_ID, config);
 
-    const allNFTMinerInfos: NFTMinerInfo[] = [];
-    allNFTMinerAccounts.map((nftMinerAccount) => {
-      const nftMinerInfo = this.parseNFTMiner(nftMinerAccount.account.data, nftMinerAccount.pubkey);
-      allNFTMinerInfos.push(nftMinerInfo);
+    const allNFTFarmerInfos: NFTFarmerInfo[] = [];
+    allNFTFarmerAccounts.map((nftFarmerAccount) => {
+      const nftFarmerInfo = this.parseNFTFarmer(nftFarmerAccount.account.data, nftFarmerAccount.pubkey);
+      allNFTFarmerInfos.push(nftFarmerInfo);
     });
 
-    return allNFTMinerInfos;
+    return allNFTFarmerInfos;
   }
 
-  static async getNFTMiner(connection: Connection, minerId: PublicKey): Promise<NFTMinerInfo> {
-    const nftMinerAccountInfo = await connection.getAccountInfo(minerId);
-    const nftMinerInfo = this.parseNFTMiner(nftMinerAccountInfo?.data as Buffer, minerId);
+  static async getNFTFarmer(connection: Connection, farmerId: PublicKey): Promise<NFTFarmerInfo> {
+    const nftFarmerAccountInfo = await connection.getAccountInfo(farmerId);
+    const nftFarmerInfo = this.parseNFTFarmer(nftFarmerAccountInfo?.data as Buffer, farmerId);
 
-    return nftMinerInfo;
+    return nftFarmerInfo;
   }
 
-  static parseNFTMiner(data: any, minerId: PublicKey): NFTMinerInfo {
-    const decodedData = MINER_LAYOUT.decode(data);
-    const { discriminator, owner, farmInfo, minerVault, lastUpdateSlot, unclaimedAmount, depositedAmount, minerBump } =
-      decodedData;
-
-    return {
-      minerId,
-      userKey: owner,
-      farmId: farmInfo,
-      minerVault,
+  static parseNFTFarmer(data: any, farmerId: PublicKey): NFTFarmerInfo {
+    const decodedData = FARMER_LAYOUT.decode(data);
+    const {
+      discriminator,
+      owner,
+      farmInfo,
+      farmerVault,
       lastUpdateSlot,
       unclaimedAmount,
       depositedAmount,
-      minerBump,
+      farmerBump,
+    } = decodedData;
+
+    return {
+      farmerId,
+      userKey: owner,
+      farmId: farmInfo,
+      farmerVault,
+      lastUpdateSlot,
+      unclaimedAmount,
+      depositedAmount,
+      farmerBump,
     };
   }
 };

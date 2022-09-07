@@ -26,8 +26,8 @@ export interface INFTVaultInfo {
   vaultId: PublicKey;
 }
 
-export interface INFTMinerInfo {
-  minerId: PublicKey;
+export interface INFTFarmerInfo {
+  farmerId: PublicKey;
   userKey: PublicKey;
 }
 
@@ -142,12 +142,12 @@ export interface IInstanceNFTVault {
   parseNFTVault(data: Buffer, vaultId: PublicKey): INFTVaultInfo;
 }
 
-export interface IInstanceNFTMiner {
-  getAllNFTMiners(connection: Connection): Promise<INFTMinerInfo[]>;
+export interface IInstanceNFTFarmer {
+  getAllNFTFarmers(connection: Connection): Promise<INFTFarmerInfo[]>;
   // TODO: Add wrapper for NFTMinerInfo
   // getAllNFTMinerWrappers(connection: Connection): Promise<INFTMinerInfoWrapper[]>;
-  getNFTMiner(connection: Connection, minerId: PublicKey): Promise<INFTMinerInfo>;
-  parseNFTMiner(data: Buffer, minerId: PublicKey): INFTMinerInfo;
+  getNFTFarmer(connection: Connection, minerId: PublicKey): Promise<INFTFarmerInfo>;
+  parseNFTFarmer(data: Buffer, minerId: PublicKey): INFTFarmerInfo;
 }
 
 export interface IInstanceVault {

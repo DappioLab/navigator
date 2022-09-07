@@ -41,13 +41,13 @@ export const FARM_LAYOUT = struct([
   u64("totalProveTokenDeposited"),
 ]);
 
-export const MINER_LAYOUT = struct([
+export const FARMER_LAYOUT = struct([
   u64("discriminator"),
   publicKey("owner"),
   publicKey("farmInfo"),
-  publicKey("minerVault"),
+  publicKey("farmerVault"), // minerVault
   u64("lastUpdateSlot"),
   u64("unclaimedAmount"),
   u64("depositedAmount"),
-  u8("minerBump"),
+  u8("farmerBump"), // minerBump
 ]);

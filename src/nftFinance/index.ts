@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { INFTFarmInfo, INFTMinerInfo, INFTPoolInfo, INFTRarityInfo, INFTVaultInfo } from "../types";
+import { INFTFarmInfo, INFTFarmerInfo, INFTPoolInfo, INFTRarityInfo, INFTVaultInfo } from "../types";
 
 export * from "./ids";
 export * from "./infos";
@@ -46,27 +46,27 @@ export interface NFTInfo {
 
 // NFTVault (deprecated)
 export interface NFTVaultInfo extends INFTVaultInfo {
-  // key (deprecated) => vaultId
-  nftHolder: PublicKey; // user (deprecated)
+  // key => vaultId
+  nftHolder: PublicKey; // user
   poolId: PublicKey;
   nftMint: PublicKey;
 }
 
 // Miner (deprecated)
-export interface NFTMinerInfo extends INFTMinerInfo {
-  // key (deprecated) => minerId
-  // owner (deprecated) => userKey
+export interface NFTFarmerInfo extends INFTFarmerInfo {
+  // key => minerId
+  // owner => userKey
   farmId: PublicKey;
-  minerVault: PublicKey;
+  farmerVault: PublicKey; // minerVault
   lastUpdateSlot: BN;
   unclaimedAmount: BN;
   depositedAmount: BN;
-  minerBump: BN;
+  farmerBump: BN; // minerBump
 }
 
-// UserInfo
+// UserInfo (deprecated)
 export interface UserNFTInfo {
-  userKey: PublicKey; // wallet (deprecated)
-  vaults: NFTVaultInfo[]; // staked (deprecated)
-  miners: NFTMinerInfo[];
+  userKey: PublicKey; // wallet
+  vaults: NFTVaultInfo[]; // staked
+  farmers: NFTFarmerInfo[];
 }

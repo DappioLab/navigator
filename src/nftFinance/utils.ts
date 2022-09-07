@@ -29,8 +29,8 @@ export async function getNFTUUnclaimedAmount(
   });
 
   let totalUnclaimAmount = 0;
-  for (let miner of userInfo.miners) {
-    const allInfoIndex = allInfoMap.get(miner.farmId.toString());
+  for (let farmer of userInfo.farmers) {
+    const allInfoIndex = allInfoMap.get(farmer.farmId.toString());
     if (allInfoIndex != undefined) {
       const allInfo = allInfos[allInfoIndex];
       if (
@@ -38,9 +38,9 @@ export async function getNFTUUnclaimedAmount(
         (rarity == "" || allInfo.rarityInfo.rarity == rarity)
       ) {
         const rewardTokenPerSlot = Number(allInfo.farmInfo.rewardTokenPerSlot);
-        const unclaimedAmount = Number(miner.unclaimedAmount);
-        const depositedAmount = Number(miner.depositedAmount);
-        const lastUpdateSlot = Number(miner.lastUpdateSlot);
+        const unclaimedAmount = Number(farmer.unclaimedAmount);
+        const depositedAmount = Number(farmer.depositedAmount);
+        const lastUpdateSlot = Number(farmer.lastUpdateSlot);
 
         totalUnclaimAmount += unclaimedAmount + (currentSlot - lastUpdateSlot) * rewardTokenPerSlot * depositedAmount;
       }
