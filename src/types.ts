@@ -92,11 +92,11 @@ export interface IInstanceMoneyMarket {
   getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<IReserveInfoWrapper[]>;
   getReserve(connection: Connection, reserveId: PublicKey): Promise<IReserveInfo>;
   parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo;
-  getAllObligations(connection: Connection, userKey: PublicKey): Promise<IObligationInfo[]>;
-  getObligation(connection: Connection, obligationId: PublicKey): Promise<IObligationInfo>;
-  parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo;
 
   // Optional Methods
+  getAllObligations?(connection: Connection, userKey: PublicKey): Promise<IObligationInfo[]>;
+  getObligation?(connection: Connection, obligationId: PublicKey): Promise<IObligationInfo>;
+  parseObligation?(data: Buffer, obligationId: PublicKey): IObligationInfo;
   getObligationId?(marketId: PublicKey, userKey: PublicKey): Promise<PublicKey>;
 }
 
