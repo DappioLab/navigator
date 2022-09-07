@@ -1,5 +1,6 @@
 import { Connection } from "@solana/web3.js";
 import { orca } from "../src";
+import { FarmInfoWrapper, PoolInfoWrapper } from "../src/orca";
 
 describe("Orca", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
@@ -40,5 +41,15 @@ describe("Orca", () => {
 
     const farm = await orca.infos.getFarm(connection, farmId);
     console.log(farm);
+  });
+
+  it("fetches pool wrapper", async () => {
+    const pools = (await orca.infos.getAllPoolWrappers(connection)) as PoolInfoWrapper[];
+    console.log(pools[0].poolInfo);
+  });
+
+  it("fetches farm wrapper", async () => {
+    const farms = (await orca.infos.getAllFarmWrappers(connection)) as FarmInfoWrapper[];
+    console.log(farms[0].farmInfo);
   });
 });
