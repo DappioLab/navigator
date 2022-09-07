@@ -7,24 +7,17 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import {
-  IFarmerInfo,
-  IFarmInfo,
-  IFarmInfoWrapper,
-  IInstanceFarm,
-  IInstancePool,
-  IPoolInfo,
-  IPoolInfoWrapper,
-} from "../types";
+import { IFarmerInfo, IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper } from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { utils } from "..";
+import * as types from ".";
 
 let infos: IInstancePool & IInstanceFarm;
 infos = class InstanceOrca {
-  static async getAllPools(connection: Connection): Promise<IPoolInfo[]> {
-    let allPools: PoolInfo[] = [];
+  static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
+    let allPools: types.PoolInfo[] = [];
     let accounts: {
       tokenAccountA: BN;
       tokenAccountB: BN;
@@ -41,7 +34,7 @@ infos = class InstanceOrca {
     const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
     for (const accountInfo of allOrcaPool) {
-      let poolData = (await this.parsePool(accountInfo.account.data, accountInfo.pubkey)) as PoolInfo;
+      let poolData = (await this.parsePool(accountInfo.account.data, accountInfo.pubkey)) as types.PoolInfo;
 
       allPools.push(poolData);
       pubKeys.push(poolData.tokenAccountA);
@@ -80,13 +73,13 @@ infos = class InstanceOrca {
       .filter((item) => item.lpSupply.cmpn(0));
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
-    return [];
+  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
+    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
   }
 
-  static async getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo> {
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {
     let data = (await connection.getAccountInfo(poolId)) as AccountInfo<Buffer>;
-    let pool = (await this.parsePool(data.data, poolId)) as PoolInfo;
+    let pool = (await this.parsePool(data.data, poolId)) as types.PoolInfo;
 
     let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
     let balanceAccounts = (await connection.getMultipleAccountsInfo(accounts)) as AccountInfo<Buffer>[];
@@ -100,7 +93,7 @@ infos = class InstanceOrca {
     return pool;
   }
 
-  static parsePool(data: Buffer, infoPubkey: PublicKey): IPoolInfo {
+  static parsePool(data: Buffer, infoPubkey: PublicKey): types.PoolInfo {
     const decodedData = POOL_LAYOUT.decode(data);
     let {
       version,
@@ -130,10 +123,10 @@ infos = class InstanceOrca {
       lpSupply: new BN(0),
       tokenSupplyA: new BN(0),
       tokenSupplyB: new BN(0),
-    } as PoolInfo;
+    };
   }
 
-  static async getAllFarms(connection: Connection, rewardMint?: PublicKey): Promise<IFarmInfo[]> {
+  static async getAllFarms(connection: Connection, rewardMint?: PublicKey): Promise<types.FarmInfo[]> {
     const sizeFilter: DataSizeFilter = {
       dataSize: 283,
     };
@@ -143,7 +136,7 @@ infos = class InstanceOrca {
 
     return allOrcaFarm
       .map((item) => {
-        let farmData = this.parseFarm(item.account.data, item.pubkey) as unknown as FarmInfo;
+        let farmData = this.parseFarm(item.account.data, item.pubkey);
         return farmData;
       })
       .filter((item) => {
@@ -151,16 +144,16 @@ infos = class InstanceOrca {
       });
   }
 
-  static async getAllFarmWrappers(connection: Connection): Promise<IFarmInfoWrapper[]> {
-    return [];
+  static async getAllFarmWrappers(connection: Connection): Promise<types.FarmInfoWrapper[]> {
+    return (await this.getAllFarms(connection)).map((farmInfo) => new FarmInfoWrapper(farmInfo));
   }
 
-  static async getFarm(connection: Connection, farmId: PublicKey): Promise<IFarmInfo> {
+  static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
     let data = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
-    return (await this.parseFarm(data.data, farmId)) as unknown as FarmInfo;
+    return await this.parseFarm(data.data, farmId);
   }
 
-  static parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo {
+  static parseFarm(data: Buffer, farmId: PublicKey): types.FarmInfo {
     const decodedData = FARM_LAYOUT.decode(data);
 
     let {
@@ -196,7 +189,7 @@ infos = class InstanceOrca {
       emissionsPerSecondDenominator: emissionsPerSecondDenominator,
       lastUpdatedTimestamp: lastUpdatedTimestamp,
       cumulativeEmissionsPerFarmToken: new BN(cumulativeEmissionsPerFarmToken, 10, "le"),
-    } as FarmInfo;
+    };
   }
 
   static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]> {
@@ -229,12 +222,12 @@ infos = class InstanceOrca {
     return farmerId;
   }
 
-  static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<IFarmerInfo> {
+  static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
     let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
     return await this._parseFarmerInfo(data.data, farmerId);
   }
 
-  private static _parseFarmerInfo(data: Buffer, pubkey: PublicKey): FarmerInfo {
+  private static _parseFarmerInfo(data: Buffer, pubkey: PublicKey): types.FarmerInfo {
     let decodedData = FARMER_LAYOUT.decode(data);
     let { isInitialized, accountType, globalFarm, owner, baseTokensConverted, cumulativeEmissionsCheckpoint } =
       decodedData;
@@ -253,45 +246,8 @@ infos = class InstanceOrca {
 
 export { infos };
 
-export interface PoolInfo extends IPoolInfo {
-  version: BN;
-  isInitialized: BN;
-  nonce: BN;
-  tokenProgramId: PublicKey;
-  tokenAccountA: PublicKey;
-  tokenAccountB: PublicKey;
-  feeAccount: PublicKey;
-  tokenSupplyA: BN;
-  tokenSupplyB: BN;
-  lpSupply: BN;
-}
-
-export interface FarmInfo extends IFarmInfo {
-  isInitialized: BN;
-  accountType: BN;
-  nonce: BN;
-  tokenProgramId: PublicKey;
-  emissionsAuthority: PublicKey;
-  removeRewardsAuthority: PublicKey;
-  baseTokenMint: PublicKey;
-  baseTokenVault: PublicKey;
-  rewardTokenVault: PublicKey;
-  farmTokenMint: PublicKey;
-  authority: PublicKey;
-  emissionsPerSecondNumerator: BN;
-  emissionsPerSecondDenominator: BN;
-  lastUpdatedTimestamp: BN;
-  cumulativeEmissionsPerFarmToken: BN;
-}
-
-export interface FarmerInfo extends IFarmerInfo {
-  isInitialized: BN;
-  accountType: BN;
-  cumulativeEmissionsCheckpoint: BN;
-}
-
 export class PoolInfoWrapper implements IPoolInfoWrapper {
-  constructor(public poolInfo: PoolInfo) {}
+  constructor(public poolInfo: types.PoolInfo) {}
 
   async calculateSwapOutAmount(fromSide: string, amountIn: BN) {
     if (fromSide == "coin") {
@@ -316,4 +272,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     return new BN(0);
   }
+}
+
+export class FarmInfoWrapper implements IFarmInfoWrapper {
+  constructor(public farmInfo: types.FarmInfo) {}
 }
