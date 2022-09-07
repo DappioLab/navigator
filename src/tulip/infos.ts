@@ -11,9 +11,8 @@ import {
   IVaultInfo,
   IVaultInfoWrapper,
 } from "../types";
-import { raydiumFeeCollector, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
-import { RAYDIUM_VAULT_V1_LAYOUT, RESERVE_LAYOUT } from "./layout";
-// import config from "./constants/vaults_v2_config.json";
+import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
+import { RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
 
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -324,7 +323,7 @@ export async function getVault(connection: Connection, vaultId: PublicKey): Prom
 }
 
 export function parseRaydiumVault(data: any, vaultId: PublicKey): RaydiumVaultInfo {
-  const decodeData = RAYDIUM_VAULT_V1_LAYOUT.decode(data);
+  const decodeData = RAYDIUM_VAULT_LAYOUT.decode(data);
   const {
     base,
     raydiumLpMintAddress,
@@ -353,7 +352,7 @@ export function parseRaydiumVault(data: any, vaultId: PublicKey): RaydiumVaultIn
     serumMarket,
   } = decodeData;
 
-  const feeCollector = raydiumFeeCollector.find((account) => account.id == vaultId.toString());
+  const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.raydium?.account == vaultId.toString());
 
   return {
     vaultId,
@@ -375,8 +374,8 @@ export function parseRaydiumVault(data: any, vaultId: PublicKey): RaydiumVaultIn
     poolAuthority: raydiumPoolAuthority,
     poolRewardATokenAccount: raydiumPoolRewardATokenAccount,
     poolRewardBTokenAccount: raydiumPoolRewardBTokenAccount,
-    feeCollectorRewardATokenAccount: new PublicKey(feeCollector?.feeCollectorRewardATokenAccount!),
-    feeCollectorRewardBTokenAccount: new PublicKey(feeCollector?.feeCollectorRewardBTokenAccount!),
+    feeCollectorRewardATokenAccount: new PublicKey(vaultAccount?.raydium?.fee_collector_reward_a_token_account!),
+    feeCollectorRewardBTokenAccount: new PublicKey(vaultAccount?.raydium?.fee_collector_reward_b_token_account!),
     dualRewards,
     vaultRewardATokenAccount,
     vaultRewardBTokenAccount,

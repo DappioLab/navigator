@@ -1,13 +1,4 @@
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  i64,
-  array,
-} from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8, bool, i64, array } from "@project-serum/borsh";
 // @ts-ignore
 import { blob } from "buffer-layout";
 
@@ -32,14 +23,7 @@ export const RESERVE_LAYOUT = struct([
     ],
     "liquidity"
   ),
-  struct(
-    [
-      publicKey("reserveTokenMint"),
-      u64("mintTotalSupply"),
-      publicKey("supplyPubkey"),
-    ],
-    "collateral"
-  ),
+  struct([publicKey("reserveTokenMint"), u64("mintTotalSupply"), publicKey("supplyPubkey")], "collateral"),
   struct(
     [
       u8("optimalUtilizationRate"),
@@ -51,17 +35,14 @@ export const RESERVE_LAYOUT = struct([
       u8("optimalBorrowRate"),
       u8("degenBorrowRate"),
       u8("maxBorrowRate"),
-      struct(
-        [u64("borrowFeeWad"), u64("flashLoanFeeWad"), u8("hostFeePercentage")],
-        "fees"
-      ),
+      struct([u64("borrowFeeWad"), u64("flashLoanFeeWad"), u8("hostFeePercentage")], "fees"),
     ],
     "config"
   ),
 ]);
 
 // Vault Layout
-const VAULT_BASE_V1_LAYOUT = struct(
+const VAULT_BASE_LAYOUT = struct(
   [
     u8("nonce"),
     array(u8(), 32, "tag"),
@@ -106,18 +87,15 @@ const VAULT_BASE_V1_LAYOUT = struct(
     array(u8(), 7, "configuredAlignment"),
     u64("pendingFees"),
     u64("totalDepositedBalanceCap"),
-    struct(
-      [u128("gainPerSecond"), u128("apr"), blob(32, "buffer")],
-      "realizedYield"
-    ),
+    struct([u128("gainPerSecond"), u128("apr"), blob(32, "buffer")], "realizedYield"),
     array(u64(), 4, "buffer"),
   ],
   "base"
 );
 
-export const RAYDIUM_VAULT_V1_LAYOUT = struct([
+export const RAYDIUM_VAULT_LAYOUT = struct([
   u64("discriminator"),
-  VAULT_BASE_V1_LAYOUT,
+  VAULT_BASE_LAYOUT,
   publicKey("raydiumLpMintAddress"),
   publicKey("raydiumAmmId"),
   publicKey("raydiumAmmAuthority"),
