@@ -138,7 +138,7 @@ infos = class InstanceSolend {
 
   static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<types.ObligationInfo[]> {
     const obligationKeys = await Promise.all(
-      SOLEND_LENDING_MARKET_ID_ALL.map(async (lendingMarket) => await getObligationPublicKey(userKey, lendingMarket))
+      SOLEND_LENDING_MARKET_ID_ALL.map(async (marketId) => await this.getObligationId(marketId, userKey))
     );
     const obligationAccounts = await connection.getMultipleAccountsInfo(obligationKeys);
     const obligationInfos = obligationAccounts
@@ -200,6 +200,12 @@ infos = class InstanceSolend {
       obligationLoans,
       obligationId,
     };
+  }
+
+  static async getObligationId(marketId: PublicKey, userKey: PublicKey) {
+    const seed = marketId.toString().slice(0, 32);
+    const obligationAddress = await PublicKey.createWithSeed(userKey, seed, SOLEND_PROGRAM_ID);
+    return obligationAddress;
   }
 };
 
@@ -313,22 +319,18 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   convertLiquidityAmountToReserveAmount(liquidityAmount: BN) {
     return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
   }
+
+  async getLendingMarketAuthority(marketId: PublicKey): Promise<PublicKey> {
+    const authority = (await PublicKey.findProgramAddress([marketId.toBuffer()], SOLEND_PROGRAM_ID))[0];
+
+    return authority;
+  }
 }
 
-export async function getObligationPublicKey(wallet: PublicKey, lendingMarket = SOLEND_LENDING_MARKET_ID_MAIN_POOL) {
-  const seed = lendingMarket.toString().slice(0, 32);
-  const obligationAddress = await PublicKey.createWithSeed(wallet, seed, SOLEND_PROGRAM_ID);
-  return obligationAddress;
-}
-
-export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
-  const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], SOLEND_PROGRAM_ID))[0];
-
-  return authority;
-}
-
-export async function obligationCreated(connection: Connection, wallet: PublicKey) {
-  let obligationInfo = await connection.getAccountInfo(await getObligationPublicKey(wallet));
+export async function checkObligationCreated(connection: Connection, userKey: PublicKey, marketId?: PublicKey) {
+  let obligationInfo = await connection.getAccountInfo(
+    await infos.getObligationId!(marketId ? marketId : SOLEND_LENDING_MARKET_ID_MAIN_POOL, userKey)
+  );
   if (obligationInfo?.owner.equals(SOLEND_PROGRAM_ID)) {
     return true;
   }
