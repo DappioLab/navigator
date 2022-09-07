@@ -24,11 +24,12 @@ import {
   FRANCIUM_LENDING_PROGRAM_ID,
   FRANCIUM_LENDING_REWARD_PROGRAM_ID,
 } from "./ids";
-import { IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper } from "../types";
+import { IInstanceFarm, IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper, IFarmInfoWrapper } from "../types";
 import { utils } from "..";
 import * as types from ".";
 
-let infos: IInstanceMoneyMarket;
+let infos: IInstanceMoneyMarket & IInstanceFarm;
+
 infos = class InstanceFrancium {
   static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
     const programIdMemcmp: MemcmpFilter = {
@@ -140,6 +141,138 @@ infos = class InstanceFrancium {
   static parseObligation(data: Buffer, obligationId: PublicKey): IObligationInfo {
     return {} as IObligationInfo;
   }
+
+  static async getAllFarms(connection: Connection, rewardMint?: PublicKey): Promise<types.FarmInfo[]> {
+    const dataSizeFilters: DataSizeFilter = {
+      dataSize: FARM_LAYOUT.span,
+    };
+    const filters = [dataSizeFilters];
+    const config: GetProgramAccountsConfig = { filters };
+    const farmAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_REWARD_PROGRAM_ID, config);
+    const currentSlot = new BN(await connection.getSlot());
+
+    let farms: types.FarmInfo[] = [];
+    farmAccounts.map((account) => {
+      let info = this.parseFarm(account.account.data, account.pubkey);
+      if (info.rewardsEndSlot.cmp(currentSlot) || info.rewardsEndSlotB.cmp(currentSlot)) {
+        farms.push(info);
+      }
+    });
+
+    return farms;
+  }
+
+  static async getAllFarmWrappers(connection: Connection, rewardMint?: PublicKey): Promise<FarmInfoWrapper[]> {
+    const farms = await this.getAllFarms(connection);
+    return farms.map((farm) => new FarmInfoWrapper(farm));
+  }
+
+  static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
+    let farmAccount = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
+    return this.parseFarm(farmAccount.data, farmId);
+  }
+
+  static parseFarm(data: Buffer, farmId: PublicKey): types.FarmInfo {
+    let buffer = Buffer.from(data);
+    let rawFarm = FARM_LAYOUT.decode(buffer);
+    let {
+      version,
+      is_dual_rewards,
+      admin,
+      token_program_id,
+      pool_authority,
+      staked_token_mint,
+      staked_token_account,
+      rewards_token_mint,
+      rewards_token_account,
+      rewards_token_mint_b,
+      rewards_token_account_b,
+      pool_stake_cap,
+      user_stake_cap,
+      rewards_start_slot,
+      rewards_end_slot,
+      rewards_per_day,
+      rewards_start_slot_b,
+      rewards_end_slot_b,
+      rewards_per_day_b,
+      total_staked_amount,
+      last_update_slot,
+      accumulated_rewards_per_share,
+      accumulated_rewards_per_share_b,
+    } = rawFarm;
+
+    return {
+      farmId,
+      version: new BN(version),
+      isDualRewards: new BN(is_dual_rewards),
+      admin: admin,
+      tokenProgramId: token_program_id,
+      poolAuthority: pool_authority,
+      stakedTokenMint: staked_token_mint,
+      stakedTokenAccount: staked_token_account,
+      rewardsTokenMint: rewards_token_mint,
+      rewardsTokenAccount: rewards_token_account,
+      rewardsTokenMintB: rewards_token_mint_b,
+      rewardsTokenAccountB: rewards_token_account_b,
+      poolStakeCap: new BN(pool_stake_cap),
+      userStakeCap: new BN(user_stake_cap),
+      rewardsStartSlot: new BN(rewards_start_slot),
+      rewardsEndSlot: new BN(rewards_end_slot),
+      rewardsPerDay: new BN(rewards_per_day),
+      rewardsStartSlotB: new BN(rewards_start_slot_b),
+      rewardsEndSlotB: new BN(rewards_end_slot_b),
+      rewardsPerDayB: new BN(rewards_per_day_b),
+      totalStakedAmount: new BN(total_staked_amount),
+      lastUpdateSlot: new BN(last_update_slot),
+      accumulatedRewardsPerShare: new BN(accumulated_rewards_per_share),
+      accumulatedRewardsPerShareB: new BN(accumulated_rewards_per_share_b),
+    };
+  }
+
+  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<types.FarmerInfo[]> {}
+
+  static async getFarmerId(farmId: PublicKey, userKey: PublicKey, version?: number): Promise<PublicKey> {
+    const ata = await utils.findAssociatedTokenAddress(userKey, farmInfo.stakedTokenMint);
+    const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
+      [userKey.toBuffer(), farmId.toBuffer(), ata.toBuffer()],
+      FRANCIUM_LENDING_REWARD_PROGRAM_ID
+    );
+    return { pda: farmInfoPub, bump: nonce };
+  }
+
+  static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
+    let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
+    return await this._parseFarmerInfo(data.data, farmerId);
+  }
+
+  private static _parseFarmerInfo(data: Buffer, farmerId: PublicKey): types.FarmerInfo {
+    let buffer = Buffer.from(data);
+    let rawFarm = FARMER_LAYOUT.decode(buffer);
+    let {
+      version,
+      staked_amount,
+      rewards_debt,
+      rewards_debt_b,
+      farming_pool,
+      user_main,
+      stake_token_account,
+      rewards_token_account,
+      rewards_token_account_b,
+    } = rawFarm;
+
+    return {
+      farmerId,
+      userKey: user_main,
+      farmId: farming_pool,
+      amount: Number(new BN(staked_amount)),
+      version: new BN(version),
+      rewardsDebt: new BN(rewards_debt),
+      rewardsDebtB: new BN(rewards_debt_b),
+      stakeTokenAccount: stake_token_account,
+      rewardsTokenAccount: rewards_token_account,
+      rewardsTokenAccountB: rewards_token_account_b,
+    };
+  }
 };
 
 export { infos };
@@ -210,132 +343,136 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 }
 
-export function parseFarmData(data: any, farmId: PublicKey): types.FarmInfo {
-  let buffer = Buffer.from(data);
-  let rawFarm = FARM_LAYOUT.decode(buffer);
-  let {
-    version,
-    is_dual_rewards,
-    admin,
-    token_program_id,
-    pool_authority,
-    staked_token_mint,
-    staked_token_account,
-    rewards_token_mint,
-    rewards_token_account,
-    rewards_token_mint_b,
-    rewards_token_account_b,
-    pool_stake_cap,
-    user_stake_cap,
-    rewards_start_slot,
-    rewards_end_slot,
-    rewards_per_day,
-    rewards_start_slot_b,
-    rewards_end_slot_b,
-    rewards_per_day_b,
-    total_staked_amount,
-    last_update_slot,
-    accumulated_rewards_per_share,
-    accumulated_rewards_per_share_b,
-  } = rawFarm;
-
-  return {
-    farmId,
-    version: new BN(version),
-    isDualRewards: new BN(is_dual_rewards),
-    admin: admin,
-    tokenProgramId: token_program_id,
-    poolAuthority: pool_authority,
-    stakedTokenMint: staked_token_mint,
-    stakedTokenAccount: staked_token_account,
-    rewardsTokenMint: rewards_token_mint,
-    rewardsTokenAccount: rewards_token_account,
-    rewardsTokenMintB: rewards_token_mint_b,
-    rewardsTokenAccountB: rewards_token_account_b,
-    poolStakeCap: new BN(pool_stake_cap),
-    userStakeCap: new BN(user_stake_cap),
-    rewardsStartSlot: new BN(rewards_start_slot),
-    rewardsEndSlot: new BN(rewards_end_slot),
-    rewardsPerDay: new BN(rewards_per_day),
-    rewardsStartSlotB: new BN(rewards_start_slot_b),
-    rewardsEndSlotB: new BN(rewards_end_slot_b),
-    rewardsPerDayB: new BN(rewards_per_day_b),
-    totalStakedAmount: new BN(total_staked_amount),
-    lastUpdateSlot: new BN(last_update_slot),
-    accumulatedRewardsPerShare: new BN(accumulated_rewards_per_share),
-    accumulatedRewardsPerShareB: new BN(accumulated_rewards_per_share_b),
-  };
+export class FarmInfoWrapper implements IFarmInfoWrapper {
+  constructor(public farmInfo: types.FarmInfo) {}
 }
 
-export function parseFarmerData(data: any, farmerId: PublicKey): types.FarmerInfo {
-  let buffer = Buffer.from(data);
-  let rawFarm = FARMER_LAYOUT.decode(buffer);
-  let {
-    version,
-    staked_amount,
-    rewards_debt,
-    rewards_debt_b,
-    farming_pool,
-    user_main,
-    stake_token_account,
-    rewards_token_account,
-    rewards_token_account_b,
-  } = rawFarm;
+// export function parseFarmData(data: any, farmId: PublicKey): types.FarmInfo {
+// let buffer = Buffer.from(data);
+// let rawFarm = FARM_LAYOUT.decode(buffer);
+// let {
+//   version,
+//   is_dual_rewards,
+//   admin,
+//   token_program_id,
+//   pool_authority,
+//   staked_token_mint,
+//   staked_token_account,
+//   rewards_token_mint,
+//   rewards_token_account,
+//   rewards_token_mint_b,
+//   rewards_token_account_b,
+//   pool_stake_cap,
+//   user_stake_cap,
+//   rewards_start_slot,
+//   rewards_end_slot,
+//   rewards_per_day,
+//   rewards_start_slot_b,
+//   rewards_end_slot_b,
+//   rewards_per_day_b,
+//   total_staked_amount,
+//   last_update_slot,
+//   accumulated_rewards_per_share,
+//   accumulated_rewards_per_share_b,
+// } = rawFarm;
 
-  return {
-    farmerId,
-    userKey: user_main,
-    farmId: farming_pool,
-    amount: Number(new BN(staked_amount)),
-    version: new BN(version),
-    rewardsDebt: new BN(rewards_debt),
-    rewardsDebtB: new BN(rewards_debt_b),
-    stakeTokenAccount: stake_token_account,
-    rewardsTokenAccount: rewards_token_account,
-    rewardsTokenAccountB: rewards_token_account_b,
-  };
-}
+// return {
+//   farmId,
+//   version: new BN(version),
+//   isDualRewards: new BN(is_dual_rewards),
+//   admin: admin,
+//   tokenProgramId: token_program_id,
+//   poolAuthority: pool_authority,
+//   stakedTokenMint: staked_token_mint,
+//   stakedTokenAccount: staked_token_account,
+//   rewardsTokenMint: rewards_token_mint,
+//   rewardsTokenAccount: rewards_token_account,
+//   rewardsTokenMintB: rewards_token_mint_b,
+//   rewardsTokenAccountB: rewards_token_account_b,
+//   poolStakeCap: new BN(pool_stake_cap),
+//   userStakeCap: new BN(user_stake_cap),
+//   rewardsStartSlot: new BN(rewards_start_slot),
+//   rewardsEndSlot: new BN(rewards_end_slot),
+//   rewardsPerDay: new BN(rewards_per_day),
+//   rewardsStartSlotB: new BN(rewards_start_slot_b),
+//   rewardsEndSlotB: new BN(rewards_end_slot_b),
+//   rewardsPerDayB: new BN(rewards_per_day_b),
+//   totalStakedAmount: new BN(total_staked_amount),
+//   lastUpdateSlot: new BN(last_update_slot),
+//   accumulatedRewardsPerShare: new BN(accumulated_rewards_per_share),
+//   accumulatedRewardsPerShareB: new BN(accumulated_rewards_per_share_b),
+// };
+// }
 
-export async function getAllFarms(connection: Connection) {
-  const dataSizeFilters: DataSizeFilter = {
-    dataSize: FARM_LAYOUT.span,
-  };
-  const filters = [dataSizeFilters];
-  const config: GetProgramAccountsConfig = { filters };
+// export function parseFarmerData(data: any, farmerId: PublicKey): types.FarmerInfo {
+// let buffer = Buffer.from(data);
+// let rawFarm = FARMER_LAYOUT.decode(buffer);
+// let {
+//   version,
+//   staked_amount,
+//   rewards_debt,
+//   rewards_debt_b,
+//   farming_pool,
+//   user_main,
+//   stake_token_account,
+//   rewards_token_account,
+//   rewards_token_account_b,
+// } = rawFarm;
 
-  const farmAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_REWARD_PROGRAM_ID, config);
+// return {
+//   farmerId,
+//   userKey: user_main,
+//   farmId: farming_pool,
+//   amount: Number(new BN(staked_amount)),
+//   version: new BN(version),
+//   rewardsDebt: new BN(rewards_debt),
+//   rewardsDebtB: new BN(rewards_debt_b),
+//   stakeTokenAccount: stake_token_account,
+//   rewardsTokenAccount: rewards_token_account,
+//   rewardsTokenAccountB: rewards_token_account_b,
+// };
+// }
 
-  const currentSlot = new BN(await connection.getSlot());
+// export async function getAllFarms(connection: Connection) {
+// const dataSizeFilters: DataSizeFilter = {
+//   dataSize: FARM_LAYOUT.span,
+// };
+// const filters = [dataSizeFilters];
+// const config: GetProgramAccountsConfig = { filters };
 
-  // TODO: Why use set instead of array?
-  let farmMap: Map<String, types.FarmInfo> = new Map();
+// const farmAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_REWARD_PROGRAM_ID, config);
 
-  for (let account of farmAccounts) {
-    let info = parseFarmData(account.account.data, account.pubkey);
-    if (info.rewardsEndSlot.cmp(currentSlot)) {
-      farmMap.set(info.stakedTokenMint.toString(), info);
-    } else if (info.rewardsEndSlotB.cmp(currentSlot)) {
-      farmMap.set(info.stakedTokenMint.toString(), info);
-    }
-  }
+// const currentSlot = new BN(await connection.getSlot());
 
-  return farmMap;
-}
+// // TODO: Why use set instead of array?
+// let farmMap: Map<String, types.FarmInfo> = new Map();
 
-export async function getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
-  let farmAccount = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
+// for (let account of farmAccounts) {
+//   let info = parseFarmData(account.account.data, account.pubkey);
+//   if (info.rewardsEndSlot.cmp(currentSlot)) {
+//     farmMap.set(info.stakedTokenMint.toString(), info);
+//   } else if (info.rewardsEndSlotB.cmp(currentSlot)) {
+//     farmMap.set(info.stakedTokenMint.toString(), info);
+//   }
+// }
 
-  return parseFarmData(farmAccount.data, farmId);
-}
+// return farmMap;
+// }
 
-export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
-  const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
-  const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
-    [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
-    FRANCIUM_LENDING_REWARD_PROGRAM_ID
-  );
-  return { pda: farmInfoPub, bump: nonce };
-}
+// export async function getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
+// let farmAccount = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
+
+// return parseFarmData(farmAccount.data, farmId);
+// }
+
+// export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
+// const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
+// const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
+//   [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
+//   FRANCIUM_LENDING_REWARD_PROGRAM_ID
+// );
+// return { pda: farmInfoPub, bump: nonce };
+// }
 
 export async function checkFarmerCreated(wallet: PublicKey, farmInfo: types.FarmInfo, connection: Connection) {
   const { pda, bump } = await getFarmerPubkey(wallet, farmInfo);
