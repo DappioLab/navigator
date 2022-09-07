@@ -66,13 +66,7 @@ infos = class InstanceLarix {
     marketId?: PublicKey
   ): Promise<types.ReserveInfoWrapper[]> {
     const allReserves = await this.getAllReserves(connection);
-    let reserveInfoWrappers: ReserveInfoWrapper[] = [];
-
-    for (let reservesMeta of allReserves) {
-      const newInfo = new ReserveInfoWrapper(reservesMeta);
-      reserveInfoWrappers.push(newInfo);
-    }
-    return reserveInfoWrappers;
+    return allReserves.map((reservesMeta) => new ReserveInfoWrapper(reservesMeta));
   }
 
   static async getReserve(connection: Connection, reserveId: PublicKey): Promise<types.ReserveInfo> {
@@ -131,7 +125,7 @@ infos = class InstanceLarix {
     connection: Connection,
     obligationId: PublicKey,
     version?: number
-  ): Promise<IObligationInfo> {
+  ): Promise<types.ObligationInfo> {
     let obligationInfo = await connection.getAccountInfo(obligationId);
     return this.parseObligation(obligationInfo?.data, obligationId);
   }
@@ -251,8 +245,8 @@ infos = class InstanceLarix {
   }
 
   static async getFarmerId(farmId: PublicKey, userKey: PublicKey, version?: number): Promise<PublicKey> {
-    // No implement
-    return PublicKey.default;
+    let newFarmer = await PublicKey.createWithSeed(userKey, LARIX_MAIN_POOL_FARMER_SEED, LARIX_PROGRAM_ID);
+    return newFarmer;
   }
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
@@ -261,28 +255,6 @@ infos = class InstanceLarix {
       .then((accountInfo) => this.parseFarmer(accountInfo?.data, farmerId));
 
     return farmer;
-
-    // It's another create account, remove too ?
-    // farmerId ||= await newFarmerAccountPub(wallet);
-    // let farmerInfo = await connection.getAccountInfo(farmerId);
-
-    // if ((farmerInfo?.data.length as number) > 0) {
-    //   let farmer = parseFarmerInfo(farmerInfo?.data, farmerId);
-    //   if (farmInfoWrapper) {
-    //     for (let indexData of farmer.indexs) {
-    //       for (let wrapper of farmInfoWrapper) {
-    //         if (indexData.reserveId.equals(wrapper.farmInfo.farmId)) {
-    //           let indexSub = wrapper.farmInfo.lTokenMiningIndex.sub(indexData.index);
-    //           let reward = indexSub.mul(indexData.unCollLTokenAmount);
-    //           farmer.unclaimedMine = farmer.unclaimedMine.add(reward);
-    //         }
-    //       }
-    //     }
-    //   }
-    //   return farmer;
-    // }
-
-    // return null;
   }
 
   static parseFarmer(data: any, farmerId: PublicKey): types.FarmerInfo {
@@ -303,6 +275,11 @@ infos = class InstanceLarix {
       unclaimedMine: new BN(unclaimedMine),
       indexs: farmerIndices,
     };
+  }
+
+  static async getObligationId(userKey: PublicKey) {
+    let newObligation = await PublicKey.createWithSeed(userKey, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
+    return newObligation;
   }
 };
 
@@ -487,8 +464,14 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   convertReserveAmountToLiquidityAmount(reserveAmount: BN) {
     return reserveAmount.mul(this.supplyAmount()).div(this.reserveTokenSupply());
   }
+
   convertLiquidityAmountToReserveAmount(liquidityAmount: BN) {
     return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
+  }
+
+  async getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
+    const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], LARIX_PROGRAM_ID))[0];
+    return authority;
   }
 }
 
@@ -644,7 +627,7 @@ export async function getAllOracleBridges(connection: Connection) {
 }
 
 export async function checkFarmerCreated(connection: Connection, wallet: PublicKey) {
-  let farmerId = await newFarmerAccountPub(wallet);
+  let farmerId = await infos.getFarmerId(PublicKey.default, wallet);
   let farmerInfo = await connection.getAccountInfo(farmerId);
   return (farmerInfo?.data.length as number) > 0;
 }
@@ -656,17 +639,7 @@ export async function checkObligationCreated(connection: Connection, wallet: Pub
   return (obligationInfo?.data.length as number) > 0;
 }
 
-export async function newFarmerAccountPub(wallet: PublicKey) {
-  let newFarmer = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_FARMER_SEED, LARIX_PROGRAM_ID);
-  return newFarmer;
-}
-
 export async function newObligationKey(wallet: PublicKey) {
   let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
   return newObligation;
-}
-
-export async function getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
-  const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], LARIX_PROGRAM_ID))[0];
-  return authority;
 }
