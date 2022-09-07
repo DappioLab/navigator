@@ -192,7 +192,7 @@ infos = class InstanceOrca {
     };
   }
 
-  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]> {
+  static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<types.FarmerInfo[]> {
     const sizeFilter: DataSizeFilter = {
       dataSize: 106,
     };
