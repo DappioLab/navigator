@@ -26,7 +26,7 @@ infos = class InstanceNFTFinance {
     const allRarityInfos = await this.getAllRarities(connection, adminAddress);
     const allPoolInfos = await this.getAllPools(connection, adminAddress);
     const allFarmInfos = await this.getAllFarms(connection, adminAddress);
-    allRarityInfos.map((rarityInfo, index) => {
+    allRarityInfos.forEach((rarityInfo, index) => {
       rarityMap.set(rarityInfo.rarityId.toString(), index);
     });
     allFarmInfos.map((farmInfo, index) => {
@@ -34,7 +34,7 @@ infos = class InstanceNFTFinance {
     });
 
     const allInfos: AllInfo[] = [];
-    for (let poolInfo of allPoolInfos) {
+    allPoolInfos.forEach((poolInfo) => {
       const rarityId = poolInfo.rarityInfo.toString();
       const proveTokenMint = poolInfo.proveTokenMint.toString();
       const rarityIndex = rarityMap.get(rarityId);
@@ -42,9 +42,10 @@ infos = class InstanceNFTFinance {
       if (rarityIndex != undefined && farmIndex != undefined) {
         const rarityInfo = allRarityInfos[rarityIndex];
         const farmInfo = allFarmInfos[farmIndex];
-        allInfos.push({ rarityInfo, poolInfo, farmInfo });
+        const allInfo: AllInfo = { rarityInfo, poolInfo, farmInfo };
+        allInfos.push(allInfo);
       }
-    }
+    });
 
     return allInfos;
   }
@@ -83,10 +84,9 @@ infos = class InstanceNFTFinance {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allRarityAccounts = await connection.getProgramAccounts(NFT_RARITY_PROGRAM_ID, config);
 
-    const allNFTRarityInfos: NFTRarityInfo[] = [];
-    allRarityAccounts.map((rarityAccount) => {
+    const allNFTRarityInfos: NFTRarityInfo[] = allRarityAccounts.map((rarityAccount) => {
       const nftRarityInfo = this.parseRarity(rarityAccount.account.data, rarityAccount.pubkey);
-      allNFTRarityInfos.push(nftRarityInfo);
+      return nftRarityInfo;
     });
 
     return allNFTRarityInfos;
@@ -99,7 +99,7 @@ infos = class InstanceNFTFinance {
     return nftRarityInfo;
   }
 
-  static parseRarity(data: any, rarityId: PublicKey): NFTRarityInfo {
+  static parseRarity(data: Buffer, rarityId: PublicKey): NFTRarityInfo {
     const decodedData = RARITY_LAYOUT.decode(data);
     const { discriminator, admin, collection, rarity, mintList } = decodedData;
 
@@ -138,10 +138,9 @@ infos = class InstanceNFTFinance {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allPoolAccounts = await connection.getProgramAccounts(NFT_STAKING_PROGRAM_ID, config);
 
-    const allNFTPoolInfos: NFTPoolInfo[] = [];
-    allPoolAccounts.map((poolAccount) => {
+    const allNFTPoolInfos: NFTPoolInfo[] = allPoolAccounts.map((poolAccount) => {
       const nftPoolInfo = this.parsePool(poolAccount.account.data, poolAccount.pubkey);
-      allNFTPoolInfos.push(nftPoolInfo);
+      return nftPoolInfo;
     });
 
     return allNFTPoolInfos;
@@ -200,10 +199,9 @@ infos = class InstanceNFTFinance {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allFarmAccounts = await connection.getProgramAccounts(NFT_MINING_PROGRAM_ID, config);
 
-    const allNFTFarmInfos: NFTFarmInfo[] = [];
-    allFarmAccounts.map((farmAccount) => {
+    const allNFTFarmInfos: NFTFarmInfo[] = allFarmAccounts.map((farmAccount) => {
       const nftFarmInfo = this.parseFarm(farmAccount.account.data, farmAccount.pubkey);
-      allNFTFarmInfos.push(nftFarmInfo);
+      return nftFarmInfo;
     });
 
     return allNFTFarmInfos;
@@ -267,10 +265,9 @@ infos = class InstanceNFTFinance {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allNFTVaultAccounts = await connection.getProgramAccounts(NFT_STAKING_PROGRAM_ID, config);
 
-    const allNFTVaultInfos: NFTVaultInfo[] = [];
-    allNFTVaultAccounts.map((nftVaultAccount) => {
+    const allNFTVaultInfos: NFTVaultInfo[] = allNFTVaultAccounts.map((nftVaultAccount) => {
       const nftVaultInfo = this.parseNFTVault(nftVaultAccount.account.data, nftVaultAccount.pubkey);
-      allNFTVaultInfos.push(nftVaultInfo);
+      return nftVaultInfo;
     });
 
     return allNFTVaultInfos;
@@ -283,7 +280,7 @@ infos = class InstanceNFTFinance {
     return nftVaultInfo;
   }
 
-  static parseNFTVault(data: any, vaultId: PublicKey): NFTVaultInfo {
+  static parseNFTVault(data: Buffer, vaultId: PublicKey): NFTVaultInfo {
     const decodedData = NFT_VAULT_LAYOUT.decode(data);
     const { discriminator, user, poolInfo, nftMint } = decodedData;
 
@@ -317,10 +314,9 @@ infos = class InstanceNFTFinance {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allNFTFarmerAccounts = await connection.getProgramAccounts(NFT_MINING_PROGRAM_ID, config);
 
-    const allNFTFarmerInfos: NFTFarmerInfo[] = [];
-    allNFTFarmerAccounts.map((nftFarmerAccount) => {
+    const allNFTFarmerInfos: NFTFarmerInfo[] = allNFTFarmerAccounts.map((nftFarmerAccount) => {
       const nftFarmerInfo = this.parseNFTFarmer(nftFarmerAccount.account.data, nftFarmerAccount.pubkey);
-      allNFTFarmerInfos.push(nftFarmerInfo);
+      return nftFarmerInfo;
     });
 
     return allNFTFarmerInfos;
@@ -333,7 +329,7 @@ infos = class InstanceNFTFinance {
     return nftFarmerInfo;
   }
 
-  static parseNFTFarmer(data: any, farmerId: PublicKey): NFTFarmerInfo {
+  static parseNFTFarmer(data: Buffer, farmerId: PublicKey): NFTFarmerInfo {
     const decodedData = FARMER_LAYOUT.decode(data);
     const {
       discriminator,

@@ -70,3 +70,41 @@ export interface UserNFTInfo {
   vaults: NFTVaultInfo[]; // staked
   farmers: NFTFarmerInfo[];
 }
+
+// default objects
+export const defaultRarityInfo: NFTRarityInfo = {
+  rarityId: PublicKey.default,
+  admin: PublicKey.default,
+  collection: "",
+  rarity: "",
+  mintList: [],
+};
+
+export const defaultPoolInfo: NFTPoolInfo = {
+  poolId: PublicKey.default,
+  proveTokenMint: PublicKey.default,
+  admin: PublicKey.default,
+  rarityInfo: PublicKey.default,
+  proveTokenAuthority: PublicKey.default,
+  proveTokenVault: PublicKey.default,
+  totalStakedAmount: new BN(0),
+};
+
+export const defaultFarmInfo: NFTFarmInfo = {
+  farmId: PublicKey.default,
+  farmTokenMint: PublicKey.default,
+  rewardTokenMint: PublicKey.default,
+  admin: PublicKey.default,
+  proveTokenMint: PublicKey.default,
+  rewardTokenPerSlot: new BN(0),
+  rewardVault: PublicKey.default,
+  farmAuthority: PublicKey.default,
+  farmAuthorityBump: new BN(0),
+  totalProveTokenDeposited: new BN(0),
+};
+
+export const defaultAllInfo: AllInfo = {
+  rarityInfo: defaultRarityInfo,
+  poolInfo: defaultPoolInfo,
+  farmInfo: defaultFarmInfo,
+};

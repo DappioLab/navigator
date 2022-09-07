@@ -4,15 +4,16 @@ import { find } from "lodash";
 import { AllInfo, NFTFarmInfo, NFTInfo, NFTPoolInfo, NFTRarityInfo, UserNFTInfo } from ".";
 
 export function getStakedAmount(allInfos: AllInfo[], collection: string = "", rarity: string = "") {
-  let staked = 0;
-  for (let allInfo of allInfos) {
-    if (allInfo.rarityInfo.collection == collection || collection == "") {
-      if (allInfo.rarityInfo.rarity == rarity || rarity == "") {
-        staked += Number(allInfo.poolInfo.totalStakedAmount);
-      }
-    }
-  }
-  return staked;
+  const targetAllInfos = allInfos.filter(
+    (allInfo) =>
+      (allInfo.rarityInfo.collection == collection || collection == "") &&
+      (allInfo.rarityInfo.rarity == rarity || rarity == "")
+  );
+  const totalStaked = targetAllInfos
+    .map((allInfo) => Number(allInfo.poolInfo.totalStakedAmount))
+    .reduce((total, staked) => total + staked);
+
+  return totalStaked;
 }
 
 export async function getNFTUUnclaimedAmount(
@@ -24,12 +25,12 @@ export async function getNFTUUnclaimedAmount(
 ) {
   const currentSlot = await connection.getSlot();
   const allInfoMap = new Map<string, number>();
-  allInfos.map((allInfo, index) => {
+  allInfos.forEach((allInfo, index) => {
     allInfoMap.set(allInfo.farmInfo.farmId.toString(), index);
   });
 
   let totalUnclaimAmount = 0;
-  for (let farmer of userInfo.farmers) {
+  userInfo.farmers.forEach((farmer) => {
     const allInfoIndex = allInfoMap.get(farmer.farmId.toString());
     if (allInfoIndex != undefined) {
       const allInfo = allInfos[allInfoIndex];
@@ -45,7 +46,7 @@ export async function getNFTUUnclaimedAmount(
         totalUnclaimAmount += unclaimedAmount + (currentSlot - lastUpdateSlot) * rewardTokenPerSlot * depositedAmount;
       }
     }
-  }
+  });
   return totalUnclaimAmount;
 }
 
@@ -68,68 +69,31 @@ export function filterAllInfosByNFTMint(allInfos: AllInfo[], nftMints: PublicKey
 }
 
 // getAllInfoFromPoolInfoKey (deprecated)
-export function filterAllInfosByPoolId(allInfos: AllInfo[], poolId: PublicKey): AllInfo {
-  let targetInfo: AllInfo = defaultAllInfo;
+export function filterAllInfosByPoolId(allInfos: AllInfo[], poolId: PublicKey): AllInfo | undefined {
+  let targetInfo: AllInfo | undefined = undefined;
   for (let allInfo of allInfos) {
     if (allInfo.poolInfo.poolId.equals(poolId)) {
       return allInfo;
     }
   }
+
   return targetInfo;
 }
 
 // getFarmInfosFromFarmInfoKeys (deprecated)
 export function filterFarmInfosByFarmIds(allInfos: AllInfo[], farmIds: PublicKey[]) {
   const allInfoMap = new Map<string, number>();
-  allInfos.map((allInfo, index) => {
+  allInfos.forEach((allInfo, index) => {
     allInfoMap.set(allInfo.farmInfo.farmId.toString(), index);
   });
 
   let farmInfos: NFTFarmInfo[] = [];
-  for (let farmId of farmIds) {
+  farmIds.forEach((farmId) => {
     const allInfoIndex = allInfoMap.get(farmId.toString());
     if (allInfoIndex != undefined) {
       farmInfos.push(allInfos[allInfoIndex].farmInfo);
     }
-  }
+  });
 
   return farmInfos;
 }
-
-// default objects
-export const defaultRarityInfo: NFTRarityInfo = {
-  rarityId: PublicKey.default,
-  admin: PublicKey.default,
-  collection: "",
-  rarity: "",
-  mintList: [],
-};
-
-export const defaultPoolInfo: NFTPoolInfo = {
-  poolId: PublicKey.default,
-  proveTokenMint: PublicKey.default,
-  admin: PublicKey.default,
-  rarityInfo: PublicKey.default,
-  proveTokenAuthority: PublicKey.default,
-  proveTokenVault: PublicKey.default,
-  totalStakedAmount: new BN(0),
-};
-
-export const defaultFarmInfo: NFTFarmInfo = {
-  farmId: PublicKey.default,
-  farmTokenMint: PublicKey.default,
-  rewardTokenMint: PublicKey.default,
-  admin: PublicKey.default,
-  proveTokenMint: PublicKey.default,
-  rewardTokenPerSlot: new BN(0),
-  rewardVault: PublicKey.default,
-  farmAuthority: PublicKey.default,
-  farmAuthorityBump: new BN(0),
-  totalProveTokenDeposited: new BN(0),
-};
-
-export const defaultAllInfo: AllInfo = {
-  rarityInfo: defaultRarityInfo,
-  poolInfo: defaultPoolInfo,
-  farmInfo: defaultFarmInfo,
-};
