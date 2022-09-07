@@ -155,9 +155,8 @@ infos = class InstanceSolend {
     version?: number
   ): Promise<types.ObligationInfo> {
     let accountInfo = await connection.getAccountInfo(obligationId);
-    return accountInfo?.owner.equals(SOLEND_PROGRAM_ID)
-      ? this.parseObligation(accountInfo?.data, obligationId)
-      : types.defaultObligationWrapper.obligationInfo;
+    if (!accountInfo?.owner.equals(SOLEND_PROGRAM_ID)) throw Error("Error: Cannot find Obligation by this ID");
+    return this.parseObligation(accountInfo.data, obligationId);
   }
 
   static parseObligation(data: Buffer, obligationId: PublicKey): types.ObligationInfo {
