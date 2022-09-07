@@ -633,13 +633,13 @@ export async function checkFarmerCreated(connection: Connection, wallet: PublicK
 }
 
 export async function checkObligationCreated(connection: Connection, wallet: PublicKey) {
-  let obligationPub = await infos.getObligationId(wallet);
+  let obligationPub = await newObligationKey(wallet);
   let obligationInfo = await connection.getAccountInfo(obligationPub);
 
   return (obligationInfo?.data.length as number) > 0;
 }
 
-// export async function newObligationKey(wallet: PublicKey) {
-//   let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
-//   return newObligation;
-// }
+export async function newObligationKey(wallet: PublicKey) {
+  let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
+  return newObligation;
+}
