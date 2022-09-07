@@ -7,6 +7,7 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IObligationInfo, IReserveInfo } from "../types";
 import { IServicesTokenInfo } from "../utils";
+import { ObligationInfoWrapper } from "./infos";
 
 export interface ReserveConfig {
   optimalUtilizationRate: BN;
@@ -101,7 +102,6 @@ export interface ObligationInfo extends IObligationInfo {
   version: BN;
   lastUpdate: LastUpdate;
   lendingMarket: PublicKey;
-  owner: PublicKey;
   depositedValue: BN;
   borrowedValue: BN;
   allowedBorrowValue: BN;
@@ -109,3 +109,15 @@ export interface ObligationInfo extends IObligationInfo {
   obligationCollaterals: ObligationCollateral[];
   obligationLoans: ObligationLoan[];
 }
+
+export const defaultObligationWrapper = new ObligationInfoWrapper({
+  version: new BN(1),
+  lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
+  lendingMarket: PublicKey.default,
+  depositedValue: new BN(0),
+  borrowedValue: new BN(0),
+  allowedBorrowValue: new BN(0),
+  unhealthyBorrowValue: new BN(0),
+  obligationCollaterals: [] as ObligationCollateral[],
+  obligationLoans: [] as ObligationLoan[],
+} as ObligationInfo);

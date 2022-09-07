@@ -13,7 +13,7 @@ import { getTokenList, IServicesTokenInfo } from "../utils";
 import { seq } from "buffer-layout";
 import axios from "axios";
 import { parseAggregatorAccountData } from "@switchboard-xyz/switchboard-api";
-import { solend } from "..";
+import * as types from ".";
 
 export const RESERVE_LAYOUT_SPAN = 619;
 
@@ -54,7 +54,7 @@ infos = class InstanceSolend {
     return reserves.map((reserve) => new ReserveInfoWrapper(reserve));
   }
   // Returns ReserveInfos w/ partnerRewardData
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<solend.ReserveInfo[]> {
+  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
     const dataSizeFilters: DataSizeFilter = {
       dataSize: RESERVE_LAYOUT_SPAN,
     };
@@ -76,7 +76,7 @@ infos = class InstanceSolend {
 
     const reserves = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
 
-    const allPartnersRewardData: solend.ISolendAPIPartnerReward[] = (await axios.get(ApiEndpoints.partnerReward)).data;
+    const allPartnersRewardData: types.ISolendAPIPartnerReward[] = (await axios.get(ApiEndpoints.partnerReward)).data;
     const tokenList = await getTokenList();
 
     const reserveWithPartnerRewardData = reserves.map((reserve) => {
@@ -86,7 +86,7 @@ infos = class InstanceSolend {
       );
 
       let price = tokenList.find((t) => t.mint === reserve.liquidity.mintPubkey.toBase58())?.price;
-      let partnerRewardData: solend.IPartnerReward[] = [];
+      let partnerRewardData: types.IPartnerReward[] = [];
 
       const borrowedAmount = reserve.liquidity.borrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
       const availableAmount = reserve.liquidity.availableAmount;
@@ -94,37 +94,34 @@ infos = class InstanceSolend {
       const poolTotalSupply = Number(supplyAmount) / 10 ** Number(reserve.liquidity.mintDecimals);
       const poolTotalSupplyValue = poolTotalSupply * price!;
 
-      if (partnerRewards.length > 0) {
-        partnerRewardData = partnerRewards
-          .map((r) => {
-            const rewardRate = r.rewardRates.slice(-1)[0].rewardRate;
-            const rewardToken = tokenList.find((t) => t.mint === r.rewardMint);
-            if (rewardToken) {
-              const rewardTokenPrice = rewardToken.price;
-              return {
-                rewardToken,
-                rate: Number((((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)),
-                side: r.side,
-              } as solend.IPartnerReward;
-            }
-          })
-          .filter((p) => p) as solend.IPartnerReward[];
-      } else {
-        partnerRewardData = [];
-      }
+      partnerRewardData = partnerRewards
+        .map((r) => {
+          const rewardRate = r.rewardRates.slice(-1)[0].rewardRate;
+          const rewardToken = tokenList.find((t) => t.mint === r.rewardMint);
+          if (rewardToken) {
+            const rewardTokenPrice = rewardToken.price;
+            return {
+              rewardToken,
+              rate: Number((((rewardRate * rewardTokenPrice) / poolTotalSupplyValue / 10 ** 36) * 100).toFixed(2)),
+              side: r.side,
+            } as types.IPartnerReward;
+          }
+        })
+        .filter((p) => p) as types.IPartnerReward[];
+
       return { ...reserve, partnerRewardData };
     });
 
     return reserveWithPartnerRewardData;
   }
   // Returns ReserveInfo w/o partnerRewardData
-  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<solend.ReserveInfo> {
+  static async getReserve(connection: Connection, reserveId: PublicKey): Promise<types.ReserveInfo> {
     const reserveAccountInfo = await connection.getAccountInfo(reserveId);
     if (!reserveAccountInfo) throw Error(`Cannot get reserveId ${reserveId} Account data `);
     return this.parseReserve(reserveAccountInfo?.data, reserveId);
   }
   // Returns ReserveInfo w/o partnerRewardData
-  static parseReserve(data: Buffer, reserveId: PublicKey): solend.ReserveInfo {
+  static parseReserve(data: Buffer, reserveId: PublicKey): types.ReserveInfo {
     const decodedData = RESERVE_LAYOUT.decode(data);
     let { version, lastUpdate, lendingMarket, liquidity, collateral, config } = decodedData;
     return {
@@ -139,7 +136,7 @@ infos = class InstanceSolend {
     };
   }
 
-  static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<solend.ObligationInfo[]> {
+  static async getAllObligations(connection: Connection, userKey: PublicKey): Promise<types.ObligationInfo[]> {
     const obligationKeys = await Promise.all(
       SOLEND_LENDING_MARKET_ID_ALL.map(async (lendingMarket) => await getObligationPublicKey(userKey, lendingMarket))
     );
@@ -156,14 +153,14 @@ infos = class InstanceSolend {
     connection: Connection,
     obligationId: PublicKey,
     version?: number
-  ): Promise<solend.ObligationInfo> {
+  ): Promise<types.ObligationInfo> {
     let accountInfo = await connection.getAccountInfo(obligationId);
     return accountInfo?.owner.equals(SOLEND_PROGRAM_ID)
       ? this.parseObligation(accountInfo?.data, obligationId)
-      : defaultObligationWrapper.obligationInfo;
+      : types.defaultObligationWrapper.obligationInfo;
   }
 
-  static parseObligation(data: Buffer, obligationId: PublicKey): solend.ObligationInfo {
+  static parseObligation(data: Buffer, obligationId: PublicKey): types.ObligationInfo {
     let dataBuffer = data as Buffer;
     let decodedInfo = OBLIGATION_LAYOUT.decode(dataBuffer);
     let {
@@ -183,7 +180,7 @@ infos = class InstanceSolend {
     const depositsBuffer = dataFlat.slice(0, depositsLen * COLLATERAL_LAYOUT.span);
     const obligationCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
       depositsBuffer
-    ) as solend.ObligationCollateral[];
+    ) as types.ObligationCollateral[];
 
     const borrowsBuffer = dataFlat.slice(
       depositsBuffer.length,
@@ -191,11 +188,11 @@ infos = class InstanceSolend {
     );
     const obligationLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer);
 
-    const obligationInfo = {
+    return {
+      userKey: owner,
       version,
       lastUpdate,
       lendingMarket,
-      owner,
       depositedValue,
       borrowedValue,
       allowedBorrowValue,
@@ -203,9 +200,7 @@ infos = class InstanceSolend {
       obligationCollaterals,
       obligationLoans,
       obligationId,
-    } as solend.ObligationInfo;
-
-    return obligationInfo;
+    };
   }
 };
 
@@ -213,7 +208,7 @@ export { infos };
 
 //all from https://docs.solend.fi/protocol/addresses
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
-  constructor(public reserveInfo: solend.ReserveInfo) {}
+  constructor(public reserveInfo: types.ReserveInfo) {}
   supplyTokenMint() {
     return this.reserveInfo.liquidity.mintPubkey;
   }
@@ -342,7 +337,7 @@ export async function obligationCreated(connection: Connection, wallet: PublicKe
 }
 
 export class ObligationInfoWrapper {
-  constructor(public obligationInfo: solend.ObligationInfo) {}
+  constructor(public obligationInfo: types.ObligationInfo) {}
 
   update(reserveInfos: ReserveInfoWrapper[]) {
     let unhealthyBorrowValue = new BN(0);
@@ -396,19 +391,6 @@ export class ObligationInfoWrapper {
     return limits.length > 0 ? limits.reduce((a, b) => a + b) : 0;
   }
 }
-
-export const defaultObligationWrapper = new ObligationInfoWrapper({
-  version: new BN(1),
-  lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
-  lendingMarket: PublicKey.default,
-  owner: PublicKey.default,
-  depositedValue: new BN(0),
-  borrowedValue: new BN(0),
-  allowedBorrowValue: new BN(0),
-  unhealthyBorrowValue: new BN(0),
-  obligationCollaterals: [] as solend.ObligationCollateral[],
-  obligationLoans: [] as solend.ObligationLoan[],
-} as solend.ObligationInfo);
 
 async function getSlndPrice(connection: Connection) {
   let priceFeed = await parseAggregatorAccountData(connection, SLND_PRICE_ORACLE);

@@ -69,7 +69,8 @@ describe("Solend", () => {
       connection,
       new PublicKey("41j1YyQCohRXZqZYDudemMvAAmFoCg9jyqEkEqd6djG1")
     )) as solend.ObligationInfo;
-    console.log(`** collateral count: ${obligation.obligationCollaterals.length}`);
-    console.log(`** loan count: ${obligation.obligationLoans.length}`);
+    console.log(`- obligation owner: ${obligation.userKey.toBase58()}`);
+    console.log(`- collateral count: ${obligation.obligationCollaterals.length}`);
+    console.log(`- loan count: ${obligation.obligationLoans.length}`);
   });
 });
