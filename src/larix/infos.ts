@@ -1,16 +1,7 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import * as types from ".";
-import {
-  IFarmerInfo,
-  IFarmInfo,
-  IFarmInfoWrapper,
-  IInstanceFarm,
-  IInstanceMoneyMarket,
-  IObligationInfo,
-  IReserveInfo,
-  IReserveInfoWrapper,
-} from "../types";
+import { IFarmInfoWrapper, IInstanceFarm, IInstanceMoneyMarket, IReserveInfoWrapper } from "../types";
 import {
   LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
@@ -128,6 +119,10 @@ infos = class InstanceLarix {
   ): Promise<types.ObligationInfo> {
     let obligationInfo = await connection.getAccountInfo(obligationId);
     return this.parseObligation(obligationInfo?.data, obligationId);
+  }
+
+  static async getObligationId?(marketId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
+    return await PublicKey.createWithSeed(userKey, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
   }
 
   static parseObligation(data: Buffer | undefined, obligationId: PublicKey): types.ObligationInfo {
@@ -615,13 +610,8 @@ export async function checkFarmerCreated(connection: Connection, wallet: PublicK
 }
 
 export async function checkObligationCreated(connection: Connection, wallet: PublicKey) {
-  let obligationPub = await newObligationKey(wallet);
+  let obligationPub = await infos.getObligationId!(PublicKey.default, wallet);
   let obligationInfo = await connection.getAccountInfo(obligationPub);
 
   return (obligationInfo?.data.length as number) > 0;
-}
-
-export async function newObligationKey(wallet: PublicKey) {
-  let newObligation = await PublicKey.createWithSeed(wallet, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
-  return newObligation;
 }
