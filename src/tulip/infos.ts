@@ -11,7 +11,7 @@ import {
   IVaultInfo,
   IVaultInfoWrapper,
 } from "../types";
-import { TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
+import { raydiumFeeCollector, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import { RAYDIUM_VAULT_V1_LAYOUT, RESERVE_LAYOUT } from "./layout";
 // import config from "./constants/vaults_v2_config.json";
 
@@ -353,26 +353,30 @@ export function parseRaydiumVault(data: any, vaultId: PublicKey): RaydiumVaultIn
     serumMarket,
   } = decodeData;
 
+  const feeCollector = raydiumFeeCollector.find((account) => account.id == vaultId.toString());
+
   return {
     vaultId,
     shareMint: base.sharesMint,
     base,
-    raydiumLpMintAddress,
-    raydiumAmmId,
-    raydiumAmmAuthority,
-    raydiumAmmOpenOrders,
-    raydiumAmmQuantitiesOrTargetOrders,
-    raydiumStakeProgram,
-    raydiumLiquidityProgram,
-    raydiumCoinTokenAccount,
-    raydiumPcTokenAccount,
-    raydiumPoolTempTokenAccount,
-    raydiumPoolLpTokenAccount,
-    raydiumPoolWithdrawQueue,
-    raydiumPoolId,
-    raydiumPoolAuthority,
-    raydiumPoolRewardATokenAccount,
-    raydiumPoolRewardBTokenAccount,
+    lpMint: raydiumLpMintAddress,
+    ammId: raydiumAmmId,
+    ammAuthority: raydiumAmmAuthority,
+    ammOpenOrders: raydiumAmmOpenOrders,
+    ammQuantitiesOrTargetOrders: raydiumAmmQuantitiesOrTargetOrders,
+    stakeProgram: raydiumStakeProgram,
+    liquidityProgram: raydiumLiquidityProgram,
+    coinTokenAccount: raydiumCoinTokenAccount,
+    pcTokenAccount: raydiumPcTokenAccount,
+    poolTempTokenAccount: raydiumPoolTempTokenAccount,
+    poolLpTokenAccount: raydiumPoolLpTokenAccount,
+    poolWithdrawQueue: raydiumPoolWithdrawQueue,
+    poolId: raydiumPoolId,
+    poolAuthority: raydiumPoolAuthority,
+    poolRewardATokenAccount: raydiumPoolRewardATokenAccount,
+    poolRewardBTokenAccount: raydiumPoolRewardBTokenAccount,
+    feeCollectorRewardATokenAccount: new PublicKey(feeCollector?.feeCollectorRewardATokenAccount!),
+    feeCollectorRewardBTokenAccount: new PublicKey(feeCollector?.feeCollectorRewardBTokenAccount!),
     dualRewards,
     vaultRewardATokenAccount,
     vaultRewardBTokenAccount,
@@ -436,22 +440,24 @@ interface Base {
 
 export interface RaydiumVaultInfo extends VaultInfo {
   base: Base;
-  raydiumLpMintAddress: PublicKey;
-  raydiumAmmId: PublicKey;
-  raydiumAmmAuthority: PublicKey;
-  raydiumAmmOpenOrders: PublicKey;
-  raydiumAmmQuantitiesOrTargetOrders: PublicKey;
-  raydiumStakeProgram: PublicKey;
-  raydiumLiquidityProgram: PublicKey;
-  raydiumCoinTokenAccount: PublicKey;
-  raydiumPcTokenAccount: PublicKey;
-  raydiumPoolTempTokenAccount: PublicKey;
-  raydiumPoolLpTokenAccount: PublicKey;
-  raydiumPoolWithdrawQueue: PublicKey;
-  raydiumPoolId: PublicKey;
-  raydiumPoolAuthority: PublicKey;
-  raydiumPoolRewardATokenAccount: PublicKey;
-  raydiumPoolRewardBTokenAccount: PublicKey;
+  lpMint: PublicKey;
+  ammId: PublicKey;
+  ammAuthority: PublicKey;
+  ammOpenOrders: PublicKey;
+  ammQuantitiesOrTargetOrders: PublicKey;
+  stakeProgram: PublicKey;
+  liquidityProgram: PublicKey;
+  coinTokenAccount: PublicKey;
+  pcTokenAccount: PublicKey;
+  poolTempTokenAccount: PublicKey;
+  poolLpTokenAccount: PublicKey;
+  poolWithdrawQueue: PublicKey;
+  poolId: PublicKey;
+  poolAuthority: PublicKey;
+  poolRewardATokenAccount: PublicKey;
+  poolRewardBTokenAccount: PublicKey;
+  feeCollectorRewardATokenAccount: PublicKey;
+  feeCollectorRewardBTokenAccount: PublicKey;
   dualRewards: BN;
   vaultRewardATokenAccount: PublicKey;
   vaultRewardBTokenAccount: PublicKey;
