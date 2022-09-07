@@ -1,21 +1,8 @@
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-  i64,
-} from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8, bool, u16, i64 } from "@project-serum/borsh";
 
-export const OPTION_PRAM_LAYOUT = struct([
-  publicKey("vault"),
-  u64("expiry"),
-  u64("strike"),
-]);
+export const OPTION_PRAM_LAYOUT = struct([publicKey("vault"), u64("expiry"), u64("strike")]);
 
-export const VAULT_LAYOUT = struct([
+export const VAULT_LAYOUT_COMMON = [
   publicKey("admin"),
   publicKey("pendingAdmin"),
   publicKey("vaultAuthority"),
@@ -55,7 +42,11 @@ export const VAULT_LAYOUT = struct([
   u8("pendingvaultBumpsWriter"),
   bool("isPaused"),
   bool("onlyEarlyAccess"),
-]);
+];
+
+export const COVER_VAULT_LAYOUT = struct(VAULT_LAYOUT_COMMON);
+
+export const PUT_VAULT_LAYOUT = struct([publicKey("identifier"), ...VAULT_LAYOUT_COMMON]);
 
 export const DEPOSITOR_LAYOUT = struct([
   publicKey("owner"),

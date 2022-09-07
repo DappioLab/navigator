@@ -4,6 +4,7 @@ import {
   GetProgramAccountsConfig,
   DataSizeFilter,
   PublicKey,
+  AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
 import {
@@ -11,16 +12,11 @@ import {
   OPTION_PRAM_LAYOUT,
   OTC_TERMS_LAYOUT,
   PRICE_PER_PAGE_LAYOUT,
-  VAULT_LAYOUT,
+  COVER_VAULT_LAYOUT,
+  PUT_VAULT_LAYOUT,
   DEPOSITOR_LAYOUT,
 } from "./layouts";
-import {
-  ADMIN,
-  IDENTIFIER,
-  KATANA_COVER_PROGRAM_ID,
-  KATANA_PUT_PROGRAM_ID,
-  PSY_PROGRAM_ID,
-} from "./ids";
+import { ADMIN, IDENTIFIER, KATANA_COVER_PROGRAM_ID, KATANA_PUT_PROGRAM_ID, PSY_PROGRAM_ID } from "./ids";
 import { struct, u128 } from "@project-serum/borsh";
 import { IDepositorInfo, IInstanceVault, IVaultInfo } from "../types";
 
@@ -31,16 +27,17 @@ import { IDepositorInfo, IInstanceVault, IVaultInfo } from "../types";
 // TODO: Implement InstanceKatana
 
 let infos: IInstanceVault;
+export enum VaultType {
+  putSell,
+  coverCall,
+}
 
 infos = class InstanceKatana {
   static async getAllVaults(connection: Connection): Promise<IVaultInfo[]> {
     return [];
   }
 
-  static async getVault(
-    connection: Connection,
-    vaultId: PublicKey
-  ): Promise<IVaultInfo> {
+  static async getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo> {
     return {} as IVaultInfo;
   }
 
@@ -48,17 +45,11 @@ infos = class InstanceKatana {
     return {} as IVaultInfo;
   }
 
-  static async getAllDepositors(
-    connection: Connection,
-    userKey: PublicKey
-  ): Promise<IDepositorInfo[]> {
+  static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]> {
     return [];
   }
 
-  static async getDepositor(
-    connection: Connection,
-    depositorId: PublicKey
-  ): Promise<IDepositorInfo> {
+  static async getDepositor(connection: Connection, depositorId: PublicKey): Promise<IDepositorInfo> {
     return {} as IDepositorInfo;
   }
 
@@ -75,7 +66,8 @@ export { infos };
 
 export interface VaultInfo extends IVaultInfo {
   // vaultId
-  // shareMint (equivalent to underlyingTokenMint?)
+  // shareMint (equivalent to derivativeTokenMint)
+  type: VaultType;
   admin: PublicKey;
   pendingAdmin: PublicKey;
   vaultAuthority: PublicKey;
@@ -115,6 +107,9 @@ export interface VaultInfo extends IVaultInfo {
   pendingvaultBumpsWriter: BN;
   isPaused: boolean;
   onlyEarlyAccess: boolean;
+  programId: PublicKey;
+  optionPram?: OptionParameters;
+  identifier?: PublicKey;
 }
 
 export interface DepositorInfo extends IDepositorInfo {
@@ -162,10 +157,7 @@ interface OptionMarketInfo {
 }
 
 export class VaultInfoWrapper {
-  constructor(
-    public readonly vaultInfo: VaultInfo,
-    public readonly programId: PublicKey
-  ) {}
+  constructor(public readonly vaultInfo: VaultInfo) {}
 
   async getPricePerPage() {
     let prefix = "price-per-share";
@@ -180,7 +172,7 @@ export class VaultInfoWrapper {
     );
     let address = await PublicKey.findProgramAddress(
       [minerBytes, this.vaultInfo.underlyingTokenMint.toBuffer(), page],
-      this.programId // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
+      this.vaultInfo.programId
     );
     return address[0];
   }
@@ -196,115 +188,211 @@ export class VaultInfoWrapper {
         this.vaultInfo.optionTokenMint.toBuffer(),
         this.vaultInfo.underlyingTokenMint.toBuffer(),
       ],
-      this.programId // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
+      this.vaultInfo.programId
     );
     return address[0];
   }
 
   async getOptionMarket(connection: Connection) {
-    let optionMarket = await getOptionMarketByOptionTokenMint(
-      this.vaultInfo.optionTokenMint,
-      connection
-    );
+    let optionMarket = await getOptionMarketByOptionTokenMint(this.vaultInfo.optionTokenMint, connection);
     return optionMarket;
   }
 }
 
 export async function parseVaultData(
   data: any,
-  vaultId: PublicKey
-  // optionPram: OptionParameters
+  vaultId: PublicKey,
+  vaultType: VaultType,
+  optionPram?: OptionParameters
 ): Promise<VaultInfo> {
   let dataBuffer = data as Buffer;
   let stateData = dataBuffer.slice(8);
-  let state = VAULT_LAYOUT.decode(stateData);
-  let {
-    admin,
-    pendingAdmin,
-    vaultAuthority,
-    cap,
-    lockedAmount,
-    lastLockedAmount,
-    totalPendingDeposits,
-    queuedWithdrawShares,
-    totalShares,
-    round,
-    underlyingTokenMint,
-    quoteTokenMint,
-    optionTokenMint,
-    nextOptionTokenMint,
-    nextOptionTokenVault,
-    writerTokenMint,
-    nextWriterTokenMint,
-    nextWriterTokenVault,
-    derivativeTokenMint,
-    earlyAccessTokenMint,
-    underlyingTokenVault,
-    quoteTokenVault,
-    optionTokenVault,
-    writerTokenVault,
-    derivativeTokenVault,
-    openOrders,
-    decimals,
-    bump,
-    authorityBump,
-    derivativeMintBump,
-    vaultBumpsUnderlying,
-    vaultBumpsQuote,
-    vaultBumpsOption,
-    vaultBumpsWriter,
-    vaultBumpsDerivative,
-    pendingvaultBumpsOption,
-    pendingvaultBumpsWriter,
-    isPaused,
-    onlyEarlyAccess,
-  } = state;
+  switch (vaultType) {
+    case VaultType.coverCall: {
+      let state = COVER_VAULT_LAYOUT.decode(stateData);
+      let {
+        admin,
+        pendingAdmin,
+        vaultAuthority,
+        cap,
+        lockedAmount,
+        lastLockedAmount,
+        totalPendingDeposits,
+        queuedWithdrawShares,
+        totalShares,
+        round,
+        underlyingTokenMint,
+        quoteTokenMint,
+        optionTokenMint,
+        nextOptionTokenMint,
+        nextOptionTokenVault,
+        writerTokenMint,
+        nextWriterTokenMint,
+        nextWriterTokenVault,
+        derivativeTokenMint,
+        earlyAccessTokenMint,
+        underlyingTokenVault,
+        quoteTokenVault,
+        optionTokenVault,
+        writerTokenVault,
+        derivativeTokenVault,
+        openOrders,
+        decimals,
+        bump,
+        authorityBump,
+        derivativeMintBump,
+        vaultBumpsUnderlying,
+        vaultBumpsQuote,
+        vaultBumpsOption,
+        vaultBumpsWriter,
+        vaultBumpsDerivative,
+        pendingvaultBumpsOption,
+        pendingvaultBumpsWriter,
+        isPaused,
+        onlyEarlyAccess,
+      } = state;
 
-  return {
-    vaultId,
-    admin,
-    pendingAdmin,
-    vaultAuthority,
-    cap,
-    lockedAmount,
-    lastLockedAmount,
-    totalPendingDeposits,
-    queuedWithdrawShares,
-    totalShares,
-    round,
-    underlyingTokenMint,
-    // TODO: underlyingTokenMint is used as dummy public key for shareMint.
-    // Need to identify the correct shareMint
-    shareMint: underlyingTokenMint,
-    quoteTokenMint,
-    optionTokenMint,
-    nextOptionTokenMint,
-    nextOptionTokenVault,
-    writerTokenMint,
-    nextWriterTokenMint,
-    nextWriterTokenVault,
-    derivativeTokenMint,
-    earlyAccessTokenMint,
-    underlyingTokenVault,
-    quoteTokenVault,
-    optionTokenVault,
-    writerTokenVault,
-    derivativeTokenVault,
-    openOrders,
-    decimals,
-    bump,
-    authorityBump,
-    derivativeMintBump,
-    vaultBumpsUnderlying,
-    vaultBumpsQuote,
-    vaultBumpsOption,
-    vaultBumpsWriter,
-    vaultBumpsDerivative,
-    pendingvaultBumpsOption,
-    pendingvaultBumpsWriter,
-    isPaused,
-    onlyEarlyAccess,
-  };
+      return {
+        type: vaultType,
+        vaultId,
+        admin,
+        pendingAdmin,
+        vaultAuthority,
+        cap,
+        lockedAmount,
+        lastLockedAmount,
+        totalPendingDeposits,
+        queuedWithdrawShares,
+        totalShares,
+        round,
+        underlyingTokenMint,
+        shareMint: derivativeTokenMint,
+        quoteTokenMint,
+        optionTokenMint,
+        nextOptionTokenMint,
+        nextOptionTokenVault,
+        writerTokenMint,
+        nextWriterTokenMint,
+        nextWriterTokenVault,
+        derivativeTokenMint,
+        earlyAccessTokenMint,
+        underlyingTokenVault,
+        quoteTokenVault,
+        optionTokenVault,
+        writerTokenVault,
+        derivativeTokenVault,
+        openOrders,
+        decimals,
+        bump,
+        authorityBump,
+        derivativeMintBump,
+        vaultBumpsUnderlying,
+        vaultBumpsQuote,
+        vaultBumpsOption,
+        vaultBumpsWriter,
+        vaultBumpsDerivative,
+        pendingvaultBumpsOption,
+        pendingvaultBumpsWriter,
+        isPaused,
+        onlyEarlyAccess,
+        optionPram,
+        programId: KATANA_COVER_PROGRAM_ID,
+      };
+    }
+    default: {
+      let putState = PUT_VAULT_LAYOUT.decode(stateData);
+      let {
+        identifier,
+        admin,
+        pendingAdmin,
+        vaultAuthority,
+        cap,
+        lockedAmount,
+        lastLockedAmount,
+        totalPendingDeposits,
+        queuedWithdrawShares,
+        totalShares,
+        round,
+        underlyingTokenMint,
+        quoteTokenMint,
+        optionTokenMint,
+        nextOptionTokenMint,
+        nextOptionTokenVault,
+        writerTokenMint,
+        nextWriterTokenMint,
+        nextWriterTokenVault,
+        derivativeTokenMint,
+        earlyAccessTokenMint,
+        underlyingTokenVault,
+        quoteTokenVault,
+        optionTokenVault,
+        writerTokenVault,
+        derivativeTokenVault,
+        openOrders,
+        decimals,
+        bump,
+        authorityBump,
+        derivativeMintBump,
+        vaultBumpsUnderlying,
+        vaultBumpsQuote,
+        vaultBumpsOption,
+        vaultBumpsWriter,
+        vaultBumpsDerivative,
+        pendingvaultBumpsOption,
+        pendingvaultBumpsWriter,
+        isPaused,
+        onlyEarlyAccess,
+      } = putState;
+
+      return {
+        type: vaultType,
+        vaultId,
+        admin,
+        pendingAdmin,
+        vaultAuthority,
+        cap,
+        lockedAmount,
+        lastLockedAmount,
+        totalPendingDeposits,
+        queuedWithdrawShares,
+        totalShares,
+        round,
+        underlyingTokenMint,
+        shareMint: derivativeTokenMint,
+        quoteTokenMint,
+        optionTokenMint,
+        nextOptionTokenMint,
+        nextOptionTokenVault,
+        writerTokenMint,
+        nextWriterTokenMint,
+        nextWriterTokenVault,
+        derivativeTokenMint,
+        earlyAccessTokenMint,
+        underlyingTokenVault,
+        quoteTokenVault,
+        optionTokenVault,
+        writerTokenVault,
+        derivativeTokenVault,
+        openOrders,
+        decimals,
+        bump,
+        authorityBump,
+        derivativeMintBump,
+        vaultBumpsUnderlying,
+        vaultBumpsQuote,
+        vaultBumpsOption,
+        vaultBumpsWriter,
+        vaultBumpsDerivative,
+        pendingvaultBumpsOption,
+        pendingvaultBumpsWriter,
+        isPaused,
+        onlyEarlyAccess,
+        identifier: identifier,
+        optionPram,
+        programId: KATANA_PUT_PROGRAM_ID,
+      };
+    }
+  }
 }
 
 export async function getAllCoverVaults(connection: Connection) {
@@ -319,27 +407,19 @@ export async function getAllCoverVaults(connection: Connection) {
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allVaultAccount = await connection.getProgramAccounts(
-    KATANA_COVER_PROGRAM_ID,
-    config
-  );
+  const allVaultAccount = await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, config);
   let allVault: VaultInfo[] = [];
-  let optionPrams = await getAllOptionPrams(
-    connection,
-    KATANA_COVER_PROGRAM_ID
-  );
+  let optionPrams = await getOptionPramsMaps(connection, KATANA_COVER_PROGRAM_ID);
+
   for (let accountInfo of allVaultAccount) {
-    for (let optionPram of optionPrams) {
-      if (optionPram.vault.equals(accountInfo.pubkey)) {
-        allVault.push(
-          await parseVaultData(
-            accountInfo.account.data,
-            accountInfo.pubkey
-            // optionPram
-          )
-        );
-      }
-    }
+    allVault.push(
+      await parseVaultData(
+        accountInfo.account.data,
+        accountInfo.pubkey,
+        VaultType.coverCall,
+        optionPrams.get(accountInfo.pubkey.toString())
+      )
+    );
   }
   return allVault;
 }
@@ -356,53 +436,34 @@ export async function getAllPutVaults(connection: Connection) {
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allVaultAccount = await connection.getProgramAccounts(
-    KATANA_PUT_PROGRAM_ID,
-    config
-  );
+  const allVaultAccount = await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, config);
   let allVault: VaultInfo[] = [];
-  let optionPrams = await getAllOptionPrams(connection, KATANA_PUT_PROGRAM_ID);
+  let optionPrams = await getOptionPramsMaps(connection, KATANA_PUT_PROGRAM_ID);
   for (let accountInfo of allVaultAccount) {
-    for (let optionPram of optionPrams) {
-      if (optionPram.vault.equals(accountInfo.pubkey)) {
-        allVault.push(
-          await parseVaultData(
-            accountInfo.account.data,
-            accountInfo.pubkey
-            // optionPram
-          )
-        );
-      }
-    }
+    allVault.push(
+      await parseVaultData(
+        accountInfo.account.data,
+        accountInfo.pubkey,
+        VaultType.putSell,
+        optionPrams.get(accountInfo.pubkey.toString())
+      )
+    );
   }
   return allVault;
 }
 
-export async function getVault(
-  connection: Connection,
-  infoPubkey: PublicKey,
-  programId: PublicKey // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
-) {
+export async function getVault(connection: Connection, infoPubkey: PublicKey) {
   const vaultAccount = await connection.getAccountInfo(infoPubkey);
-  let optionPrams = await getAllOptionPrams(connection, programId);
+  let type = vaultAccount?.owner.equals(KATANA_COVER_PROGRAM_ID) ? VaultType.coverCall : VaultType.putSell;
+  let optionPrams = await getOptionPramsMaps(connection, vaultAccount?.owner);
   let vault!: VaultInfo;
-  for (let optionPram of optionPrams) {
-    if (optionPram.vault.equals(infoPubkey)) {
-      vault = await parseVaultData(
-        vaultAccount?.data,
-        infoPubkey
-        // optionPram
-      );
-    }
-  }
+
+  vault = await parseVaultData(vaultAccount?.data, infoPubkey, type, optionPrams.get(infoPubkey.toString()));
+
   return vault;
 }
 
-export async function getAllDepositors(
-  connection: Connection,
-  wallet: PublicKey,
-  programId: PublicKey
-) {
+export async function getAllDepositors(connection: Connection, wallet: PublicKey, programId: PublicKey) {
   const adminIdMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 8,
@@ -414,15 +475,10 @@ export async function getAllDepositors(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allDepositorAccount = await connection.getProgramAccounts(
-    programId,
-    config
-  );
+  const allDepositorAccount = await connection.getProgramAccounts(programId, config);
   let allDepositor: DepositorInfo[] = [];
   for (let accountInfo of allDepositorAccount) {
-    allDepositor.push(
-      await parseDepositorData(accountInfo.account.data, accountInfo.pubkey)
-    );
+    allDepositor.push(await parseDepositorData(accountInfo.account.data, accountInfo.pubkey));
   }
   return allDepositor;
 }
@@ -455,32 +511,44 @@ export function parseOptionParameters(data: any, infoPubkey: PublicKey) {
   return new OptionParameters(infoPubkey, vault, expiry, strike);
 }
 
-export async function getAllOptionPrams(
-  connection: Connection,
-  programId: PublicKey
-) {
+export async function getOptionPramsMaps(connection: Connection, programId?: PublicKey) {
   const sizeFilter: DataSizeFilter = {
     dataSize: 57,
   };
   const filters = [sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allOptionPramAccount = await connection.getProgramAccounts(
-    programId, // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
-    config
-  );
-  let allOptionPram: OptionParameters[] = [];
-  for (let accountInfo of allOptionPramAccount) {
-    allOptionPram.push(
-      parseOptionParameters(accountInfo.account.data, accountInfo.pubkey)
-    );
+  let allOptionPramAccount: {
+    pubkey: PublicKey;
+    account: AccountInfo<Buffer>;
+  }[] = [];
+  if (programId) {
+    allOptionPramAccount = [
+      ...allOptionPramAccount,
+      ...(await connection.getProgramAccounts(
+        programId, // KATANA_COVER_PROGRAM_ID or KATANA_PUT_PROGRAM_ID
+        config
+      )),
+    ];
+  } else {
+    allOptionPramAccount = [
+      ...allOptionPramAccount,
+      ...(await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, config)),
+    ];
+    allOptionPramAccount = [
+      ...allOptionPramAccount,
+      ...(await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, config)),
+    ];
   }
-  return allOptionPram;
+
+  let optionMaps: Map<string, OptionParameters> = new Map();
+  for (let accountInfo of allOptionPramAccount) {
+    let optionInfo = parseOptionParameters(accountInfo.account.data, accountInfo.pubkey);
+    optionMaps.set(optionInfo.vault.toString(), optionInfo);
+  }
+  return optionMaps;
 }
 
-export async function parseDepositorData(
-  data: any,
-  depositorId: PublicKey
-): Promise<DepositorInfo> {
+export async function parseDepositorData(data: any, depositorId: PublicKey): Promise<DepositorInfo> {
   let dataBuffer = data as Buffer;
   let userData = dataBuffer.slice(8);
   let depositor = DEPOSITOR_LAYOUT.decode(userData);
@@ -506,17 +574,10 @@ export async function parseDepositorData(
   };
 }
 
-export async function getDepositorId(
-  wallet: PublicKey,
-  vault: PublicKey,
-  programId: PublicKey
-) {
+export async function getDepositorId(wallet: PublicKey, vault: PublicKey, programId: PublicKey) {
   let prefix = "user-account";
   let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
-  let address = await PublicKey.findProgramAddress(
-    [minerBytes, wallet.toBuffer(), vault.toBuffer()],
-    programId
-  );
+  let address = await PublicKey.findProgramAddress([minerBytes, wallet.toBuffer(), vault.toBuffer()], programId);
   return address;
 }
 
@@ -534,10 +595,7 @@ export async function checkDepositorCreated(
   return false;
 }
 
-export function parseOtcTermsData(
-  data: any,
-  otcTermId: PublicKey
-): OtcTermInfo {
+export function parseOtcTermsData(data: any, otcTermId: PublicKey): OtcTermInfo {
   let dataBuffer = data as Buffer;
   let otcData = dataBuffer.slice(8);
   let otcRaw = OTC_TERMS_LAYOUT.decode(otcData);
@@ -553,10 +611,7 @@ export function parseOtcTermsData(
   };
 }
 
-export async function getOtcTermsAccount(
-  connection: Connection,
-  vault: VaultInfoWrapper
-): Promise<OtcTermInfo> {
+export async function getOtcTermsAccount(connection: Connection, vault: VaultInfoWrapper): Promise<OtcTermInfo> {
   let otcTermId = await vault.getOtcTermId();
   let account = await connection.getAccountInfo(otcTermId);
   if (account == undefined) {
@@ -577,10 +632,7 @@ export function defaultOtcTerms(otcTermId: PublicKey) {
   };
 }
 
-export function parsePricePerSharePageData(
-  data: any,
-  infoPubkey: PublicKey
-): PricePerSharePageInfo {
+export function parsePricePerSharePageData(data: any, infoPubkey: PublicKey): PricePerSharePageInfo {
   let dataBuffer = data as Buffer;
   let ppspData = dataBuffer.slice(8);
   let ppspRaw = PRICE_PER_PAGE_LAYOUT.decode(ppspData);
@@ -601,20 +653,14 @@ export function parsePricePerSharePageData(
   };
 }
 
-export async function getPricePerPageAccount(
-  vault: VaultInfoWrapper,
-  connection: Connection
-) {
+export async function getPricePerPageAccount(vault: VaultInfoWrapper, connection: Connection) {
   let infoPubkey = await vault.getPricePerPage();
   let account = await connection.getAccountInfo(infoPubkey);
   let ppsp = parsePricePerSharePageData(account?.data, infoPubkey);
   return ppsp;
 }
 
-export function parseOptionMarketInfo(
-  data: any,
-  optionMarketId: PublicKey
-): OptionMarketInfo {
+export function parseOptionMarketInfo(data: any, optionMarketId: PublicKey): OptionMarketInfo {
   let dataBuffer = data as Buffer;
   if (!data || !optionMarketId) {
     return {
@@ -686,13 +732,7 @@ export async function getOptionMarketByOptionTokenMint(
   };
   const filters = [mintMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const allOptionMarket = await connection.getProgramAccounts(
-    PSY_PROGRAM_ID,
-    config
-  );
-  let optionMarketInfo = parseOptionMarketInfo(
-    allOptionMarket[0]?.account.data,
-    allOptionMarket[0]?.pubkey
-  );
+  const allOptionMarket = await connection.getProgramAccounts(PSY_PROGRAM_ID, config);
+  let optionMarketInfo = parseOptionMarketInfo(allOptionMarket[0]?.account.data, allOptionMarket[0]?.pubkey);
   return optionMarketInfo;
 }
