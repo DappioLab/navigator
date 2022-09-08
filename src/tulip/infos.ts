@@ -29,32 +29,34 @@ infos = class InstanceTulip {
     const config: GetProgramAccountsConfig = { filters: filters };
     const reserveAccounts = await connection.getProgramAccounts(TULIP_PROGRAM_ID, config);
 
-    const r = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
 
-    let reserves = [] as types.ReserveInfo[];
-    for (let account of reserveAccounts) {
-      let info = this.parseReserve(account.account.data, account.pubkey);
-      reserves.push(info);
-    }
+    // let reserves = [] as types.ReserveInfo[];
+    // for (let account of reserveAccounts) {
+    //   let info = this.parseReserve(account.account.data, account.pubkey);
+    //   reserves.push(info);
+    // }
 
     return reserves;
   }
 
   static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<ReserveInfoWrapper[]> {
-    const allReserves = await this.getAllReserves(connection, marketId);
-    const allReservesWrapper: ReserveInfoWrapper[] = [];
+    const reserves = await this.getAllReserves(connection, marketId);
+    const reserveWrappers = reserves.map((reserve) => new ReserveInfoWrapper(reserve));
+    return reserveWrappers;
 
-    allReserves.map((reserveInfo) => {
-      allReservesWrapper.push(new ReserveInfoWrapper(reserveInfo));
-    });
-
-    return allReservesWrapper;
+    // const allReserves = await this.getAllReserves(connection, marketId);
+    // const allReservesWrapper: ReserveInfoWrapper[] = [];
+    // allReserves.map((reserveInfo) => {
+    //   allReservesWrapper.push(new ReserveInfoWrapper(reserveInfo));
+    // });
+    // return allReservesWrapper;
   }
 
   static async getReserve(connection: Connection, reserveId: PublicKey): Promise<types.ReserveInfo> {
     const reserveAccountInfo = await connection.getAccountInfo(reserveId);
     if (!reserveAccountInfo) throw Error("Error: Cannot get reserve account (tulip.getReserve)");
-    return this.parseReserve(reserveAccountInfo?.data, reserveId);
+    return this.parseReserve(reserveAccountInfo.data, reserveId);
   }
 
   static parseReserve(data: Buffer, reserveId: PublicKey): types.ReserveInfo {
@@ -79,17 +81,23 @@ infos = class InstanceTulip {
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allVaultAccount = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
-    let allVault: types.VaultInfo[] = [];
 
-    for (let vaultAccountInfo of allVaultAccount) {
-      if (this._isAllowedId(vaultAccountInfo.pubkey)) {
-        const vault = this.parseVault(vaultAccountInfo.account.data, vaultAccountInfo.pubkey);
-        allVault.push(vault);
-      } else continue;
-    }
+    const accountInfos = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
+    const vaults = accountInfos
+      .filter((info) => this._isAllowedId(info.pubkey))
+      .map((info) => this.parseVault(info.account.data, info.pubkey));
+    return vaults;
 
-    return allVault;
+    // const allVaultAccount = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
+    // let allVault: types.VaultInfo[] = [];
+
+    // for (let vaultAccountInfo of allVaultAccount) {
+    //   if (this._isAllowedId(vaultAccountInfo.pubkey)) {
+    //     const vault = this.parseVault(vaultAccountInfo.account.data, vaultAccountInfo.pubkey);
+    //     allVault.push(vault);
+    //   } else continue;
+    // }
+    // return allVault;
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
@@ -110,17 +118,19 @@ infos = class InstanceTulip {
       default:
         parseVault = this._parseRaydiumVault;
     }
-    let vault = {} as unknown as types.VaultInfo;
-    let failId = 0;
-    let successId = 0;
-    try {
-      vault = parseVault(data, vaultId);
-      console.log({ successId, vaultId: vaultId.toBase58() });
-    } catch (e) {
-      failId++;
-      console.log({ failId, vaultId: vaultId.toBase58() });
-    }
-    return vault;
+    return parseVault(data, vaultId);
+    // DEBUG
+    // let vault = {} as unknown as types.VaultInfo;
+    // let failId = 0;
+    // let successId = 0;
+    // try {
+    //   vault = parseVault(data, vaultId);
+    //   console.log({ successId, vaultId: vaultId.toBase58() });
+    // } catch (e) {
+    //   failId++;
+    //   console.log({ failId, vaultId: vaultId.toBase58() });
+    // }
+    // return vault;
   }
 
   private static _parseRaydiumVault(data: any, vaultId: PublicKey): types.RaydiumVaultInfo {
