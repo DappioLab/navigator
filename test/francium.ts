@@ -1,5 +1,6 @@
 import { PublicKey, Connection } from "@solana/web3.js";
 import { francium } from "../src";
+import { ReserveInfo, ReserveInfoWrapper } from "../src/francium";
 
 describe("Francium", () => {
   // const connection = new Connection("https://rpc-mainnet-fork.dappio.xyz", {
@@ -32,13 +33,24 @@ describe("Francium", () => {
 
   // const supplyAmount = 20000;
 
+  it("fetches reserve", async () => {
+    const reserves = (await francium.infos.getAllReserves(connection)) as ReserveInfo[];
+    const poolId = reserves[0].reserveId;
+    console.log(poolId.toString());
+
+    const pool = (await francium.infos.getReserve(connection, poolId)) as ReserveInfo;
+    console.log(pool);
+  });
+
+  it("fetches reserve wrapper", async () => {
+    const reserveWrappers = (await francium.infos.getAllReserveWrappers(connection)) as ReserveInfoWrapper[];
+    const reserveInfo = reserveWrappers[0];
+    console.log(reserveInfo.supplyApy());
+  });
+
   it("fetches farm data", async () => {
-    const farmId = new PublicKey(
-      "3EhxTvGjycQSKBY4EFz7MGA5Ke7rf39oUU2nM9qBP6Cj"
-    );
-
-    const farm = await francium.getFarm(connection, farmId);
-
+    const farmId = new PublicKey("3EhxTvGjycQSKBY4EFz7MGA5Ke7rf39oUU2nM9qBP6Cj");
+    const farm = await francium.infos.getFarm(connection, farmId);
     console.log(farm);
   });
 });
