@@ -213,9 +213,9 @@ infos = class InstanceOrca {
     });
   }
 
-  static async getFarmerId(farmId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
+  static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey): Promise<PublicKey> {
     const [farmerId, _] = await PublicKey.findProgramAddress(
-      [farmId.toBuffer(), userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
+      [farmInfo.farmId.toBuffer(), userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
       ORCA_FARM_PROGRAM_ID
     );
 

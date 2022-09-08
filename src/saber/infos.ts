@@ -259,8 +259,8 @@ infos = class InstanceSaber {
     return allFarmerInfo;
   }
 
-  static async getFarmerId(farmId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
-    let [farmerId, _] = await this.getFarmerIdWithBump(farmId, userKey);
+  static async getFarmerId(farmInfo: FarmInfo, userKey: PublicKey): Promise<PublicKey> {
+    let [farmerId, _] = await this.getFarmerIdWithBump(farmInfo.farmId, userKey);
     return farmerId;
   }
 
@@ -292,7 +292,7 @@ infos = class InstanceSaber {
   }
 
   static async farmerCreated(connection: Connection, userKey: PublicKey, farm: FarmInfo) {
-    let farmerId = await this.getFarmerId(userKey, farm.farmId);
+    let farmerId = await this.getFarmerId(farm, userKey);
     let farmerAccountInfo = await connection.getAccountInfo(farmerId);
     if (farmerAccountInfo?.owner.equals(QURARRY_MINE_PROGRAM_ID)) {
       return true;
