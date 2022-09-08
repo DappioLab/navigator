@@ -91,7 +91,7 @@ infos = class InstanceTulip {
         parseVault = this._parseRaydiumVault;
         break;
       default:
-        parseVault = this._parseRaydiumVault;
+        throw Error("Error: data structure does not exist or not supported yet (tulip.parseVault");
     }
     return parseVault(data, vaultId);
   }
