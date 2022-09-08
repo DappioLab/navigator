@@ -59,12 +59,13 @@ describe("Tulip", () => {
     //   console.log(`** VaultId: ${v.vaultId}`);
     // });
   });
-  // it(" Can get vault", async () => {
-  //   const vault = (await tulip.infos.getVault!(
-  //     connection,
-  //     new PublicKey("41j1YyQCohRXZqZYDudemMvAAmFoCg9jyqEkEqd6djG1")
-  //   )) as tulip.VaultInfo;
-  //   console.log(`- Vault shareMint: ${vault.shareMint.toBase58()}`);
-  //   console.log(`- Vault base PDA: ${vault.base.pda.toBase58()}`);
-  // });
+  it(" Can get vault", async () => {
+    const vault = (await tulip.infos.getVault!(
+      connection,
+      new PublicKey("4gKvh8AmET6U84KXAJdnq1eU53mtniPXGyfDTW2R3rQN")
+      // new PublicKey("BMBaSwtdHxeXaCW68oMGDr26kLoK2bPP8aSMrNgkm62U")
+    )) as tulip.VaultInfo;
+    console.log(`- Vault shareMint: ${vault.shareMint.toBase58()}`);
+    console.log(`- Vault base PDA: ${vault.base.pda.toBase58()}`);
+  });
 });

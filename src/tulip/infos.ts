@@ -28,6 +28,9 @@ infos = class InstanceTulip {
 
     const config: GetProgramAccountsConfig = { filters: filters };
     const reserveAccounts = await connection.getProgramAccounts(TULIP_PROGRAM_ID, config);
+
+    const r = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+
     let reserves = [] as types.ReserveInfo[];
     for (let account of reserveAccounts) {
       let info = this.parseReserve(account.account.data, account.pubkey);
@@ -107,8 +110,10 @@ infos = class InstanceTulip {
     }
     let vault = {} as unknown as types.VaultInfo;
     let failId = 0;
+    let successId = 0;
     try {
       vault = parseVault(data, vaultId);
+      console.log({ successId, vaultId: vaultId.toBase58() });
     } catch (e) {
       failId++;
       console.log({ failId, vaultId: vaultId.toBase58() });
