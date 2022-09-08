@@ -276,7 +276,6 @@ infos = class InstanceOrca {
         return;
       }
 
-      // 71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2
       let poolValueUSD =
         (Number(item.tokenSupplyA) / 10 ** tokenA.decimals) * tokenA?.price +
         (Number(item.tokenSupplyB) / 10 ** tokenB.decimals) * tokenB.price;
