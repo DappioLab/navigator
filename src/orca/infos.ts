@@ -276,15 +276,7 @@ infos = class InstanceOrca {
         return;
       }
 
-      // if (item.poolId.toBase58() === "71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2") {
-      //   console.log(Number(item.tokenSupplyA));
-      //   console.log(Number(item.tokenSupplyB));
-      //   console.log("decimals");
-      //   console.log(tokenA);
-
-      //   console.log(tokenB);
-      // }
-
+      // 71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2
       let poolValueUSD =
         (Number(item.tokenSupplyA) / 10 ** tokenA.decimals) * tokenA?.price +
         (Number(item.tokenSupplyB) / 10 ** tokenB.decimals) * tokenB.price;
@@ -306,9 +298,9 @@ infos = class InstanceOrca {
             10 ** Number(item.farm.baseTokenMintAccountData!.decimals) /
             (Number(item.lpSupply) / 10 ** item.lpDecimals);
 
-          if (item.poolId.toBase58() === "71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2") {
-            console.log("emission", rewardValueUSD, poolValueUSD, stakeRate);
-          }
+          // if (item.poolId.toBase58() === "71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2") {
+          //   console.log("emission", rewardValueUSD, poolValueUSD, stakeRate);
+          // }
 
           emissionAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
           item["emissionAPR"] = emissionAPR;
