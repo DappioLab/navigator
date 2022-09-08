@@ -243,7 +243,7 @@ infos = class InstanceLarix {
     return allFarmerInfos;
   }
 
-  static async getFarmerId(farmId: PublicKey, userKey: PublicKey, version?: number): Promise<PublicKey> {
+  static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey> {
     let newFarmer = await PublicKey.createWithSeed(userKey, LARIX_MAIN_POOL_FARMER_SEED, LARIX_PROGRAM_ID);
     return newFarmer;
   }
@@ -604,7 +604,7 @@ export async function getAllOracleBridges(connection: Connection) {
 }
 
 export async function checkFarmerCreated(connection: Connection, wallet: PublicKey) {
-  let farmerId = await infos.getFarmerId(PublicKey.default, wallet);
+  let farmerId = await infos.getFarmerId({} as types.FarmInfo, wallet);
   let farmerInfo = await connection.getAccountInfo(farmerId);
   return (farmerInfo?.data.length as number) > 0;
 }

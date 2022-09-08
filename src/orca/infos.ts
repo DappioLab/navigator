@@ -288,8 +288,8 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
   }
 }
 
-export async function checkFarmerCreated(connection: Connection, farmId: PublicKey, userKey: PublicKey) {
-  let farmerId = await infos.getFarmerId(farmId, userKey);
+export async function checkFarmerCreated(connection: Connection, farmInfo: types.FarmInfo, userKey: PublicKey) {
+  let farmerId = await infos.getFarmerId(farmInfo, userKey);
   let farmerAccount = await connection.getAccountInfo(farmerId);
   return (farmerAccount?.data.length as number) > 0;
 }
