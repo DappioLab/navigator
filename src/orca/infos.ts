@@ -283,6 +283,7 @@ infos = class InstanceOrca {
 
       let emissionAPR = 0;
       let doubleDipAPR = 0;
+
       if (item.farm) {
         let dailyEmission =
           (Number(item.farm.emissionsPerSecondNumerator) * 60 * 60 * 24) /
@@ -297,10 +298,6 @@ infos = class InstanceOrca {
             Number(item.farm.baseTokenVaultAccountData!.amount) /
             10 ** Number(item.farm.baseTokenMintAccountData!.decimals) /
             (Number(item.lpSupply) / 10 ** item.lpDecimals);
-
-          // if (item.poolId.toBase58() === "71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2") {
-          //   console.log("emission", rewardValueUSD, poolValueUSD, stakeRate);
-          // }
 
           emissionAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
           item["emissionAPR"] = emissionAPR;
@@ -328,22 +325,11 @@ infos = class InstanceOrca {
             10 ** Number(item.doubleDip.baseTokenMintAccountData!.decimals) /
             (Number(item.lpSupply) / 10 ** item.lpDecimals);
 
-          // if (item.poolId.toBase58() === "71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2") {
-          //   console.log("double dip", rewardValueUSD, poolValueUSD, stakeRate);
-          // }
-
           doubleDipAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
           item["doubleDipAPR"] = doubleDipAPR;
         }
       }
 
-      // if (item.poolId.toBase58() === "71zvJycCiY2JRRwKr27oiu48mFzrstCoP6riGEyCyEB2") {
-      //   console.log(JSON.parse(JSON.stringify(item)), "######");
-      // }
-
-      // delete item["farm"];
-      // delete item["doubleDip"];
-      // @ts-ignore
       if (item.farm) {
         arr.push({
           farmId: item.farm?.farmId,
@@ -361,14 +347,10 @@ infos = class InstanceOrca {
           isEmission: false,
         });
       }
-
-      // console.log(tokenA.symbol, "-", tokenB.symbol, ":", item.emissionAPR, item.doubleDipAPR);
-
       return item;
     });
 
     return arr;
-    // return parsedAPRPools;
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {

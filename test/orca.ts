@@ -57,10 +57,6 @@ describe("Orca", () => {
     const tokenList = await utils.getTokenList();
 
     farms.map((farm) => {
-      // console.log(farm?.getApr(), "farm?.getApr()");
-
-      // console.log(JSON.parse(JSON.stringify(farm?.getApr())));
-
       const aprData = farm.getApr();
       if (aprData) {
         let pool = pools.find((item) => item.poolId.equals(aprData!.poolId));
@@ -72,20 +68,5 @@ describe("Orca", () => {
         console.log("apr", aprData!.apr);
       }
     });
-    // pools.map((item) => {
-    //   let farm = farms.find((t) => t.farmInfo.baseTokenMint.equals(item.lpMint));
-    //   // console.log(farm, "FARM");
-
-    //   if (farm) {
-    //     console.log(
-    //       item.tokenAMint.toBase58(),
-    //       "-",
-    //       item.tokenBMint.toBase58(),
-    //       ":",
-    //       // farm.getApr(item.poolId, pools, infos),
-    //       "farm.getApr(pools, infos);"
-    //     );
-    //   }
-    // });
   });
 });
