@@ -69,7 +69,7 @@ infos = class InstanceTulip {
     const config: GetProgramAccountsConfig = { filters: filters };
 
     const accountInfos = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
-    const vaults = accountInfos
+    const vaults: types.VaultInfo[] = accountInfos
       .filter((info) => this._isAllowedId(info.pubkey))
       .map((info) => this.parseVault(info.account.data, info.pubkey));
     return vaults;
@@ -79,7 +79,7 @@ infos = class InstanceTulip {
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
     if (!vaultAccountInfo) throw Error("Error: Cannot get reserve account (tulip.getVault)");
 
-    const vault = this.parseVault(vaultAccountInfo?.data, vaultId);
+    const vault: types.VaultInfo = this.parseVault(vaultAccountInfo?.data, vaultId);
 
     return vault;
   }
@@ -226,7 +226,7 @@ infos = class InstanceTulip {
     };
   }
   private static _isAllowedId(id: PublicKey) {
-    return vaultV2Config.vaults.accounts.find(
+    return !!vaultV2Config.vaults.accounts.find(
       (account) =>
         account.multi_deposit_optimizer?.account == id.toString() ||
         account.lending_optimizer?.account == id.toString() ||
@@ -234,9 +234,7 @@ infos = class InstanceTulip {
         account.orca?.account == id.toString() ||
         account.quarry?.account == id.toString() ||
         account.atrix?.account == id.toString()
-    )
-      ? true
-      : false;
+    );
   }
 };
 
