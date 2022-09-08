@@ -34,7 +34,7 @@ infos = class InstanceOrca {
     const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
     for (const accountInfo of allOrcaPool) {
-      let poolData = await this.parsePool(accountInfo.account.data, accountInfo.pubkey);
+      let poolData = this.parsePool(accountInfo.account.data, accountInfo.pubkey);
 
       allPools.push(poolData);
       pubKeys.push(poolData.tokenAccountA);
@@ -79,7 +79,7 @@ infos = class InstanceOrca {
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {
     let data = (await connection.getAccountInfo(poolId)) as AccountInfo<Buffer>;
-    let pool = await this.parsePool(data.data, poolId);
+    let pool = this.parsePool(data.data, poolId);
 
     let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
     let balanceAccounts = (await connection.getMultipleAccountsInfo(accounts)) as AccountInfo<Buffer>[];
@@ -150,7 +150,7 @@ infos = class InstanceOrca {
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
     let data = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
-    return await this.parseFarm(data.data, farmId);
+    return this.parseFarm(data.data, farmId);
   }
 
   static parseFarm(data: Buffer, farmId: PublicKey): types.FarmInfo {
@@ -224,7 +224,7 @@ infos = class InstanceOrca {
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
     let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
-    return await this._parseFarmerInfo(data.data, farmerId);
+    return this._parseFarmerInfo(data.data, farmerId);
   }
 
   private static _parseFarmerInfo(data: Buffer, pubkey: PublicKey): types.FarmerInfo {
@@ -272,8 +272,24 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     return new BN(0);
   }
+
+  async getAuthority() {
+    let authority = await PublicKey.findProgramAddress([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
+    return authority[0];
+  }
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: types.FarmInfo) {}
+
+  async getAuthority() {
+    let authority = await PublicKey.findProgramAddress([this.farmInfo.farmId.toBuffer()], ORCA_FARM_PROGRAM_ID);
+    return authority[0];
+  }
+}
+
+export async function checkFarmerCreated(connection: Connection, farmId: PublicKey, userKey: PublicKey) {
+  let farmerId = await infos.getFarmerId(farmId, userKey);
+  let farmerAccount = await connection.getAccountInfo(farmerId);
+  return (farmerAccount?.data.length as number) > 0;
 }

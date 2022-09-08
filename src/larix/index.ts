@@ -5,7 +5,6 @@ import BN from "bn.js";
 import { PublicKey } from "@solana/web3.js";
 import { IFarmerInfo, IFarmInfo, IObligationInfo, IReserveInfo } from "../types";
 import { IServicesTokenInfo } from "../utils";
-import { ObligationInfoWrapper } from "./infos";
 
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
@@ -144,9 +143,10 @@ export interface ObligationLoan {
 }
 
 export interface ObligationInfo extends IObligationInfo {
+  // obligationId
+
   version: BN;
   lastUpdate: LastUpdate;
-  obligationKey: PublicKey;
   lendingMarket: PublicKey;
   owner: PublicKey;
   depositedValue: BN;
@@ -154,21 +154,6 @@ export interface ObligationInfo extends IObligationInfo {
   allowedBorrowValue: BN;
   unhealthyBorrowValue: BN;
   unclaimedMine: BN;
-}
-
-export function defaultObligation(obligationKey?: PublicKey) {
-  const obligationInfo = {
-    version: new BN(1),
-    lastUpdate: { lastUpdatedSlot: new BN(0), stale: false },
-    obligationKey: obligationKey ? obligationKey : PublicKey.default,
-    lendingMarket: PublicKey.default,
-    owner: PublicKey.default,
-    depositedValue: new BN(0),
-    borrowedValue: new BN(0),
-    allowedBorrowValue: new BN(0),
-    unhealthyBorrowValue: new BN(0),
-    unclaimedMine: new BN(0),
-  } as ObligationInfo;
-
-  return new ObligationInfoWrapper(obligationInfo, [], []);
+  obligationCollaterals: ObligationCollateral[];
+  obligationLoans: ObligationLoan[];
 }
