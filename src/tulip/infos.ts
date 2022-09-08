@@ -75,7 +75,7 @@ infos = class InstanceTulip {
 
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
     const sizeFilter: DataSizeFilter = {
-      dataSize: RAYDIUM_VAULT_V1_LAYOUT_SPAN,
+      dataSize: RAYDIUM_VAULT_LAYOUT_SPAN,
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
@@ -83,8 +83,10 @@ infos = class InstanceTulip {
     let allVault: types.VaultInfo[] = [];
 
     for (let vaultAccountInfo of allVaultAccount) {
-      const vault = this.parseVault(vaultAccountInfo.account.data, vaultAccountInfo.pubkey);
-      allVault.push(vault);
+      if (this._isAllowedId(vaultAccountInfo.pubkey)) {
+        const vault = this.parseVault(vaultAccountInfo.account.data, vaultAccountInfo.pubkey);
+        allVault.push(vault);
+      } else continue;
     }
 
     return allVault;
@@ -102,7 +104,7 @@ infos = class InstanceTulip {
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     let parseVault;
     switch (data.length) {
-      case RAYDIUM_VAULT_V1_LAYOUT_SPAN:
+      case RAYDIUM_VAULT_LAYOUT_SPAN:
         parseVault = this._parseRaydiumVault;
         break;
       default:
@@ -187,6 +189,19 @@ infos = class InstanceTulip {
       serumMarket,
     };
   }
+  private static _isAllowedId(id: PublicKey) {
+    return vaultV2Config.vaults.accounts.find(
+      (account) =>
+        account.multi_deposit_optimizer?.account == id.toString() ||
+        account.lending_optimizer?.account == id.toString() ||
+        account.raydium?.account == id.toString() ||
+        account.orca?.account == id.toString() ||
+        account.quarry?.account == id.toString() ||
+        account.atrix?.account == id.toString()
+    )
+      ? true
+      : false;
+  }
 
   static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]> {
     return [];
@@ -204,7 +219,7 @@ infos = class InstanceTulip {
 export { infos };
 
 const RESERVE_LAYOUT_SPAN = 622;
-const RAYDIUM_VAULT_V1_LAYOUT_SPAN = 1712;
+const RAYDIUM_VAULT_LAYOUT_SPAN = 1712;
 const WAD = new BN(10).pow(new BN(18));
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
