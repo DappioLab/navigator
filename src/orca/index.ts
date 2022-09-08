@@ -22,7 +22,6 @@ export interface PoolInfo extends IPoolInfo {
   tokenSupplyA: BN;
   tokenSupplyB: BN;
   lpSupply: BN;
-  lpMint: PublicKey;
   lpDecimals: number;
   tradingAPR: number | null;
   doubleDipAPR: number | null;
