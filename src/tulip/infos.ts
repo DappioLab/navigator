@@ -3,7 +3,7 @@ import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSize
 import BN from "bn.js";
 import { IDepositorInfo, IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper } from "../types";
 import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
-import { RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
+import { DEPOSITOR_LAYOUT, RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
 import * as types from ".";
 
 let infos: IInstanceMoneyMarket & IInstanceVault;
@@ -230,6 +230,7 @@ export { infos };
 
 const RESERVE_LAYOUT_SPAN = 622;
 const RAYDIUM_VAULT_LAYOUT_SPAN = 1712;
+const DEPOSITOR_LAYOUT_SPAN = 440;
 const WAD = new BN(10).pow(new BN(18));
 
 export class ReserveInfoWrapper implements IReserveInfoWrapper {
@@ -614,3 +615,72 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
 // export interface VaultInfo extends IVaultInfo {
 //   base: Base;
 // }
+
+export async function getAllDepositors(connection: Connection, userKey?: PublicKey): Promise<types.DepositorInfo[]> {
+  const dataSizeFilters: DataSizeFilter = {
+    dataSize: DEPOSITOR_LAYOUT_SPAN,
+  };
+  let filters: (MemcmpFilter | DataSizeFilter)[] = [dataSizeFilters];
+  if (userKey) {
+    const programIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: userKey.toString(),
+      },
+    };
+    filters = [programIdMemcmp, dataSizeFilters];
+  }
+  const config: GetProgramAccountsConfig = { filters: filters };
+  const allDepositorAccounts = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
+  let allDepositors: types.DepositorInfo[] = [];
+
+  for (let depositorAccountInfo of allDepositorAccounts) {
+    const vault = parseDepositor(depositorAccountInfo.account.data, depositorAccountInfo.pubkey);
+    allDepositors.push(vault);
+  }
+
+  return allDepositors;
+}
+
+export async function getDepositor(connection: Connection, depositorId: PublicKey): Promise<types.DepositorInfo> {
+  const depositorAccountInfo = await connection.getAccountInfo(depositorId);
+  const depositor = parseDepositor(depositorAccountInfo?.data, depositorId);
+
+  return depositor;
+}
+
+export function parseDepositor(data: any, depositorId: PublicKey): types.DepositorInfo {
+  const decodeData = DEPOSITOR_LAYOUT.decode(data);
+  const {
+    owner,
+    vault,
+    pdaNonce,
+    queueNonce,
+    shares,
+    depositedBalance,
+    lastDepositTime,
+    pendingWithdrawAmount,
+    totalDepositedUnderlying,
+    totalWithdrawnUnderlying,
+    lastPendingReward,
+    rewardPerSharePaid,
+    extra_data_account,
+  } = decodeData;
+
+  return {
+    depositorId,
+    userKey: owner,
+    vaultId: vault,
+    pdaNonce,
+    queueNonce,
+    shares,
+    depositedBalance,
+    lastDepositTime,
+    pendingWithdrawAmount,
+    totalDepositedUnderlying,
+    totalWithdrawnUnderlying,
+    lastPendingReward,
+    rewardPerSharePaid,
+    extra_data_account,
+  };
+}

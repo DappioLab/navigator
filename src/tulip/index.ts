@@ -3,7 +3,7 @@ export * from "./infos";
 
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { IReserveInfo, IVaultInfo } from "../types";
+import { IDepositorInfo, IReserveInfo, IVaultInfo } from "../types";
 
 export interface Fees {
   feeMultiplier: BN;
@@ -141,4 +141,19 @@ export interface ReserveInfo extends IReserveInfo {
 
 export interface VaultInfo extends IVaultInfo {
   base: Base;
+}
+
+export interface DepositorInfo extends IDepositorInfo {
+  vaultId: PublicKey;
+  pdaNonce: BN;
+  queueNonce: BN;
+  shares: BN;
+  depositedBalance: BN;
+  lastDepositTime: BN;
+  pendingWithdrawAmount: BN;
+  totalDepositedUnderlying: BN;
+  totalWithdrawnUnderlying: BN;
+  lastPendingReward: BN;
+  rewardPerSharePaid: BN;
+  extra_data_account: PublicKey;
 }

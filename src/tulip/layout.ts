@@ -122,3 +122,22 @@ export const RAYDIUM_VAULT_LAYOUT = struct([
   publicKey("serumMarket"),
   blob(407, "padding"),
 ]);
+
+export const DEPOSITOR_LAYOUT = struct([
+  u64("discriminator"),
+  publicKey("owner"),
+  publicKey("vault"),
+  u8("pdaNonce"),
+  u8("queueNonce"),
+  array(u8(), 6, "_alignment"),
+  u64("shares"),
+  u64("depositedBalance"),
+  i64("lastDepositTime"),
+  u64("pendingWithdrawAmount"),
+  u64("totalDepositedUnderlying"),
+  u64("totalWithdrawnUnderlying"),
+  u64("lastPendingReward"),
+  u128("rewardPerSharePaid"),
+  publicKey("extra_data_account"),
+  blob(407, "padding"),
+]);
