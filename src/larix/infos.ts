@@ -5,7 +5,6 @@ import { IFarmInfoWrapper, IInstanceFarm, IInstanceMoneyMarket, IReserveInfoWrap
 import {
   LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
-  LARIX_MAIN_POOL_OBLIGATION_SEED,
   LARIX_MARKET_ID_MAIN_POOL,
   LARIX_PROGRAM_ID,
   LDO_MINT,
@@ -121,8 +120,12 @@ infos = class InstanceLarix {
     return this.parseObligation(obligationInfo?.data, obligationId);
   }
 
-  static async getObligationId?(marketId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
-    return await PublicKey.createWithSeed(userKey, LARIX_MAIN_POOL_OBLIGATION_SEED, LARIX_PROGRAM_ID);
+  static async getObligationId?(
+    marketId: PublicKey = LARIX_MARKET_ID_MAIN_POOL,
+    userKey: PublicKey
+  ): Promise<PublicKey> {
+    const seed = marketId.toString().slice(0, 32);
+    return await PublicKey.createWithSeed(userKey, seed, LARIX_PROGRAM_ID);
   }
 
   static parseObligation(data: Buffer | undefined, obligationId: PublicKey): types.ObligationInfo {
@@ -149,18 +152,17 @@ infos = class InstanceLarix {
     // }
 
     const depositsBuffer = dataFlat.slice(0, depositsLen * COLLATERAL_LAYOUT.span);
-    const depositCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
+    const obligationCollaterals = seq(COLLATERAL_LAYOUT, depositsLen).decode(
       depositsBuffer
     ) as types.ObligationCollateral[];
 
     const borrowsBuffer = dataFlat.slice(depositsBuffer.length, depositsBuffer.length + borrowsLen * LOAN_LAYOUT.span);
-    const borrowLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as types.ObligationLoan[];
+    const obligationLoans = seq(LOAN_LAYOUT, borrowsLen).decode(borrowsBuffer) as types.ObligationLoan[];
 
     return {
       version,
       lastUpdate,
       obligationId,
-      obligationKey: obligationId,
       lendingMarket,
       owner,
       depositedValue,
@@ -169,6 +171,8 @@ infos = class InstanceLarix {
       unhealthyBorrowValue,
       unclaimedMine,
       userKey: PublicKey.default,
+      obligationCollaterals,
+      obligationLoans,
     };
   }
   static async getAllFarms(connection: Connection, rewardMint?: PublicKey): Promise<types.FarmInfo[]> {
@@ -513,11 +517,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 }
 
 export class ObligationInfoWrapper {
-  constructor(
-    public obligationInfo: types.ObligationInfo,
-    public obligationCollaterals: types.ObligationCollateral[],
-    public obligationLoans: types.ObligationLoan[]
-  ) {}
+  constructor(public obligationInfo: types.ObligationInfo) {}
 
   update(
     reserveAndFarmInfo: {
@@ -535,7 +535,7 @@ export class ObligationInfoWrapper {
     }
     let unclaimedAmount = this.obligationInfo.unclaimedMine;
 
-    for (let depositedReserve of this.obligationCollaterals) {
+    for (let depositedReserve of this.obligationInfo.obligationCollaterals) {
       let infoWrapper = reserveMap.get(depositedReserve.reserveId.toString());
       if (infoWrapper) {
         let reserveInfoWrapper = infoWrapper.reserve;
@@ -557,7 +557,7 @@ export class ObligationInfoWrapper {
       }
     }
 
-    for (let borrowedReserve of this.obligationLoans) {
+    for (let borrowedReserve of this.obligationInfo.obligationLoans) {
       let infoWrapper = reserveMap.get(borrowedReserve.reserveId.toString());
       if (infoWrapper) {
         let reserveInfoWrapper = infoWrapper.reserve;
@@ -579,7 +579,7 @@ export class ObligationInfoWrapper {
   }
 
   getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
-    const limits = this.obligationCollaterals.map((deposit) => {
+    const limits = this.obligationInfo.obligationCollaterals.map((deposit) => {
       const reserve = reserves.find((r) => r.reserveInfo.reserveId.equals(deposit.reserveId));
       const supplyToken = tokenList.find((t) => t.mint === reserve?.supplyTokenMint().toBase58());
       if (!reserve || !supplyToken) return 0;

@@ -320,8 +320,10 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
   }
 
-  async getLendingMarketAuthority(marketId: PublicKey): Promise<PublicKey> {
-    const authority = (await PublicKey.findProgramAddress([marketId.toBuffer()], SOLEND_PROGRAM_ID))[0];
+  async getLendingMarketAuthority(): Promise<PublicKey> {
+    const authority = (
+      await PublicKey.findProgramAddress([this.reserveInfo.lendingMarket.toBuffer()], SOLEND_PROGRAM_ID)
+    )[0];
 
     return authority;
   }

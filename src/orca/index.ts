@@ -30,7 +30,6 @@ export interface FarmInfo extends IFarmInfo {
   baseTokenVault: PublicKey;
   rewardTokenVault: PublicKey;
   farmTokenMint: PublicKey;
-  // authority: PublicKey;
   emissionsPerSecondNumerator: BN;
   emissionsPerSecondDenominator: BN;
   lastUpdatedTimestamp: BN;
