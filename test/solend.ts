@@ -52,7 +52,7 @@ describe("Solend", () => {
     );
   });
   it(" Can get all obligations", async () => {
-    const obligations = (await solend.infos.getAllObligations(
+    const obligations = (await solend.infos.getAllObligations!(
       connection,
       new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4")
     )) as solend.ObligationInfo[];
@@ -65,7 +65,7 @@ describe("Solend", () => {
     });
   });
   it(" Can get obligation", async () => {
-    const obligation = (await solend.infos.getObligation(
+    const obligation = (await solend.infos.getObligation!(
       connection,
       new PublicKey("41j1YyQCohRXZqZYDudemMvAAmFoCg9jyqEkEqd6djG1")
     )) as solend.ObligationInfo;
