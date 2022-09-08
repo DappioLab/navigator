@@ -6,6 +6,11 @@ export * from "./ids";
 export * from "./infos";
 export * from "./layouts";
 
+export interface IParsedPoolAndFarm extends PoolInfo {
+  farm: FarmInfo | undefined;
+  doubleDip: FarmInfo | undefined;
+}
+
 export interface PoolInfo extends IPoolInfo {
   version: BN;
   isInitialized: BN;
@@ -17,6 +22,11 @@ export interface PoolInfo extends IPoolInfo {
   tokenSupplyA: BN;
   tokenSupplyB: BN;
   lpSupply: BN;
+  lpMint: PublicKey;
+  lpDecimals: number;
+  tradingAPR: number | null;
+  doubleDipAPR: number | null;
+  emissionAPR: number | null;
 }
 
 export interface FarmInfo extends IFarmInfo {
@@ -34,6 +44,26 @@ export interface FarmInfo extends IFarmInfo {
   emissionsPerSecondDenominator: BN;
   lastUpdatedTimestamp: BN;
   cumulativeEmissionsPerFarmToken: BN;
+  baseTokenVaultAccountData: {
+    mint: PublicKey;
+    owner: PublicKey;
+    amount: BN;
+  } | null;
+  baseTokenMintAccountData: {
+    mint: PublicKey;
+    supply: BN;
+    decimals: number;
+  } | null;
+  rewardTokenVaultAccountData: {
+    mint: PublicKey;
+    owner: PublicKey;
+    amount: BN;
+  } | null;
+  rewardTokenMintAccountData: {
+    mint: PublicKey;
+    supply: BN;
+    decimals: number;
+  } | null;
 }
 
 export interface FarmerInfo extends IFarmerInfo {
