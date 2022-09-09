@@ -114,7 +114,7 @@ infos = class InstanceNFTFinance {
       discriminator,
       admin,
       proveTokenAuthority,
-      proveTokenVault,
+      proveTokenTreasury,
       proveTokenMint,
       rarityInfo,
       mintListLength,
@@ -127,7 +127,7 @@ infos = class InstanceNFTFinance {
       proveTokenMint,
       rarityId: rarityInfo,
       proveTokenAuthority,
-      proveTokenVault,
+      proveTokenTreasury,
       totalStakedAmount: totalLocked,
     };
   }

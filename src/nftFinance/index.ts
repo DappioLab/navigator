@@ -18,7 +18,7 @@ export interface NFTPoolInfo extends INFTPoolInfo {
   adminKey: PublicKey;
   rarityId: PublicKey;
   proveTokenAuthority: PublicKey;
-  proveTokenVault: PublicKey;
+  proveTokenTreasury: PublicKey;
   totalStakedAmount: BN;
 }
 

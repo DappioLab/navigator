@@ -14,7 +14,7 @@ export const POOL_LAYOUT = struct([
   u64("discriminator"),
   publicKey("admin"),
   publicKey("proveTokenAuthority"),
-  publicKey("proveTokenVault"),
+  publicKey("proveTokenTreasury"), // proveTokenVault
   publicKey("proveTokenMint"),
   publicKey("rarityInfo"),
   u64("mintListLength"),
