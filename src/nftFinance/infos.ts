@@ -1,8 +1,14 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
-import { IInstanceNFTPool, IInstanceNFTFarm, IInstanceNFTVault, IInstanceNFTFarmer } from "../types";
+import {
+  IInstanceNFTPool,
+  IInstanceNFTFarm,
+  IInstanceNFTLocker,
+  IInstanceNFTFarmer,
+  IInstanceNFTRarity,
+} from "../types";
 import { NFT_MINING_PROGRAM_ID, NFT_RARITY_PROGRAM_ID, NFT_STAKING_PROGRAM_ID } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_VAULT_LAYOUT, FARMER_LAYOUT } from "./layout";
-import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, AllInfo, NFTVaultInfo, NFTFarmerInfo, UserNFTInfo } from ".";
+import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, NFTLockerInfo, NFTFarmerInfo } from ".";
 
 const RARITY_LAYOUT_SPAN = 16460;
 const POOL_LAYOUT_SPAN = 184;
@@ -16,52 +22,9 @@ const FARMER_LAYOUT_SPAN = 129;
 
 // TODO: Implement InstanceNFTFinance
 
-let infos: IInstanceNFTPool & IInstanceNFTFarm & IInstanceNFTVault & IInstanceNFTFarmer;
+let infos: IInstanceNFTRarity & IInstanceNFTPool & IInstanceNFTFarm & IInstanceNFTLocker & IInstanceNFTFarmer;
 
 infos = class InstanceNFTFinance {
-  // fetchAll (deprecated)
-  static async getAllInfos(connection: Connection, adminAddress?: PublicKey): Promise<AllInfo[]> {
-    const rarityMap = new Map<string, number>();
-    const farmMap = new Map<string, number>();
-    const allRarityInfos = await this.getAllRarities(connection, adminAddress);
-    const allPoolInfos = await this.getAllPools(connection, adminAddress);
-    const allFarmInfos = await this.getAllFarms(connection, adminAddress);
-    allRarityInfos.forEach((rarityInfo, index) => {
-      rarityMap.set(rarityInfo.rarityId.toString(), index);
-    });
-    allFarmInfos.map((farmInfo, index) => {
-      farmMap.set(farmInfo.proveTokenMint.toString(), index);
-    });
-
-    const allInfos: AllInfo[] = [];
-    allPoolInfos.forEach((poolInfo) => {
-      const rarityId = poolInfo.rarityInfo.toString();
-      const proveTokenMint = poolInfo.proveTokenMint.toString();
-      const rarityIndex = rarityMap.get(rarityId);
-      const farmIndex = farmMap.get(proveTokenMint);
-      if (rarityIndex != undefined && farmIndex != undefined) {
-        const rarityInfo = allRarityInfos[rarityIndex];
-        const farmInfo = allFarmInfos[farmIndex];
-        const allInfo: AllInfo = { rarityInfo, poolInfo, farmInfo };
-        allInfos.push(allInfo);
-      }
-    });
-
-    return allInfos;
-  }
-
-  // fetchUser (deprecated)
-  static async getUserNFTInfo(connection: Connection, userKey: PublicKey): Promise<UserNFTInfo> {
-    const allNFTVaults = await this.getAllNFTVaults(connection, userKey);
-    const allNFTFarmers = await this.getAllNFTFarmers(connection, userKey);
-
-    return {
-      userKey,
-      vaults: allNFTVaults,
-      farmers: allNFTFarmers,
-    };
-  }
-
   static async getAllRarities(connection: Connection, adminAddress?: PublicKey): Promise<NFTRarityInfo[]> {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
@@ -243,7 +206,7 @@ infos = class InstanceNFTFinance {
     };
   }
 
-  static async getAllNFTVaults(connection: Connection, userKey?: PublicKey): Promise<NFTVaultInfo[]> {
+  static async getAllNFTLockers(connection: Connection, userKey?: PublicKey): Promise<NFTLockerInfo[]> {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
@@ -263,24 +226,24 @@ infos = class InstanceNFTFinance {
     }
 
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allNFTVaultAccounts = await connection.getProgramAccounts(NFT_STAKING_PROGRAM_ID, config);
+    const allNFTLockerAccounts = await connection.getProgramAccounts(NFT_STAKING_PROGRAM_ID, config);
 
-    const allNFTVaultInfos: NFTVaultInfo[] = allNFTVaultAccounts.map((nftVaultAccount) => {
-      const nftVaultInfo = this.parseNFTVault(nftVaultAccount.account.data, nftVaultAccount.pubkey);
-      return nftVaultInfo;
+    const allNFTLockerInfos: NFTLockerInfo[] = allNFTLockerAccounts.map((nftLockerAccount) => {
+      const nftLockerInfo = this.parseNFTLocker(nftLockerAccount.account.data, nftLockerAccount.pubkey);
+      return nftLockerInfo;
     });
 
-    return allNFTVaultInfos;
+    return allNFTLockerInfos;
   }
 
-  static async getNFTVault(connection: Connection, vaultId: PublicKey): Promise<NFTVaultInfo> {
-    const nftVaultAccountInfo = await connection.getAccountInfo(vaultId);
-    const nftVaultInfo = this.parseNFTVault(nftVaultAccountInfo?.data as Buffer, vaultId);
+  static async getNFTLocker(connection: Connection, vaultId: PublicKey): Promise<NFTLockerInfo> {
+    const nftLockerAccountInfo = await connection.getAccountInfo(vaultId);
+    const nftLockerInfo = this.parseNFTLocker(nftLockerAccountInfo?.data as Buffer, vaultId);
 
-    return nftVaultInfo;
+    return nftLockerInfo;
   }
 
-  static parseNFTVault(data: Buffer, vaultId: PublicKey): NFTVaultInfo {
+  static parseNFTLocker(data: Buffer, vaultId: PublicKey): NFTLockerInfo {
     const decodedData = NFT_VAULT_LAYOUT.decode(data);
     const { discriminator, user, poolInfo, nftMint } = decodedData;
 
