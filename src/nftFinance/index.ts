@@ -32,18 +32,6 @@ export interface NFTFarmInfo extends INFTFarmInfo {
   totalProveTokenDeposited: BN;
 }
 
-export interface AllInfo {
-  rarityInfo: NFTRarityInfo;
-  poolInfo: NFTPoolInfo;
-  farmInfo: NFTFarmInfo;
-}
-
-// infoAndNftPair (deprecated)
-export interface NFTInfo {
-  allInfo: AllInfo;
-  nftMint: PublicKey;
-}
-
 // NFTVault (deprecated)
 export interface NFTLockerInfo extends INFTLockerInfo {
   // key => vaultId
