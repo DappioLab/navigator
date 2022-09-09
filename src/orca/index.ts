@@ -40,26 +40,22 @@ export interface FarmInfo extends IFarmInfo {
   emissionsPerSecondDenominator: BN;
   lastUpdatedTimestamp: BN;
   cumulativeEmissionsPerFarmToken: BN;
-  baseTokenVaultAccountData: {
-    mint: PublicKey;
-    owner: PublicKey;
-    amount: BN;
-  } | null;
-  baseTokenMintAccountData: {
-    mint: PublicKey;
-    supplyDividedByDecimals: BN;
-    decimals: number;
-  } | null;
-  rewardTokenVaultAccountData: {
-    mint: PublicKey;
-    owner: PublicKey;
-    amount: BN;
-  } | null;
-  rewardTokenMintAccountData: {
-    mint: PublicKey;
-    supplyDividedByDecimals: BN;
-    decimals: number;
-  } | null;
+  baseTokenVaultAccountData: ITokenVaultInfo | undefined;
+  baseTokenMintAccountData: IMintVaultInfo | undefined;
+  rewardTokenVaultAccountData: ITokenVaultInfo | undefined;
+  rewardTokenMintAccountData: IMintVaultInfo | undefined;
+}
+
+export interface ITokenVaultInfo {
+  mint: PublicKey;
+  owner: PublicKey;
+  amount: BN;
+}
+
+export interface IMintVaultInfo {
+  mint: PublicKey;
+  supplyDividedByDecimals: BN;
+  decimals: number;
 }
 
 export interface FarmerInfo extends IFarmerInfo {

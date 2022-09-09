@@ -36,19 +36,8 @@ infos = class InstanceOrca {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
-    // const allAPIPools: any = await (await axios.get("https://api.orca.so/allPools")).data;
-
     for (const accountInfo of allOrcaPool) {
       let poolData = this.parsePool(accountInfo.account.data, accountInfo.pubkey);
-
-      // let apr = null;
-      // Object.keys(allAPIPools).map((item) => {
-      //   if (allAPIPools[item].poolAccount === poolData.poolId.toBase58()) {
-      //     apr = (allAPIPools[item].apy.week * 100).toFixed(2);
-      //   }
-      // });
-
-      // poolData.tradingAPR = apr;
       allPools.push(poolData);
       pubKeys.push(poolData.tokenAccountA);
       pubKeys.push(poolData.tokenAccountB);
@@ -91,7 +80,7 @@ infos = class InstanceOrca {
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
-    const allAPIPools: any = await (await axios.get("https://api.orca.so/allPools")).data;
+    const allAPIPools: { [key: string]: types.IOrcaAPI } = await (await axios.get("https://api.orca.so/allPools")).data;
     return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
   }
 
@@ -153,88 +142,70 @@ infos = class InstanceOrca {
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
     const allOrcaFarm = await connection.getProgramAccounts(ORCA_FARM_PROGRAM_ID, config);
-
-    let baseVaultPublicKeys: PublicKey[] = [];
-    let baseTokenMintPublicKeys: PublicKey[] = [];
-    let rewardTokenVaultPublicKeys: PublicKey[] = [];
-    let rewardTokenMintPublicKeys: PublicKey[] = [];
+    let baseMintPublicKeys: PublicKey[] = [];
+    let rewardMintPublicKeys: PublicKey[] = [];
+    let tokenPublicKeys: PublicKey[] = [];
     let farms: types.FarmInfo[] = [];
 
     allOrcaFarm.forEach((item) => {
       let farmData = this.parseFarm(item.account.data, item.pubkey);
-
-      // Store keys needed
-      baseVaultPublicKeys.push(farmData.baseTokenVault);
-      baseTokenMintPublicKeys.push(farmData.baseTokenMint);
-      rewardTokenVaultPublicKeys.push(farmData.rewardTokenVault);
-
+      baseMintPublicKeys.push(farmData.baseTokenMint);
+      tokenPublicKeys.push(farmData.baseTokenVault);
+      tokenPublicKeys.push(farmData.rewardTokenVault);
       farms.push(farmData);
     });
 
-    // Get base vault account info
-    let baseVaultResult: PublicKey[] = [];
-    for (var i = 0; i < baseVaultPublicKeys.length; i += 99) {
-      baseVaultResult = baseVaultPublicKeys.slice(i, i + 99);
-      let data = await connection.getMultipleAccountsInfo(baseVaultResult);
-      for (let [index, item] of data.entries()) {
-        let accountInfos = utils.parseTokenAccount(item?.data, baseVaultResult[index]);
+    const BATCH_SIZE = 99;
+    let mintAccounts: (AccountInfo<Buffer> | null)[] = [];
+    let tokenAccounts: (AccountInfo<Buffer> | null)[] = [];
 
-        let farmData = farms.find((t) => t.baseTokenVault.equals(baseVaultResult[index]));
-        farmData!.baseTokenVaultAccountData = accountInfos;
-      }
+    for (var i = 0; i < baseMintPublicKeys.length; i += BATCH_SIZE) {
+      let slices = baseMintPublicKeys.slice(i, i + BATCH_SIZE);
+      let results = await connection.getMultipleAccountsInfo(slices);
+      mintAccounts = [...mintAccounts, ...results];
     }
 
-    // Get base mint account info
-    let baseMintResult: PublicKey[] = [];
-    for (var i = 0; i < baseTokenMintPublicKeys.length; i += 99) {
-      baseMintResult = baseTokenMintPublicKeys.slice(i, i + 99);
-      let data = await connection.getMultipleAccountsInfo(baseMintResult);
-      for (let [index, item] of data.entries()) {
-        let mintData = MintLayout.decode(item!.data);
-        let { supply, decimals } = mintData;
-        let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
-        let farmData = farms.find((t) => t.baseTokenMint.equals(baseMintResult[index]));
-        farmData!.baseTokenMintAccountData = { mint: baseMintResult[index], supplyDividedByDecimals, decimals };
-      }
+    for (var i = 0; i < tokenPublicKeys.length; i += BATCH_SIZE) {
+      let slices = tokenPublicKeys.slice(i, i + BATCH_SIZE);
+      let results = await connection.getMultipleAccountsInfo(slices);
+      tokenAccounts = [...tokenAccounts, ...results];
     }
 
-    // Get reward vault account info
-    let rewardVaultResult: PublicKey[] = [];
-    for (var i = 0; i < rewardTokenVaultPublicKeys.length; i += 99) {
-      rewardVaultResult = rewardTokenVaultPublicKeys.slice(i, i + 99);
-      let data = await connection.getMultipleAccountsInfo(rewardVaultResult);
-      for (let [index, item] of data.entries()) {
-        let accountInfos = utils.parseTokenAccount(item?.data, rewardVaultResult[index]);
+    let mintAccountSet: Map<PublicKey, types.IMintVaultInfo> = new Map();
+    let tokenAccountSet: Map<PublicKey, types.ITokenVaultInfo> = new Map();
 
-        let farmData = farms.find((t) => t.rewardTokenVault.equals(rewardVaultResult[index]));
+    tokenAccounts.forEach((account, index) => {
+      const key = tokenPublicKeys[index];
+      const token = utils.parseTokenAccount(account?.data, key);
+      let obj: types.ITokenVaultInfo = { mint: token.mint, amount: token.amount, owner: token.owner };
+      tokenAccountSet.set(key, obj);
+      rewardMintPublicKeys.push(token.mint);
+    });
 
-        // Reward Mint
-        rewardTokenMintPublicKeys.push(accountInfos.mint);
-        farmData!.rewardTokenVaultAccountData = accountInfos;
-      }
+    for (var i = 0; i < rewardMintPublicKeys.length; i += BATCH_SIZE) {
+      let slices = rewardMintPublicKeys.slice(i, i + BATCH_SIZE);
+      let results = await connection.getMultipleAccountsInfo(slices);
+      mintAccounts = [...mintAccounts, ...results];
     }
 
-    // Get reward mint account info
-    let rewardMintResult: PublicKey[] = [];
-    let rewardTokenData: { mint: PublicKey; supplyDividedByDecimals: BN; decimals: number }[] = [];
-    for (let i = 0; i < rewardTokenMintPublicKeys.length; i += 99) {
-      rewardMintResult = rewardTokenMintPublicKeys.slice(i, i + 99);
-      let data = await connection.getMultipleAccountsInfo(rewardMintResult);
-      for (let [index, item] of data.entries()) {
-        let mintData = MintLayout.decode(item!.data);
-        let { supply, decimals } = mintData;
-        let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
-        rewardTokenData.push({ mint: rewardMintResult[index], supplyDividedByDecimals, decimals });
-      }
-    }
+    const mintPublicKeys = [...baseMintPublicKeys, ...rewardMintPublicKeys];
+    mintAccounts.forEach((account, index) => {
+      const key = mintPublicKeys[index];
+      const mintData = MintLayout.decode(account!.data);
+      let { supply, decimals } = mintData;
+      let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
+      let obj = { mint: key, supplyDividedByDecimals, decimals };
+      mintAccountSet.set(key, obj);
+    });
 
-    // Map reward mint & reward vault
-    for (let i = 0; i < farms.length; i++) {
-      let data = rewardTokenData.find((t) => t.mint.equals(farms[i].rewardTokenVaultAccountData?.mint!));
-      if (data) {
-        farms[i].rewardTokenMintAccountData = data;
-      }
-    }
+    farms.forEach((farm) => {
+      farm.baseTokenMintAccountData = mintAccountSet.get(farm.baseTokenMint);
+      farm.baseTokenVaultAccountData = tokenAccountSet.get(farm.baseTokenVault);
+      farm.rewardTokenVaultAccountData = tokenAccountSet.get(farm.rewardTokenVault);
+
+      const rewardMint = tokenAccountSet.get(farm.rewardTokenVault)!.mint;
+      farm.rewardTokenMintAccountData = mintAccountSet.get(rewardMint);
+    });
 
     return farms;
   }
@@ -390,10 +361,10 @@ infos = class InstanceOrca {
       emissionsPerSecondDenominator: emissionsPerSecondDenominator,
       lastUpdatedTimestamp: lastUpdatedTimestamp,
       cumulativeEmissionsPerFarmToken: new BN(cumulativeEmissionsPerFarmToken, 10, "le"),
-      baseTokenMintAccountData: null,
-      baseTokenVaultAccountData: null,
-      rewardTokenMintAccountData: null,
-      rewardTokenVaultAccountData: null,
+      baseTokenMintAccountData: undefined,
+      baseTokenVaultAccountData: undefined,
+      rewardTokenMintAccountData: undefined,
+      rewardTokenVaultAccountData: undefined,
     };
   }
 
@@ -452,7 +423,7 @@ infos = class InstanceOrca {
 export { infos };
 
 export class PoolInfoWrapper implements IPoolInfoWrapper {
-  constructor(public poolInfo: types.PoolInfo, public allAPIPools: any) {}
+  constructor(public poolInfo: types.PoolInfo, public allAPIPools: { [key: string]: types.IOrcaAPI }) {}
 
   async calculateSwapOutAmount(fromSide: string, amountIn: BN) {
     if (fromSide == "coin") {
