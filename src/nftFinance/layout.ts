@@ -4,7 +4,7 @@ import { blob } from "buffer-layout";
 
 export const RARITY_LAYOUT = struct([
   u64("discriminator"),
-  publicKey("admin"),
+  publicKey("adminKey"), // admin
   array(u8(), 16, "collection"),
   array(u8(), 16, "rarity"),
   vec(publicKey(), "mintList"),
@@ -12,25 +12,25 @@ export const RARITY_LAYOUT = struct([
 
 export const POOL_LAYOUT = struct([
   u64("discriminator"),
-  publicKey("admin"),
+  publicKey("adminKey"), // admin
   publicKey("proveTokenAuthority"),
   publicKey("proveTokenTreasury"), // proveTokenVault
   publicKey("proveTokenMint"),
-  publicKey("rarityInfo"),
+  publicKey("rarityId"), // rarityInfo
   u64("mintListLength"),
-  u64("totalLocked"),
+  u64("totalStakedAmount"), // totalLocked
 ]);
 
 export const NFT_LOCKER_LAYOUT = struct([
   u64("discriminator"),
-  publicKey("user"),
-  publicKey("poolInfo"),
+  publicKey("userKey"), // user
+  publicKey("poolId"), // poolInfo
   publicKey("nftMint"),
 ]);
 
 export const FARM_LAYOUT = struct([
   u64("discriminator"),
-  publicKey("admin"),
+  publicKey("adminKey"), // admin
   publicKey("proveTokenMint"),
   publicKey("rewardTokenMint"),
   publicKey("farmTokenMint"),
@@ -43,8 +43,8 @@ export const FARM_LAYOUT = struct([
 
 export const FARMER_LAYOUT = struct([
   u64("discriminator"),
-  publicKey("owner"),
-  publicKey("farmInfo"),
+  publicKey("userKey"), // owner
+  publicKey("farmId"), // farmInfo
   publicKey("proveTokenAta"), // minerVault
   u64("lastUpdateSlot"),
   u64("unclaimedAmount"),

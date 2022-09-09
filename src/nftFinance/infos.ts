@@ -56,7 +56,7 @@ infos = class InstanceNFTFinance {
 
   static parseRarity(data: Buffer, rarityId: PublicKey): NFTRarityInfo {
     const decodedData = RARITY_LAYOUT.decode(data);
-    const { discriminator, admin, collection, rarity, mintList } = decodedData;
+    const { discriminator, adminKey, collection, rarity, mintList } = decodedData;
 
     const collectionParsed = Buffer.from(collection).toString("utf-8").split("\x00")[0];
 
@@ -64,7 +64,7 @@ infos = class InstanceNFTFinance {
 
     return {
       rarityId,
-      adminKey: admin,
+      adminKey,
       collection: collectionParsed,
       rarity: rarityParsed,
       mintList,
@@ -112,23 +112,23 @@ infos = class InstanceNFTFinance {
     const decodedData = POOL_LAYOUT.decode(data);
     const {
       discriminator,
-      admin,
+      adminKey,
       proveTokenAuthority,
       proveTokenTreasury,
       proveTokenMint,
-      rarityInfo,
+      rarityId,
       mintListLength,
-      totalLocked,
+      totalStakedAmount,
     } = decodedData;
 
     return {
       poolId,
-      adminKey: admin,
+      adminKey,
       proveTokenMint,
-      rarityId: rarityInfo,
+      rarityId,
       proveTokenAuthority,
       proveTokenTreasury,
-      totalStakedAmount: totalLocked,
+      totalStakedAmount,
     };
   }
 
@@ -173,7 +173,7 @@ infos = class InstanceNFTFinance {
     const decodedData = FARM_LAYOUT.decode(data);
     const {
       discriminator,
-      admin,
+      adminKey,
       proveTokenMint,
       rewardTokenMint,
       farmTokenMint,
@@ -186,7 +186,7 @@ infos = class InstanceNFTFinance {
 
     return {
       farmId,
-      adminKey: admin,
+      adminKey,
       proveTokenMint,
       rewardTokenMint,
       farmTokenMint,
@@ -237,12 +237,12 @@ infos = class InstanceNFTFinance {
 
   static parseNFTLocker(data: Buffer, lockerId: PublicKey): NFTLockerInfo {
     const decodedData = NFT_LOCKER_LAYOUT.decode(data);
-    const { discriminator, user, poolInfo, nftMint } = decodedData;
+    const { discriminator, userKey, poolId, nftMint } = decodedData;
 
     return {
-      lockerId: lockerId,
-      userKey: user,
-      poolId: poolInfo,
+      lockerId,
+      userKey,
+      poolId,
       nftMint,
     };
   }
@@ -288,8 +288,8 @@ infos = class InstanceNFTFinance {
     const decodedData = FARMER_LAYOUT.decode(data);
     const {
       discriminator,
-      owner,
-      farmInfo,
+      userKey,
+      farmId,
       proveTokenAta,
       lastUpdateSlot,
       unclaimedAmount,
@@ -299,8 +299,8 @@ infos = class InstanceNFTFinance {
 
     return {
       farmerId,
-      userKey: owner,
-      farmId: farmInfo,
+      userKey,
+      farmId,
       proveTokenAta,
       lastUpdateSlot,
       unclaimedAmount,
