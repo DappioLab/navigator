@@ -135,15 +135,12 @@ infos = class InstanceFrancium {
     const farmAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_REWARD_PROGRAM_ID, config);
     const currentSlot = new BN(await connection.getSlot());
 
-    let farms: types.FarmInfo[] = [];
-    farmAccounts.map((account) => {
-      let info = this.parseFarm(account.account.data, account.pubkey);
-      if (info.rewardsEndSlot.cmp(currentSlot) || info.rewardsEndSlotB.cmp(currentSlot)) {
-        farms.push(info);
-      }
-    });
-
-    return farms;
+    return farmAccounts
+      .map((account) => {
+        let info = this.parseFarm(account.account.data, account.pubkey);
+        return info;
+      })
+      .filter((item) => item.rewardsEndSlot.cmp(currentSlot) || item.rewardsEndSlotB.cmp(currentSlot));
   }
 
   static async getAllFarmWrappers(connection: Connection, rewardMint?: PublicKey): Promise<FarmInfoWrapper[]> {
