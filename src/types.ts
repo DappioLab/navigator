@@ -22,7 +22,7 @@ export interface INFTFarmInfo {
   rewardTokenMint: PublicKey;
 }
 
-export interface INFTVaultInfo {
+export interface INFTLockerInfo {
   vaultId: PublicKey;
 }
 
@@ -118,6 +118,14 @@ export interface IInstanceMoneyMarket {
   getObligationId?(marketId: PublicKey, userKey: PublicKey): Promise<PublicKey>;
 }
 
+export interface IInstanceNFTRarity {
+  getAllRarities(connection: Connection): Promise<INFTRarityInfo[]>;
+  // TODO: Add wrapper for NFTRarityInfo
+  // getAllRarityWrappers(connection: Connection): Promise<INFTRarityInfoWrapper[]>;
+  getRarity(connection: Connection, rarityId: PublicKey): Promise<INFTRarityInfo>;
+  parseRarity(data: Buffer, rarityId: PublicKey): INFTRarityInfo;
+}
+
 export interface IInstanceNFTPool {
   getAllPools(connection: Connection): Promise<INFTPoolInfo[]>;
   // TODO: Add wrapper for NFTPoolInfo
@@ -134,12 +142,12 @@ export interface IInstanceNFTFarm {
   parseFarm(data: Buffer, farmId: PublicKey): INFTFarmInfo;
 }
 
-export interface IInstanceNFTVault {
-  getAllNFTVaults(connection: Connection): Promise<INFTVaultInfo[]>;
-  // TODO: Add wrapper for NFTVaultInfo
-  // getAllNFTVaultWrappers(connection: Connection): Promise<INFTVaultInfoWrapper[]>;
-  getNFTVault(connection: Connection, vaultId: PublicKey): Promise<INFTVaultInfo>;
-  parseNFTVault(data: Buffer, vaultId: PublicKey): INFTVaultInfo;
+export interface IInstanceNFTLocker {
+  getAllNFTLockers(connection: Connection): Promise<INFTLockerInfo[]>;
+  // TODO: Add wrapper for NFTLockerInfo
+  // getAllNFTLockerWrappers(connection: Connection): Promise<INFTLockerInfoWrapper[]>;
+  getNFTLocker(connection: Connection, vaultId: PublicKey): Promise<INFTLockerInfo>;
+  parseNFTLocker(data: Buffer, vaultId: PublicKey): INFTLockerInfo;
 }
 
 export interface IInstanceNFTFarmer {
