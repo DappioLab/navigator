@@ -10,7 +10,7 @@ export async function getStakedAmount(
   rarityInfos?: NFTRarityInfo[],
   poolInfos?: NFTPoolInfo[],
   farmInfos?: NFTFarmInfo[]
-) {
+): Promise<number> {
   const rarityMap = new Map<string, number>();
   const farmMap = new Map<string, number>();
   const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
@@ -55,7 +55,7 @@ export async function getNFTUUnclaimedAmount(
   poolInfos?: NFTPoolInfo[],
   farmInfos?: NFTFarmInfo[],
   farmerInfos?: NFTFarmerInfo[]
-) {
+): Promise<number> {
   const rarityMap = new Map<string, number>();
   const farmMap = new Map<string, number>();
   const fullInfoMap = new Map<string, number>();
@@ -118,7 +118,16 @@ export async function getFullInfosByMints(
   rarityInfos?: NFTRarityInfo[],
   poolInfos?: NFTPoolInfo[],
   farmInfos?: NFTFarmInfo[]
-) {
+): Promise<
+  (
+    | {
+        rarityInfo: NFTRarityInfo;
+        poolInfo: NFTPoolInfo;
+        farmInfo: NFTFarmInfo;
+      }
+    | undefined
+  )[]
+> {
   const rarityMap = new Map<string, number>();
   const mintMap = new Map<string, string>();
   const farmMap = new Map<string, number>();
@@ -161,7 +170,14 @@ export async function getFullInfoByPoolId(
   rarityInfos?: NFTRarityInfo[],
   poolInfos?: NFTPoolInfo[],
   farmInfos?: NFTFarmInfo[]
-) {
+): Promise<
+  | {
+      rarityInfo: NFTRarityInfo;
+      poolInfo: NFTPoolInfo;
+      farmInfo: NFTFarmInfo;
+    }
+  | undefined
+> {
   const rarityMap = new Map<string, number>();
   const farmMap = new Map<string, number>();
   const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
@@ -187,7 +203,11 @@ export async function getFullInfoByPoolId(
 }
 
 // getFarmInfosFromFarmInfoKeys (deprecated)
-export async function getFarmInfosByFarmIds(connection: Connection, farmIds: PublicKey[], farmInfos?: NFTFarmInfo[]) {
+export async function getFarmInfosByFarmIds(
+  connection: Connection,
+  farmIds: PublicKey[],
+  farmInfos?: NFTFarmInfo[]
+): Promise<NFTFarmInfo[]> {
   const allFarmInfos = farmInfos ? farmInfos : ((await infos.getAllFarms(connection)) as NFTFarmInfo[]);
 
   const farmInfoMap = new Map<string, number>();
@@ -207,7 +227,11 @@ export async function getFarmInfosByFarmIds(connection: Connection, farmIds: Pub
 }
 
 // fetchAll (deprecated)
-export async function getFullInfo(connection: Connection) {
+export async function getFullInfo(connection: Connection): Promise<{
+  rarityInfos: NFTRarityInfo[];
+  poolInfos: NFTPoolInfo[];
+  farmInfos: NFTFarmInfo[];
+}> {
   const rarityInfos = (await infos.getAllRarities(connection)) as NFTRarityInfo[];
   const poolInfos = (await infos.getAllPools(connection)) as NFTPoolInfo[];
   const farmInfos = (await infos.getAllFarms(connection)) as NFTFarmInfo[];
@@ -221,7 +245,10 @@ export async function getLockersAndFarmers(
   userKey: PublicKey,
   lockerInfos?: NFTLockerInfo[],
   farmerInfos?: NFTFarmerInfo[]
-) {
+): Promise<{
+  lockers: NFTLockerInfo[];
+  farmers: NFTFarmerInfo[];
+}> {
   const allLockerInfos = lockerInfos
     ? lockerInfos
     : ((await infos.getAllNFTLockers(connection)).filter((locker) =>
