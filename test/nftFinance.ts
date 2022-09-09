@@ -68,4 +68,9 @@ describe("NFT Finance", () => {
     const stakedAmount = await nftFinance.getStakedAmount(connection, "DappieGang");
     console.log(stakedAmount);
   });
+
+  it("Get lockers and farmers", async () => {
+    const lockersAndFarmers = await nftFinance.getLockersAndFarmers(connection, userKey);
+    console.log(lockersAndFarmers);
+  });
 });
