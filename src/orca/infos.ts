@@ -491,11 +491,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       })
       .find((item) => item.poolAccount === this.poolInfo.poolId.toBase58());
 
-    if (pool) {
-      return pool.apy.week * 100;
-    } else {
-      return 0;
-    }
+    return pool ? pool.apy.week * 100 : 0;
   }
 }
 
@@ -512,9 +508,6 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 
   getApr() {
     let data = this.parsedData.find((item) => item.farmId.equals(this.farmInfo.farmId) && item.apr);
-    if (!data) {
-      return null;
-    }
     return data;
   }
 }
