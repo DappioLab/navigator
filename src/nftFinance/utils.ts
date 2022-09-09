@@ -19,7 +19,7 @@ export async function getStakedAmount(
   allRarityInfos.forEach((rarityInfo, index) => {
     rarityMap.set(rarityInfo.rarityId.toString(), index);
   });
-  allFarmInfos.map((farmInfo, index) => {
+  allFarmInfos.forEach((farmInfo, index) => {
     farmMap.set(farmInfo.proveTokenMint.toString(), index);
   });
 
@@ -70,7 +70,7 @@ export async function getNFTUUnclaimedAmount(
   allRarityInfos.forEach((rarityInfo, index) => {
     rarityMap.set(rarityInfo.rarityId.toString(), index);
   });
-  allFarmInfos.map((farmInfo, index) => {
+  allFarmInfos.forEach((farmInfo, index) => {
     farmMap.set(farmInfo.proveTokenMint.toString(), index);
   });
 
@@ -137,7 +137,7 @@ export async function getFullInfosByMints(
   allRarityInfos.forEach((rarityInfo, index) => {
     rarityMap.set(rarityInfo.rarityId.toString(), index);
   });
-  allFarmInfos.map((farmInfo, index) => {
+  allFarmInfos.forEach((farmInfo, index) => {
     farmMap.set(farmInfo.proveTokenMint.toString(), index);
   });
 
@@ -186,7 +186,7 @@ export async function getFullInfoByPoolId(
   allRarityInfos.forEach((rarityInfo, index) => {
     rarityMap.set(rarityInfo.rarityId.toString(), index);
   });
-  allFarmInfos.map((farmInfo, index) => {
+  allFarmInfos.forEach((farmInfo, index) => {
     farmMap.set(farmInfo.proveTokenMint.toString(), index);
   });
 
