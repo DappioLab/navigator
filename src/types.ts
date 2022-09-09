@@ -85,7 +85,7 @@ export interface IInstanceFarm {
   getFarm(connection: Connection, farmId: PublicKey): Promise<IFarmInfo>;
   parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo;
   getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]>;
-  getFarmerId(farmId: PublicKey, userKey: PublicKey, version?: number): Promise<PublicKey>;
+  getFarmerId(farmInfo: IFarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey>;
   getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<IFarmerInfo>;
 
   // Optional Methods

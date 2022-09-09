@@ -1,12 +1,5 @@
-import {
-  createATAWithoutCheckIx,
-  findAssociatedTokenAddress,
-  wrapNative,
-} from "../utils";
-import {
-  NATIVE_MINT,
-  createCloseAccountInstruction,
-} from "@solana/spl-token-v2";
+import { createATAWithoutCheckIx, findAssociatedTokenAddress, wrapNative } from "../utils";
+import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token-v2";
 import BN from "bn.js";
 import {
   Connection,
@@ -29,11 +22,8 @@ import {
   initializeRaydiumPosition,
   closeRaydiumPosition,
 } from "./instructions";
-import {
-  getRaydiumPositionKeySet,
-  parseReserveInfo,
-  RaydiumStrategyState,
-} from "./infos";
+import { getRaydiumPositionKeySet, infos } from "./infos";
+import { RaydiumStrategyState, ReserveInfo } from ".";
 import {
   infos as raydiumInfos,
   PoolInfo as RaydiumPoolInfo,
@@ -62,25 +52,14 @@ export async function getDepositTx(
   let poolTx = new Transaction();
   let cleanUpTx = new Transaction();
 
-  const positionKeySet = await getRaydiumPositionKeySet(
-    wallet,
-    strategy.infoPubkey
-  );
+  const positionKeySet = await getRaydiumPositionKeySet(wallet, strategy.infoPubkey);
   const initIx = initializeRaydiumPosition(wallet, strategy, positionKeySet);
   let pubkeys = [strategy.lendingPool0, strategy.lendingPool1, strategy.ammId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let lending0 = parseReserveInfo(accountsInfo[0]?.data, pubkeys[0]);
-  let lending1 = parseReserveInfo(accountsInfo[1]?.data, pubkeys[1]);
-  let ammInfo = raydiumInfos.parsePool(
-    accountsInfo[2]?.data as Buffer,
-    pubkeys[2]
-  ) as RaydiumPoolInfo;
-  let serumMarket = await Market.load(
-    connection,
-    ammInfo.serumMarket,
-    undefined,
-    ammInfo.serumProgramId
-  );
+  let lending0 = infos.parseReserve(accountsInfo[0]!.data, pubkeys[0]) as ReserveInfo;
+  let lending1 = infos.parseReserve(accountsInfo[1]!.data, pubkeys[1]) as ReserveInfo;
+  let ammInfo = raydiumInfos.parsePool(accountsInfo[2]?.data as Buffer, pubkeys[2]) as RaydiumPoolInfo;
+  let serumMarket = await Market.load(connection, ammInfo.serumMarket, undefined, ammInfo.serumProgramId);
 
   preTx.add(initIx);
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
@@ -100,47 +79,14 @@ export async function getDepositTx(
 
   moneyMarketTx.add(
     // TODO: Rename to supply?
-    transfer(
-      wallet,
-      strategy,
-      positionKeySet.address,
-      stopLoss,
-      amount0,
-      amount1,
-      usrATA0,
-      usrATA1
-    )
+    transfer(wallet, strategy, positionKeySet.address, stopLoss, amount0, amount1, usrATA0, usrATA1)
   );
 
-  moneyMarketTx.add(
-    borrow(
-      wallet,
-      strategy,
-      lending0,
-      lending1,
-      ammInfo,
-      positionKeySet.address,
-      new BN(0),
-      borrow1
-    )
-  );
+  moneyMarketTx.add(borrow(wallet, strategy, lending0, lending1, ammInfo, positionKeySet.address, new BN(0), borrow1));
 
-  moneyMarketTx.add(
-    borrow(
-      wallet,
-      strategy,
-      lending0,
-      lending1,
-      ammInfo,
-      positionKeySet.address,
-      borrow0,
-      new BN(0)
-    )
-  );
+  moneyMarketTx.add(borrow(wallet, strategy, lending0, lending1, ammInfo, positionKeySet.address, borrow0, new BN(0)));
 
-  poolTx.add(
-    await swap(wallet, strategy, ammInfo, serumMarket, positionKeySet.address)
-  );
+  poolTx.add(await swap(wallet, strategy, ammInfo, serumMarket, positionKeySet.address));
   poolTx.add(addLiquidity(wallet, strategy, ammInfo, positionKeySet.address));
 
   // TODO: Miss staking?
@@ -165,21 +111,10 @@ export async function getWithdrawTx(
 
   let pubkeys = [strategy.ammId, strategy.stakePoolId];
   let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let ammInfo = raydiumInfos.parsePool(
-    accountsInfo[0]?.data as Buffer,
-    pubkeys[0]
-  ) as RaydiumPoolInfo;
-  let stakeInfo = raydiumInfos.parseFarm(
-    accountsInfo[1]?.data as Buffer,
-    pubkeys[1]
-  ) as RaydiumFarmInfo;
+  let ammInfo = raydiumInfos.parsePool(accountsInfo[0]?.data as Buffer, pubkeys[0]) as RaydiumPoolInfo;
+  let stakeInfo = raydiumInfos.parseFarm(accountsInfo[1]?.data as Buffer, pubkeys[1]) as RaydiumFarmInfo;
   const farmInfoWrapper = new RaydiumFarmInfoWrapper(stakeInfo);
-  let serumMarket = await Market.load(
-    connection,
-    ammInfo.serumMarket,
-    undefined,
-    ammInfo.serumProgramId
-  );
+  let serumMarket = await Market.load(connection, ammInfo.serumMarket, undefined, ammInfo.serumProgramId);
 
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenAMint));
@@ -215,26 +150,10 @@ export async function getWithdrawTx(
 
   preTx.add(updateLending(strategy));
   preTx.add(
-    await unstake(
-      strategy,
-      farmInfoWrapper,
-      wallet,
-      strategyFarmInfo,
-      userInfoAccount,
-      lpAmount,
-      new BN(withdrawType)
-    )
+    await unstake(strategy, farmInfoWrapper, wallet, strategyFarmInfo, userInfoAccount, lpAmount, new BN(withdrawType))
   );
 
-  poolTx.add(
-    await removeLiquidity(
-      wallet,
-      strategy,
-      ammInfo,
-      serumMarket,
-      userInfoAccount
-    )
-  );
+  poolTx.add(await removeLiquidity(wallet, strategy, ammInfo, serumMarket, userInfoAccount));
 
   withdrawTx.add(
     await swapAndWithdraw(
@@ -255,10 +174,7 @@ export async function getWithdrawTx(
 }
 
 // Raydium-specific
-export function getCloseRaydiumPositionTx(
-  userInfoAccount: PublicKey,
-  wallet: PublicKey
-): Transaction {
+export function getCloseRaydiumPositionTx(userInfoAccount: PublicKey, wallet: PublicKey): Transaction {
   let tx = new Transaction();
   tx.add(closeRaydiumPosition(userInfoAccount, wallet));
   return tx;

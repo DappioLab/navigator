@@ -213,9 +213,9 @@ infos = class InstanceOrca {
     });
   }
 
-  static async getFarmerId(farmId: PublicKey, userKey: PublicKey): Promise<PublicKey> {
+  static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey): Promise<PublicKey> {
     const [farmerId, _] = await PublicKey.findProgramAddress(
-      [farmId.toBuffer(), userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
+      [farmInfo.farmId.toBuffer(), userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
       ORCA_FARM_PROGRAM_ID
     );
 
@@ -288,8 +288,8 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
   }
 }
 
-export async function checkFarmerCreated(connection: Connection, farmId: PublicKey, userKey: PublicKey) {
-  let farmerId = await infos.getFarmerId(farmId, userKey);
+export async function checkFarmerCreated(connection: Connection, farmInfo: types.FarmInfo, userKey: PublicKey) {
+  let farmerId = await infos.getFarmerId(farmInfo, userKey);
   let farmerAccount = await connection.getAccountInfo(farmerId);
   return (farmerAccount?.data.length as number) > 0;
 }
