@@ -45,7 +45,7 @@ export const FARMER_LAYOUT = struct([
   u64("discriminator"),
   publicKey("owner"),
   publicKey("farmInfo"),
-  publicKey("farmerVault"), // minerVault
+  publicKey("proveTokenAta"), // minerVault
   u64("lastUpdateSlot"),
   u64("unclaimedAmount"),
   u64("depositedAmount"),

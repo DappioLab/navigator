@@ -45,7 +45,7 @@ export interface NFTFarmerInfo extends INFTFarmerInfo {
   // key => farmerId
   // owner => userKey
   farmId: PublicKey;
-  farmerVault: PublicKey; // minerVault
+  proveTokenAta: PublicKey; // minerVault
   lastUpdateSlot: BN;
   unclaimedAmount: BN;
   depositedAmount: BN;
