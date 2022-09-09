@@ -12,7 +12,8 @@
     "testOrca": "mocha --require ts-node/register --timeout 10000000 ./test/orca.ts",
     "testSolend": "mocha --require ts-node/register --timeout 10000000 ./test/solend.ts",
     "testLifinity": "mocha --require ts-node/register --timeout 10000000 ./test/lifinity.ts",
-    "testTulip": "mocha --require ts-node/register --timeout 10000000 ./test/tulip.ts"
+    "testTulip": "mocha --require ts-node/register --timeout 10000000 ./test/tulip.ts",
+    "testNftFinance": "mocha --require ts-node/register --timeout 10000000 ./test/nftFinance.ts"
   },
   "keywords": [],
   "author": "",

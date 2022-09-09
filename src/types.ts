@@ -7,6 +7,10 @@ export interface IPoolInfo {
   lpMint: PublicKey;
 }
 
+export interface INFTRarityInfo {
+  rarityId: PublicKey;
+}
+
 export interface INFTPoolInfo {
   poolId: PublicKey;
   proveTokenMint: PublicKey;
@@ -16,6 +20,16 @@ export interface INFTFarmInfo {
   farmId: PublicKey;
   farmTokenMint: PublicKey;
   rewardTokenMint: PublicKey;
+}
+
+export interface INFTLockerInfo {
+  lockerId: PublicKey;
+  userKey: PublicKey;
+}
+
+export interface INFTFarmerInfo {
+  farmerId: PublicKey;
+  userKey: PublicKey;
 }
 
 // TODO
@@ -105,12 +119,25 @@ export interface IInstanceMoneyMarket {
   getObligationId?(marketId: PublicKey, userKey: PublicKey): Promise<PublicKey>;
 }
 
+export interface IInstanceNFTRarity {
+  getAllRarities(connection: Connection): Promise<INFTRarityInfo[]>;
+  // TODO: Add wrapper for NFTRarityInfo
+  // getAllRarityWrappers(connection: Connection): Promise<INFTRarityInfoWrapper[]>;
+  getRarity(connection: Connection, rarityId: PublicKey): Promise<INFTRarityInfo>;
+  parseRarity(data: Buffer, rarityId: PublicKey): INFTRarityInfo;
+}
+
 export interface IInstanceNFTPool {
   getAllPools(connection: Connection): Promise<INFTPoolInfo[]>;
   // TODO: Add wrapper for NFTPoolInfo
   // getAllPoolWrappers(connection: Connection): Promise<INFTPoolInfoWrapper[]>;
   getPool(connection: Connection, poolId: PublicKey): Promise<INFTPoolInfo>;
   parsePool(data: Buffer, farmId: PublicKey): INFTPoolInfo;
+  getAllNFTLockers(connection: Connection): Promise<INFTLockerInfo[]>;
+  // TODO: Add wrapper for NFTLockerInfo
+  // getAllNFTLockerWrappers(connection: Connection): Promise<INFTLockerInfoWrapper[]>;
+  getNFTLocker(connection: Connection, lockerId: PublicKey): Promise<INFTLockerInfo>;
+  parseNFTLocker(data: Buffer, lockerId: PublicKey): INFTLockerInfo;
 }
 
 export interface IInstanceNFTFarm {
@@ -119,6 +146,11 @@ export interface IInstanceNFTFarm {
   // getAllFarmWrappers(connection: Connection): Promise<INFTFarmInfoWrapper[]>;
   getFarm(connection: Connection, farmId: PublicKey): Promise<INFTFarmInfo>;
   parseFarm(data: Buffer, farmId: PublicKey): INFTFarmInfo;
+  getAllNFTFarmers(connection: Connection): Promise<INFTFarmerInfo[]>;
+  // TODO: Add wrapper for NFTFarmerInfo
+  // getAllNFTFarmerWrappers(connection: Connection): Promise<INFTFarmerInfoWrapper[]>;
+  getNFTFarmer(connection: Connection, farmerId: PublicKey): Promise<INFTFarmerInfo>;
+  parseNFTFarmer(data: Buffer, farmerId: PublicKey): INFTFarmerInfo;
 }
 
 export interface IInstanceVault {
