@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { INFTFarmInfo, INFTFarmerInfo, INFTPoolInfo, INFTRarityInfo, INFTVaultInfo } from "../types";
+import { INFTFarmInfo, INFTFarmerInfo, INFTPoolInfo, INFTRarityInfo, INFTLockerInfo } from "../types";
 
 export * from "./ids";
 export * from "./infos";
@@ -45,7 +45,7 @@ export interface NFTInfo {
 }
 
 // NFTVault (deprecated)
-export interface NFTVaultInfo extends INFTVaultInfo {
+export interface NFTLockerInfo extends INFTLockerInfo {
   // key => vaultId
   nftHolder: PublicKey; // user
   poolId: PublicKey;
@@ -62,13 +62,6 @@ export interface NFTFarmerInfo extends INFTFarmerInfo {
   unclaimedAmount: BN;
   depositedAmount: BN;
   farmerBump: BN; // minerBump
-}
-
-// UserInfo (deprecated)
-export interface UserNFTInfo {
-  userKey: PublicKey; // wallet
-  vaults: NFTVaultInfo[]; // staked
-  farmers: NFTFarmerInfo[];
 }
 
 // default objects
@@ -101,10 +94,4 @@ export const defaultFarmInfo: NFTFarmInfo = {
   farmAuthority: PublicKey.default,
   farmAuthorityBump: new BN(0),
   totalProveTokenDeposited: new BN(0),
-};
-
-export const defaultAllInfo: AllInfo = {
-  rarityInfo: defaultRarityInfo,
-  poolInfo: defaultPoolInfo,
-  farmInfo: defaultFarmInfo,
 };
