@@ -29,18 +29,18 @@ export async function getStakedAmount(
       const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
       const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
 
-      return rarityIndex != undefined && farmIndex != undefined
+      return rarityIndex && farmIndex
         ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
         : null;
     })
-    .filter((info) => !!info);
+    .filter((info) => Boolean(info));
 
-  const targetFullInfos = allFullInfos.filter(
-    (fullInfo) =>
-      (fullInfo!.rarityInfo.collection == collection || collection == "") &&
-      (fullInfo!.rarityInfo.rarity == rarity || rarity == "")
-  );
-  const totalStaked = targetFullInfos
+  const totalStaked = allFullInfos
+    .filter(
+      (fullInfo) =>
+        (fullInfo!.rarityInfo.collection == collection || collection == "") &&
+        (fullInfo!.rarityInfo.rarity == rarity || rarity == "")
+    )
     .map((fullInfo) => Number(fullInfo!.poolInfo.totalStakedAmount))
     .reduce((total, staked) => total + staked);
 
@@ -81,35 +81,33 @@ export async function getNFTUUnclaimedAmount(
       const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
       const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
 
-      return rarityIndex != undefined && farmIndex != undefined
+      return rarityIndex && farmIndex
         ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
         : null;
     })
-    .filter((info) => !!info);
+    .filter((info) => Boolean(info));
 
   const currentSlot = await connection.getSlot();
   allFullInfos.forEach((fullInfo, index) => {
-    if (fullInfo != undefined) fullInfoMap.set(fullInfo.farmInfo.farmId.toString(), index);
+    if (fullInfo) fullInfoMap.set(fullInfo.farmInfo.farmId.toString(), index);
   });
 
   let totalUnclaimAmount = 0;
   allFarmerInfos.forEach((farmer) => {
     const fullInfoIndex = fullInfoMap.get(farmer.farmId.toString());
-    if (fullInfoIndex != undefined) {
-      const fullInfo = allFullInfos[fullInfoIndex];
-      if (fullInfo != undefined) {
-        if (
-          (collection == "" || fullInfo.rarityInfo.collection == collection) &&
-          (rarity == "" || fullInfo.rarityInfo.rarity == rarity)
-        ) {
-          const rewardTokenPerSlot = Number(fullInfo.farmInfo.rewardTokenPerSlot);
-          const unclaimedAmount = Number(farmer.unclaimedAmount);
-          const depositedAmount = Number(farmer.depositedAmount);
-          const lastUpdateSlot = Number(farmer.lastUpdateSlot);
+    const fullInfo = allFullInfos[fullInfoIndex || 0];
+    if (
+      fullInfoIndex &&
+      fullInfo &&
+      (collection == "" || fullInfo.rarityInfo.collection == collection) &&
+      (rarity == "" || fullInfo.rarityInfo.rarity == rarity)
+    ) {
+      const rewardTokenPerSlot = Number(fullInfo.farmInfo.rewardTokenPerSlot);
+      const unclaimedAmount = Number(farmer.unclaimedAmount);
+      const depositedAmount = Number(farmer.depositedAmount);
+      const lastUpdateSlot = Number(farmer.lastUpdateSlot);
 
-          totalUnclaimAmount += unclaimedAmount + (currentSlot - lastUpdateSlot) * rewardTokenPerSlot * depositedAmount;
-        }
-      }
+      totalUnclaimAmount += unclaimedAmount + (currentSlot - lastUpdateSlot) * rewardTokenPerSlot * depositedAmount;
     }
   });
   return totalUnclaimAmount;
@@ -152,11 +150,11 @@ export async function getFullInfosByMints(
       const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
       const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
 
-      return rarityIndex != undefined && farmIndex != undefined
+      return rarityIndex && farmIndex
         ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
         : undefined;
     })
-    .filter((info) => !!info);
+    .filter((info) => Boolean(info));
 
   allFullInfos.forEach((fullInfo, index) => {
     fullInfo!.rarityInfo.mintList.forEach((mint) => {
@@ -167,9 +165,9 @@ export async function getFullInfosByMints(
 
   let fullInfos = nftMints.map((nftMint) => {
     const rarityId = mintMap.get(nftMint.toString());
-    const fullInfoIndex = rarityId != undefined ? fullInfoMap.get(rarityId) : undefined;
+    const fullInfoIndex = rarityId ? fullInfoMap.get(rarityId) : undefined;
 
-    return fullInfoIndex != undefined ? allFullInfos[fullInfoIndex] : undefined;
+    return fullInfoIndex ? allFullInfos[fullInfoIndex] : undefined;
   });
 
   return fullInfos;
@@ -203,15 +201,12 @@ export async function getFullInfoByPoolId(
   });
 
   const targetPoolInfo = allPoolInfos.find((poolInfo) => poolInfo.poolId.equals(poolId));
-  if (targetPoolInfo == undefined) {
-    return undefined;
-  } else {
-    const rarityIndex = rarityMap.get(targetPoolInfo.rarityId.toString());
-    const farmIndex = farmMap.get(targetPoolInfo.proveTokenMint.toString());
-    if (rarityIndex != undefined && farmIndex != undefined) {
-      return { rarityInfo: allRarityInfos[rarityIndex], poolInfo: targetPoolInfo, farmInfo: allFarmInfos[farmIndex] };
-    } else return undefined;
-  }
+  const rarityIndex = rarityMap.get(targetPoolInfo?.rarityId?.toString() || "");
+  const farmIndex = farmMap.get(targetPoolInfo?.proveTokenMint?.toString() || "");
+
+  return targetPoolInfo && rarityIndex && farmIndex
+    ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: targetPoolInfo, farmInfo: allFarmInfos[farmIndex] }
+    : undefined;
 }
 
 // getFarmInfosFromFarmInfoKeys (deprecated)
@@ -230,7 +225,7 @@ export async function getFarmInfosByFarmIds(
   let targetFarmInfos: NFTFarmInfo[] = [];
   farmIds.forEach((farmId) => {
     const farmIndex = farmInfoMap.get(farmId.toString());
-    if (farmIndex != undefined) {
+    if (farmIndex) {
       targetFarmInfos.push(allFarmInfos[farmIndex]);
     }
   });

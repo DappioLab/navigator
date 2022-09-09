@@ -18,7 +18,7 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let adminIdMemcmp: MemcmpFilter;
-    if (adminKey != null && adminKey != undefined) {
+    if (adminKey) {
       adminIdMemcmp = {
         memcmp: {
           offset: 8,
@@ -72,7 +72,7 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let adminIdMemcmp: MemcmpFilter;
-    if (adminKey != null && adminKey != undefined) {
+    if (adminKey) {
       adminIdMemcmp = {
         memcmp: {
           offset: 8,
@@ -133,7 +133,7 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let adminIdMemcmp: MemcmpFilter;
-    if (adminKey != null && adminKey != undefined) {
+    if (adminKey) {
       adminIdMemcmp = {
         memcmp: {
           offset: 8,
@@ -199,7 +199,7 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let nftHolderMemcmp: MemcmpFilter;
-    if (userKey != null && userKey != undefined) {
+    if (userKey) {
       nftHolderMemcmp = {
         memcmp: {
           offset: 8,
@@ -248,7 +248,7 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let nftHolderMemcmp: MemcmpFilter;
-    if (userKey != null && userKey != undefined) {
+    if (userKey) {
       nftHolderMemcmp = {
         memcmp: {
           offset: 8,
