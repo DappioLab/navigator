@@ -23,8 +23,6 @@ export interface PoolInfo extends IPoolInfo {
   tokenSupplyB: BN;
   lpSupply: BN;
   lpDecimals: number;
-  doubleDipAPR: number | null;
-  emissionAPR: number | null;
 }
 
 export interface FarmInfo extends IFarmInfo {

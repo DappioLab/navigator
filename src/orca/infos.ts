@@ -143,8 +143,6 @@ infos = class InstanceOrca {
       tokenSupplyA: new BN(0),
       tokenSupplyB: new BN(0),
       lpDecimals: LPDecimals,
-      emissionAPR: null,
-      doubleDipAPR: null,
     };
   }
 
@@ -299,7 +297,6 @@ infos = class InstanceOrca {
             (Number(item.lpSupply) / 10 ** item.lpDecimals);
 
           emissionAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
-          item["emissionAPR"] = emissionAPR;
         }
       }
       if (item.farm && item.doubleDip) {
@@ -325,7 +322,6 @@ infos = class InstanceOrca {
             (Number(item.lpSupply) / 10 ** item.lpDecimals);
 
           doubleDipAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
-          item["doubleDipAPR"] = doubleDipAPR;
         }
       }
 
@@ -333,7 +329,7 @@ infos = class InstanceOrca {
         arr.push({
           farmId: item.farm?.farmId,
           poolId: item.poolId,
-          apr: item.emissionAPR!,
+          apr: emissionAPR,
           isEmission: true,
         });
       }
@@ -342,7 +338,7 @@ infos = class InstanceOrca {
         arr.push({
           farmId: item.doubleDip?.farmId,
           poolId: item.poolId,
-          apr: item.doubleDipAPR!,
+          apr: doubleDipAPR,
           isEmission: false,
         });
       }
