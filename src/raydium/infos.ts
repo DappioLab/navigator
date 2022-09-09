@@ -366,7 +366,6 @@ infos = class InstanceRaydium {
         );
       }
     }
-
     return farms;
   }
 
