@@ -160,7 +160,7 @@ infos = class InstanceOrca {
     let rewardTokenMintPublicKeys: PublicKey[] = [];
     let farms: types.FarmInfo[] = [];
 
-    allOrcaFarm.map((item) => {
+    allOrcaFarm.forEach((item) => {
       let farmData = this.parseFarm(item.account.data, item.pubkey);
 
       // Store keys needed
@@ -268,7 +268,7 @@ infos = class InstanceOrca {
       return parsedPool;
     });
 
-    parsedPools.map((item) => {
+    parsedPools.forEach((item) => {
       let tokenA = tokenList.find((t) => t.mint === item.tokenAMint.toBase58())!;
       let tokenB = tokenList.find((t) => t.mint === item.tokenBMint.toBase58())!;
 
@@ -344,7 +344,6 @@ infos = class InstanceOrca {
           isEmission: false,
         });
       }
-      return item;
     });
 
     return arr;
