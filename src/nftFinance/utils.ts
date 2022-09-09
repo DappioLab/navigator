@@ -197,9 +197,9 @@ export async function getFarmInfosByFarmIds(connection: Connection, farmIds: Pub
 
   let targetFarmInfos: NFTFarmInfo[] = [];
   farmIds.forEach((farmId) => {
-    const allInfoIndex = farmInfoMap.get(farmId.toString());
-    if (allInfoIndex != undefined) {
-      targetFarmInfos.push(allFarmInfos[allInfoIndex]);
+    const farmIndex = farmInfoMap.get(farmId.toString());
+    if (farmIndex != undefined) {
+      targetFarmInfos.push(allFarmInfos[farmIndex]);
     }
   });
 
