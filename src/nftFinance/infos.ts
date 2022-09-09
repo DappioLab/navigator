@@ -1,13 +1,13 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
 import { IInstanceNFTPool, IInstanceNFTFarm, IInstanceNFTRarity } from "../types";
 import { NFT_MINING_PROGRAM_ID, NFT_RARITY_PROGRAM_ID, NFT_STAKING_PROGRAM_ID } from "./ids";
-import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_VAULT_LAYOUT, FARMER_LAYOUT } from "./layout";
+import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_LOCKER_LAYOUT, FARMER_LAYOUT } from "./layout";
 import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, NFTLockerInfo, NFTFarmerInfo } from ".";
 
 const RARITY_LAYOUT_SPAN = 16460;
 const POOL_LAYOUT_SPAN = 184;
 const FARM_LAYOUT_SPAN = 217;
-const NFT_VAULT_LAYOUT_SPAN = 104;
+const NFT_LOCKER_LAYOUT_SPAN = 104;
 const FARMER_LAYOUT_SPAN = 129;
 
 ////////////////////////////////////////////////////////////
@@ -202,7 +202,7 @@ infos = class InstanceNFTFinance {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
-      dataSize: NFT_VAULT_LAYOUT_SPAN,
+      dataSize: NFT_LOCKER_LAYOUT_SPAN,
     };
     filters = [dataSizeFilters];
 
@@ -228,19 +228,19 @@ infos = class InstanceNFTFinance {
     return allNFTLockerInfos;
   }
 
-  static async getNFTLocker(connection: Connection, vaultId: PublicKey): Promise<NFTLockerInfo> {
-    const nftLockerAccountInfo = await connection.getAccountInfo(vaultId);
-    const nftLockerInfo = this.parseNFTLocker(nftLockerAccountInfo?.data as Buffer, vaultId);
+  static async getNFTLocker(connection: Connection, lockerId: PublicKey): Promise<NFTLockerInfo> {
+    const nftLockerAccountInfo = await connection.getAccountInfo(lockerId);
+    const nftLockerInfo = this.parseNFTLocker(nftLockerAccountInfo?.data as Buffer, lockerId);
 
     return nftLockerInfo;
   }
 
-  static parseNFTLocker(data: Buffer, vaultId: PublicKey): NFTLockerInfo {
-    const decodedData = NFT_VAULT_LAYOUT.decode(data);
+  static parseNFTLocker(data: Buffer, lockerId: PublicKey): NFTLockerInfo {
+    const decodedData = NFT_LOCKER_LAYOUT.decode(data);
     const { discriminator, user, poolInfo, nftMint } = decodedData;
 
     return {
-      lockerId: vaultId,
+      lockerId: lockerId,
       userKey: user,
       poolId: poolInfo,
       nftMint,

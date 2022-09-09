@@ -21,7 +21,7 @@ export const POOL_LAYOUT = struct([
   u64("totalLocked"),
 ]);
 
-export const NFT_VAULT_LAYOUT = struct([
+export const NFT_LOCKER_LAYOUT = struct([
   u64("discriminator"),
   publicKey("user"),
   publicKey("poolInfo"),

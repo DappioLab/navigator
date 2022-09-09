@@ -136,8 +136,8 @@ export interface IInstanceNFTPool {
   getAllNFTLockers(connection: Connection): Promise<INFTLockerInfo[]>;
   // TODO: Add wrapper for NFTLockerInfo
   // getAllNFTLockerWrappers(connection: Connection): Promise<INFTLockerInfoWrapper[]>;
-  getNFTLocker(connection: Connection, vaultId: PublicKey): Promise<INFTLockerInfo>;
-  parseNFTLocker(data: Buffer, vaultId: PublicKey): INFTLockerInfo;
+  getNFTLocker(connection: Connection, lockerId: PublicKey): Promise<INFTLockerInfo>;
+  parseNFTLocker(data: Buffer, lockerId: PublicKey): INFTLockerInfo;
 }
 
 export interface IInstanceNFTFarm {
@@ -149,8 +149,8 @@ export interface IInstanceNFTFarm {
   getAllNFTFarmers(connection: Connection): Promise<INFTFarmerInfo[]>;
   // TODO: Add wrapper for NFTFarmerInfo
   // getAllNFTFarmerWrappers(connection: Connection): Promise<INFTFarmerInfoWrapper[]>;
-  getNFTFarmer(connection: Connection, minerId: PublicKey): Promise<INFTFarmerInfo>;
-  parseNFTFarmer(data: Buffer, minerId: PublicKey): INFTFarmerInfo;
+  getNFTFarmer(connection: Connection, farmerId: PublicKey): Promise<INFTFarmerInfo>;
+  parseNFTFarmer(data: Buffer, farmerId: PublicKey): INFTFarmerInfo;
 }
 
 export interface IInstanceVault {
