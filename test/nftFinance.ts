@@ -27,6 +27,7 @@ describe("NFT Finance", () => {
 
   const nftMint1 = new PublicKey("CVEJtggYjsAFNHBBUb4dJYAHmxqzPtXYNLR3ZNhTi8Zk"); // Dappie Gang #1170
   const nftMint2 = new PublicKey("bTPywNyPj3ckpmANXFE5GVDvRvBNH4Ehmu89Hec16FH"); // Diamond Baepe #1945
+  const poolId = new PublicKey("uZVnFrQnA3EXpoohLjioCUQ85B8isrfNCfCzMqNC4w1");
   const userKey = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
 
   it("Get rarities", async () => {
@@ -72,5 +73,10 @@ describe("NFT Finance", () => {
   it("Get lockers and farmers", async () => {
     const lockersAndFarmers = await nftFinance.getLockersAndFarmers(connection, userKey);
     console.log(lockersAndFarmers);
+  });
+
+  it("Get FullInfo by poolId", async () => {
+    const fullInfo = await nftFinance.getFullInfoByPoolId(connection, poolId);
+    console.log(fullInfo);
   });
 });
