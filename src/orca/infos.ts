@@ -61,8 +61,8 @@ infos = class InstanceOrca {
       for (let i = 0; i < amountInfos.length / 3; i++) {
         let tokenAAmount = utils.parseTokenAccount(amountInfos[i * 3]?.data, pubKeysChunk[i * 3]).amount;
         let tokenBAmount = utils.parseTokenAccount(amountInfos[i * 3 + 1]?.data, pubKeysChunk[i * 3 + 1]).amount;
-        let lpDecimals = utils.parseMintAccount(amountInfos[i * 3 + 2]?.data, pubKeysChunk[i * 3 + 2]).decimals;
         let lpSupply = new BN(Number(MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply));
+        let lpDecimals = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).decimals;
 
         accounts.push({
           tokenAccountA: tokenAAmount,
@@ -190,10 +190,11 @@ infos = class InstanceOrca {
       baseMintResult = baseTokenMintPublicKeys.slice(i, i + 99);
       let data = await connection.getMultipleAccountsInfo(baseMintResult);
       for (let [index, item] of data.entries()) {
-        let accountInfos = utils.parseMintAccount(item?.data, baseMintResult[index]);
-
+        let mintData = MintLayout.decode(item!.data);
+        let { supply, decimals } = mintData;
+        let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
         let farmData = farms.find((t) => t.baseTokenMint.equals(baseMintResult[index]));
-        farmData!.baseTokenMintAccountData = accountInfos;
+        farmData!.baseTokenMintAccountData = { mint: baseMintResult[index], supplyDividedByDecimals, decimals };
       }
     }
 
@@ -215,14 +216,15 @@ infos = class InstanceOrca {
 
     // Get reward mint account info
     let rewardMintResult: PublicKey[] = [];
-    let rewardTokenData: { mint: PublicKey; supply: BN; decimals: number }[] = [];
+    let rewardTokenData: { mint: PublicKey; supplyDividedByDecimals: BN; decimals: number }[] = [];
     for (let i = 0; i < rewardTokenMintPublicKeys.length; i += 99) {
       rewardMintResult = rewardTokenMintPublicKeys.slice(i, i + 99);
       let data = await connection.getMultipleAccountsInfo(rewardMintResult);
       for (let [index, item] of data.entries()) {
-        let accountInfos = utils.parseMintAccount(item?.data, rewardMintResult[index]);
-
-        rewardTokenData.push(accountInfos);
+        let mintData = MintLayout.decode(item!.data);
+        let { supply, decimals } = mintData;
+        let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
+        rewardTokenData.push({ mint: rewardMintResult[index], supplyDividedByDecimals, decimals });
       }
     }
 

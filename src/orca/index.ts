@@ -47,7 +47,7 @@ export interface FarmInfo extends IFarmInfo {
   } | null;
   baseTokenMintAccountData: {
     mint: PublicKey;
-    supply: BN;
+    supplyDividedByDecimals: BN;
     decimals: number;
   } | null;
   rewardTokenVaultAccountData: {
@@ -57,7 +57,7 @@ export interface FarmInfo extends IFarmInfo {
   } | null;
   rewardTokenMintAccountData: {
     mint: PublicKey;
-    supply: BN;
+    supplyDividedByDecimals: BN;
     decimals: number;
   } | null;
 }
