@@ -23,7 +23,8 @@ export interface INFTFarmInfo {
 }
 
 export interface INFTLockerInfo {
-  vaultId: PublicKey;
+  lockerId: PublicKey;
+  userKey: PublicKey;
 }
 
 export interface INFTFarmerInfo {
@@ -132,6 +133,11 @@ export interface IInstanceNFTPool {
   // getAllPoolWrappers(connection: Connection): Promise<INFTPoolInfoWrapper[]>;
   getPool(connection: Connection, poolId: PublicKey): Promise<INFTPoolInfo>;
   parsePool(data: Buffer, farmId: PublicKey): INFTPoolInfo;
+  getAllNFTLockers(connection: Connection): Promise<INFTLockerInfo[]>;
+  // TODO: Add wrapper for NFTLockerInfo
+  // getAllNFTLockerWrappers(connection: Connection): Promise<INFTLockerInfoWrapper[]>;
+  getNFTLocker(connection: Connection, vaultId: PublicKey): Promise<INFTLockerInfo>;
+  parseNFTLocker(data: Buffer, vaultId: PublicKey): INFTLockerInfo;
 }
 
 export interface IInstanceNFTFarm {
@@ -140,20 +146,9 @@ export interface IInstanceNFTFarm {
   // getAllFarmWrappers(connection: Connection): Promise<INFTFarmInfoWrapper[]>;
   getFarm(connection: Connection, farmId: PublicKey): Promise<INFTFarmInfo>;
   parseFarm(data: Buffer, farmId: PublicKey): INFTFarmInfo;
-}
-
-export interface IInstanceNFTLocker {
-  getAllNFTLockers(connection: Connection): Promise<INFTLockerInfo[]>;
-  // TODO: Add wrapper for NFTLockerInfo
-  // getAllNFTLockerWrappers(connection: Connection): Promise<INFTLockerInfoWrapper[]>;
-  getNFTLocker(connection: Connection, vaultId: PublicKey): Promise<INFTLockerInfo>;
-  parseNFTLocker(data: Buffer, vaultId: PublicKey): INFTLockerInfo;
-}
-
-export interface IInstanceNFTFarmer {
   getAllNFTFarmers(connection: Connection): Promise<INFTFarmerInfo[]>;
-  // TODO: Add wrapper for NFTMinerInfo
-  // getAllNFTMinerWrappers(connection: Connection): Promise<INFTMinerInfoWrapper[]>;
+  // TODO: Add wrapper for NFTFarmerInfo
+  // getAllNFTFarmerWrappers(connection: Connection): Promise<INFTFarmerInfoWrapper[]>;
   getNFTFarmer(connection: Connection, minerId: PublicKey): Promise<INFTFarmerInfo>;
   parseNFTFarmer(data: Buffer, minerId: PublicKey): INFTFarmerInfo;
 }

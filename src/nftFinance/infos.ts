@@ -1,11 +1,5 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
-import {
-  IInstanceNFTPool,
-  IInstanceNFTFarm,
-  IInstanceNFTLocker,
-  IInstanceNFTFarmer,
-  IInstanceNFTRarity,
-} from "../types";
+import { IInstanceNFTPool, IInstanceNFTFarm, IInstanceNFTRarity } from "../types";
 import { NFT_MINING_PROGRAM_ID, NFT_RARITY_PROGRAM_ID, NFT_STAKING_PROGRAM_ID } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_VAULT_LAYOUT, FARMER_LAYOUT } from "./layout";
 import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, NFTLockerInfo, NFTFarmerInfo } from ".";
@@ -20,12 +14,10 @@ const FARMER_LAYOUT_SPAN = 129;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
-// TODO: Implement InstanceNFTFinance
-
-let infos: IInstanceNFTRarity & IInstanceNFTPool & IInstanceNFTFarm & IInstanceNFTLocker & IInstanceNFTFarmer;
+let infos: IInstanceNFTRarity & IInstanceNFTPool & IInstanceNFTFarm;
 
 infos = class InstanceNFTFinance {
-  static async getAllRarities(connection: Connection, adminAddress?: PublicKey): Promise<NFTRarityInfo[]> {
+  static async getAllRarities(connection: Connection, adminKey?: PublicKey): Promise<NFTRarityInfo[]> {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
@@ -34,11 +26,11 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let adminIdMemcmp: MemcmpFilter;
-    if (adminAddress != null && adminAddress != undefined) {
+    if (adminKey != null && adminKey != undefined) {
       adminIdMemcmp = {
         memcmp: {
           offset: 8,
-          bytes: adminAddress.toString(),
+          bytes: adminKey.toString(),
         },
       };
       filters.push(adminIdMemcmp);
@@ -72,14 +64,14 @@ infos = class InstanceNFTFinance {
 
     return {
       rarityId,
-      admin,
+      adminKey: admin,
       collection: collectionParsed,
       rarity: rarityParsed,
       mintList,
     };
   }
 
-  static async getAllPools(connection: Connection, adminAddress?: PublicKey): Promise<NFTPoolInfo[]> {
+  static async getAllPools(connection: Connection, adminKey?: PublicKey): Promise<NFTPoolInfo[]> {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
@@ -88,11 +80,11 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let adminIdMemcmp: MemcmpFilter;
-    if (adminAddress != null && adminAddress != undefined) {
+    if (adminKey != null && adminKey != undefined) {
       adminIdMemcmp = {
         memcmp: {
           offset: 8,
-          bytes: adminAddress.toString(),
+          bytes: adminKey.toString(),
         },
       };
       filters.push(adminIdMemcmp);
@@ -131,16 +123,16 @@ infos = class InstanceNFTFinance {
 
     return {
       poolId,
-      admin,
+      adminKey: admin,
       proveTokenMint,
-      rarityInfo,
+      rarityId: rarityInfo,
       proveTokenAuthority,
       proveTokenVault,
       totalStakedAmount: totalLocked,
     };
   }
 
-  static async getAllFarms(connection: Connection, adminAddress?: PublicKey): Promise<NFTFarmInfo[]> {
+  static async getAllFarms(connection: Connection, adminKey?: PublicKey): Promise<NFTFarmInfo[]> {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
@@ -149,11 +141,11 @@ infos = class InstanceNFTFinance {
     filters = [dataSizeFilters];
 
     let adminIdMemcmp: MemcmpFilter;
-    if (adminAddress != null && adminAddress != undefined) {
+    if (adminKey != null && adminKey != undefined) {
       adminIdMemcmp = {
         memcmp: {
           offset: 8,
-          bytes: adminAddress.toString(),
+          bytes: adminKey.toString(),
         },
       };
       filters.push(adminIdMemcmp);
@@ -194,7 +186,7 @@ infos = class InstanceNFTFinance {
 
     return {
       farmId,
-      admin,
+      adminKey: admin,
       proveTokenMint,
       rewardTokenMint,
       farmTokenMint,
@@ -248,8 +240,8 @@ infos = class InstanceNFTFinance {
     const { discriminator, user, poolInfo, nftMint } = decodedData;
 
     return {
-      vaultId,
-      nftHolder: user,
+      lockerId: vaultId,
+      userKey: user,
       poolId: poolInfo,
       nftMint,
     };
