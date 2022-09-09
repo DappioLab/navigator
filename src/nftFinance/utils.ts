@@ -35,14 +35,12 @@ export async function getStakedAmount(
     })
     .filter((info) => !!info);
 
-  const targetFullInfos = allFullInfos.filter((fullInfo) =>
-    !fullInfo
-      ? undefined
-      : (fullInfo.rarityInfo.collection == collection || collection == "") &&
-        (fullInfo.rarityInfo.rarity == rarity || rarity == "")
+  const targetFullInfos = allFullInfos.filter(
+    (fullInfo) =>
+      (fullInfo!.rarityInfo.collection == collection || collection == "") &&
+      (fullInfo!.rarityInfo.rarity == rarity || rarity == "")
   );
   const totalStaked = targetFullInfos
-    .filter((fullInfo) => fullInfo)
     .map((fullInfo) => Number(fullInfo!.poolInfo.totalStakedAmount))
     .reduce((total, staked) => total + staked);
 
@@ -137,6 +135,7 @@ export async function getFullInfosByMints(
   const rarityMap = new Map<string, number>();
   const mintMap = new Map<string, string>();
   const farmMap = new Map<string, number>();
+  const fullInfoMap = new Map<string, number>();
   const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
   const allPoolInfos = poolInfos ? poolInfos : ((await infos.getAllPools(connection)) as NFTPoolInfo[]);
   const allFarmInfos = farmInfos ? farmInfos : ((await infos.getAllFarms(connection)) as NFTFarmInfo[]);
@@ -159,19 +158,18 @@ export async function getFullInfosByMints(
     })
     .filter((info) => !!info);
 
-  allFullInfos
-    .filter((fullInfo) => !!fullInfo)
-    .forEach((fullInfo) => {
-      fullInfo!.rarityInfo.mintList.forEach((mint) => {
-        mintMap.set(mint.toString(), fullInfo!.rarityInfo.rarityId.toString());
-      });
+  allFullInfos.forEach((fullInfo, index) => {
+    fullInfo!.rarityInfo.mintList.forEach((mint) => {
+      mintMap.set(mint.toString(), fullInfo!.rarityInfo.rarityId.toString());
     });
+    fullInfoMap.set(fullInfo!.rarityInfo.rarityId.toString(), index);
+  });
 
   let fullInfos = nftMints.map((nftMint) => {
     const rarityId = mintMap.get(nftMint.toString());
-    if (rarityId != undefined) {
-      return allFullInfos.find((fullInfo) => fullInfo?.rarityInfo.rarityId.toString() == rarityId);
-    }
+    const fullInfoIndex = rarityId != undefined ? fullInfoMap.get(rarityId) : undefined;
+
+    return fullInfoIndex != undefined ? allFullInfos[fullInfoIndex] : undefined;
   });
 
   return fullInfos;
