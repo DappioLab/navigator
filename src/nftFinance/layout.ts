@@ -34,7 +34,7 @@ export const FARM_LAYOUT = struct([
   publicKey("proveTokenMint"),
   publicKey("rewardTokenMint"),
   publicKey("farmTokenMint"),
-  publicKey("rewardVault"),
+  publicKey("rewardTreasury"), // rewardVault
   publicKey("farmAuthority"),
   u8("farmAuthorityBump"),
   u64("rewardTokenPerSlot"),

@@ -26,7 +26,7 @@ export interface NFTFarmInfo extends INFTFarmInfo {
   adminKey: PublicKey;
   proveTokenMint: PublicKey;
   rewardTokenPerSlot: BN;
-  rewardVault: PublicKey;
+  rewardTreasury: PublicKey;
   farmAuthority: PublicKey;
   farmAuthorityBump: BN;
   totalProveTokenDeposited: BN;
