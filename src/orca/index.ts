@@ -23,7 +23,6 @@ export interface PoolInfo extends IPoolInfo {
   tokenSupplyB: BN;
   lpSupply: BN;
   lpDecimals: number;
-  tradingAPR: number | null;
   doubleDipAPR: number | null;
   emissionAPR: number | null;
 }
@@ -69,4 +68,9 @@ export interface FarmerInfo extends IFarmerInfo {
   isInitialized: BN;
   accountType: BN;
   cumulativeEmissionsCheckpoint: BN;
+}
+
+export interface IOrcaAPI {
+  poolAccount: string;
+  apy: { week: number };
 }

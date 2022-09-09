@@ -36,19 +36,19 @@ infos = class InstanceOrca {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
-    const allAPIPools: any = await (await axios.get("https://api.orca.so/allPools")).data;
+    // const allAPIPools: any = await (await axios.get("https://api.orca.so/allPools")).data;
 
     for (const accountInfo of allOrcaPool) {
       let poolData = this.parsePool(accountInfo.account.data, accountInfo.pubkey);
 
-      let apr = null;
-      Object.keys(allAPIPools).map((item) => {
-        if (allAPIPools[item].poolAccount === poolData.poolId.toBase58()) {
-          apr = (allAPIPools[item].apy.week * 100).toFixed(2);
-        }
-      });
+      // let apr = null;
+      // Object.keys(allAPIPools).map((item) => {
+      //   if (allAPIPools[item].poolAccount === poolData.poolId.toBase58()) {
+      //     apr = (allAPIPools[item].apy.week * 100).toFixed(2);
+      //   }
+      // });
 
-      poolData.tradingAPR = apr;
+      // poolData.tradingAPR = apr;
       allPools.push(poolData);
       pubKeys.push(poolData.tokenAccountA);
       pubKeys.push(poolData.tokenAccountB);
@@ -91,7 +91,8 @@ infos = class InstanceOrca {
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
-    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
+    const allAPIPools: any = await (await axios.get("https://api.orca.so/allPools")).data;
+    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {
@@ -142,7 +143,6 @@ infos = class InstanceOrca {
       tokenSupplyA: new BN(0),
       tokenSupplyB: new BN(0),
       lpDecimals: LPDecimals,
-      tradingAPR: null,
       emissionAPR: null,
       doubleDipAPR: null,
     };
@@ -455,7 +455,7 @@ infos = class InstanceOrca {
 export { infos };
 
 export class PoolInfoWrapper implements IPoolInfoWrapper {
-  constructor(public poolInfo: types.PoolInfo) {}
+  constructor(public poolInfo: types.PoolInfo, public allAPIPools: any) {}
 
   async calculateSwapOutAmount(fromSide: string, amountIn: BN) {
     if (fromSide == "coin") {
@@ -484,6 +484,20 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   async getAuthority() {
     let authority = await PublicKey.findProgramAddress([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
     return authority[0];
+  }
+
+  getApr() {
+    let pool = Object.keys(this.allAPIPools)
+      .map((item: string) => {
+        return this.allAPIPools[item] as types.IOrcaAPI;
+      })
+      .find((item) => item.poolAccount === this.poolInfo.poolId.toBase58());
+
+    if (pool) {
+      return pool.apy.week * 100;
+    } else {
+      return 0;
+    }
   }
 }
 
