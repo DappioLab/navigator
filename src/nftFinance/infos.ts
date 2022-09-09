@@ -5,14 +5,6 @@ import { POOL_LAYOUT, FARM_LAYOUT, RARITY_LAYOUT, NFT_LOCKER_LAYOUT, FARMER_LAYO
 import { NFTRarityInfo, NFTPoolInfo, NFTFarmInfo, NFTLockerInfo, NFTFarmerInfo } from ".";
 
 const RARITY_LAYOUT_SPAN = 16460;
-const POOL_LAYOUT_SPAN = 184;
-const FARM_LAYOUT_SPAN = 217;
-const NFT_LOCKER_LAYOUT_SPAN = 104;
-const FARMER_LAYOUT_SPAN = 129;
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
 
 let infos: IInstanceNFTRarity & IInstanceNFTPool & IInstanceNFTFarm;
 
@@ -36,7 +28,7 @@ infos = class InstanceNFTFinance {
       filters.push(adminIdMemcmp);
     }
 
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const config: GetProgramAccountsConfig = { filters };
     const allRarityAccounts = await connection.getProgramAccounts(NFT_RARITY_PROGRAM_ID, config);
 
     const allNFTRarityInfos: NFTRarityInfo[] = allRarityAccounts.map((rarityAccount) => {
@@ -75,7 +67,7 @@ infos = class InstanceNFTFinance {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
-      dataSize: POOL_LAYOUT_SPAN,
+      dataSize: POOL_LAYOUT.span,
     };
     filters = [dataSizeFilters];
 
@@ -90,7 +82,7 @@ infos = class InstanceNFTFinance {
       filters.push(adminIdMemcmp);
     }
 
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const config: GetProgramAccountsConfig = { filters };
     const allPoolAccounts = await connection.getProgramAccounts(NFT_STAKING_PROGRAM_ID, config);
 
     const allNFTPoolInfos: NFTPoolInfo[] = allPoolAccounts.map((poolAccount) => {
@@ -136,7 +128,7 @@ infos = class InstanceNFTFinance {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
-      dataSize: FARM_LAYOUT_SPAN,
+      dataSize: FARM_LAYOUT.span,
     };
     filters = [dataSizeFilters];
 
@@ -151,7 +143,7 @@ infos = class InstanceNFTFinance {
       filters.push(adminIdMemcmp);
     }
 
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const config: GetProgramAccountsConfig = { filters };
     const allFarmAccounts = await connection.getProgramAccounts(NFT_MINING_PROGRAM_ID, config);
 
     const allNFTFarmInfos: NFTFarmInfo[] = allFarmAccounts.map((farmAccount) => {
@@ -202,7 +194,7 @@ infos = class InstanceNFTFinance {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
-      dataSize: NFT_LOCKER_LAYOUT_SPAN,
+      dataSize: NFT_LOCKER_LAYOUT.span,
     };
     filters = [dataSizeFilters];
 
@@ -217,7 +209,7 @@ infos = class InstanceNFTFinance {
       filters.push(nftHolderMemcmp);
     }
 
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const config: GetProgramAccountsConfig = { filters };
     const allNFTLockerAccounts = await connection.getProgramAccounts(NFT_STAKING_PROGRAM_ID, config);
 
     const allNFTLockerInfos: NFTLockerInfo[] = allNFTLockerAccounts.map((nftLockerAccount) => {
@@ -251,7 +243,7 @@ infos = class InstanceNFTFinance {
     let filters: (MemcmpFilter | DataSizeFilter)[] = [];
 
     const dataSizeFilters: DataSizeFilter = {
-      dataSize: FARMER_LAYOUT_SPAN,
+      dataSize: FARMER_LAYOUT.span,
     };
     filters = [dataSizeFilters];
 
@@ -266,7 +258,7 @@ infos = class InstanceNFTFinance {
       filters.push(nftHolderMemcmp);
     }
 
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const config: GetProgramAccountsConfig = { filters };
     const allNFTFarmerAccounts = await connection.getProgramAccounts(NFT_MINING_PROGRAM_ID, config);
 
     const allNFTFarmerInfos: NFTFarmerInfo[] = allNFTFarmerAccounts.map((nftFarmerAccount) => {
@@ -311,7 +303,3 @@ infos = class InstanceNFTFinance {
 };
 
 export { infos };
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
