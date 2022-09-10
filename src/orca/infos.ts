@@ -100,6 +100,12 @@ infos = class InstanceOrca {
     return pool;
   }
 
+  static async getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<PoolInfoWrapper> {
+    const pool = await this.getPool(connection, poolId);
+    const allAPIPools: { [key: string]: types.IOrcaAPI } = await (await axios.get("https://api.orca.so/allPools")).data;
+    return new PoolInfoWrapper(pool, allAPIPools);
+  }
+
   static parsePool(data: Buffer, infoPubkey: PublicKey): types.PoolInfo {
     const decodedData = POOL_LAYOUT.decode(data);
     let {
@@ -214,16 +220,22 @@ infos = class InstanceOrca {
     const tokenList = await utils.getTokenList();
     const farms = await this.getAllFarms(connection);
     const pools = await this.getAllPools(connection);
-    const parsedData = this._getParsedPoolAndFarmAPR(farms, pools, tokenList);
-    return (await this.getAllFarms(connection)).map((farmInfo) => new FarmInfoWrapper(farmInfo, parsedData));
+    const aprSet = this._getParsedPoolAndFarmAPR(farms, pools, tokenList);
+    return (await this.getAllFarms(connection)).map(
+      (farmInfo) => new FarmInfoWrapper(farmInfo, aprSet.get(farmInfo.farmId))
+    );
   }
 
+  // Work-around: Return a set with farmId as key
+  // TODO:
+  //   - Move this function to FarmInfoWrapper
+  //   - Remove dependencies of some properties injected by getAllFarms (ex: rewardTokenMintAccountData)
   private static _getParsedPoolAndFarmAPR(
     farms: types.FarmInfo[],
     pools: types.PoolInfo[],
     tokenList: IServicesTokenInfo[]
-  ): { poolId: PublicKey; farmId: PublicKey; apr: number; isEmission: boolean }[] {
-    let arr: { poolId: PublicKey; farmId: PublicKey; apr: number; isEmission: boolean }[] = [];
+  ): Map<PublicKey, { poolId: PublicKey; apr: number; isEmission: boolean }> {
+    let aprSet = new Map<PublicKey, { poolId: PublicKey; apr: number; isEmission: boolean }>();
 
     let parsedPools = pools.map((item) => {
       let doubleDip: types.FarmInfo | undefined = undefined;
@@ -299,30 +311,33 @@ infos = class InstanceOrca {
       }
 
       if (item.farm) {
-        arr.push({
-          farmId: item.farm?.farmId,
-          poolId: item.poolId,
-          apr: emissionAPR,
-          isEmission: true,
-        });
+        aprSet.set(item.farm?.farmId, { poolId: item.poolId, apr: emissionAPR, isEmission: true });
       }
 
       if (item.doubleDip) {
-        arr.push({
-          farmId: item.doubleDip?.farmId,
-          poolId: item.poolId,
-          apr: doubleDipAPR,
-          isEmission: false,
-        });
+        aprSet.set(item.doubleDip?.farmId, { poolId: item.poolId, apr: doubleDipAPR, isEmission: false });
       }
     });
 
-    return arr;
+    return aprSet;
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
     let data = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
     return this.parseFarm(data.data, farmId);
+  }
+
+  static async getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<FarmInfoWrapper> {
+    const farm = await this.getFarm(connection, farmId);
+
+    // NOTICE: a dummy injectionedApr is used
+    const dummyApr = {
+      poolId: farmId,
+      apr: 0,
+      isEmission: false,
+    };
+
+    return new FarmInfoWrapper(farm, dummyApr);
   }
 
   static parseFarm(data: Buffer, farmId: PublicKey): types.FarmInfo {
@@ -468,7 +483,9 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(
     public farmInfo: types.FarmInfo,
-    public parsedData: { poolId: PublicKey; farmId: PublicKey; apr: number; isEmission: boolean }[]
+    // Work-around: inject the APR only for matched farmId
+    // TODO: remove injection of parsedData entirely
+    public injectedApr: { poolId: PublicKey; apr: number; isEmission: boolean } | undefined
   ) {}
 
   async getAuthority() {
@@ -476,9 +493,11 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return authority[0];
   }
 
+  // TODO:
+  //   - the apr should be calculated directly inside wrapper instead of retrieving from injected vaule
+  //   - getApr() should return number only
   getApr() {
-    let data = this.parsedData.find((item) => item.farmId.equals(this.farmInfo.farmId) && item.apr);
-    return data;
+    return this.injectedApr;
   }
 }
 

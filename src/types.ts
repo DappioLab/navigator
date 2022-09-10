@@ -90,6 +90,7 @@ export interface IInstancePool {
   getAllPools(connection: Connection): Promise<IPoolInfo[]>;
   getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]>;
   getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo>;
+  getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<IPoolInfoWrapper>;
   parsePool(data: Buffer, farmId: PublicKey): IPoolInfo;
 }
 
@@ -97,6 +98,7 @@ export interface IInstanceFarm {
   getAllFarms(connection: Connection, rewardMint?: PublicKey): Promise<IFarmInfo[]>;
   getAllFarmWrappers(connection: Connection, rewardMint?: PublicKey): Promise<IFarmInfoWrapper[]>;
   getFarm(connection: Connection, farmId: PublicKey): Promise<IFarmInfo>;
+  getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<IFarmInfoWrapper>;
   parseFarm(data: Buffer, farmId: PublicKey): IFarmInfo;
   getAllFarmers(connection: Connection, userKey: PublicKey): Promise<IFarmerInfo[]>;
   getFarmerId(farmInfo: IFarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey>;

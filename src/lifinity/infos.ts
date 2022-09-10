@@ -43,6 +43,11 @@ infos = class InstanceLifinity {
     };
   }
 
+  static async getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<PoolInfoWrapper> {
+    const pool = await this.getPool(connection, poolId);
+    return new PoolInfoWrapper(pool);
+  }
+
   static parsePool(data: Buffer, poolId: PublicKey): PoolInfo {
     const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
     let {

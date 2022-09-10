@@ -153,6 +153,11 @@ infos = class InstanceFrancium {
     return this.parseFarm(farmAccount.data, farmId);
   }
 
+  static async getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<FarmInfoWrapper> {
+    const farm = await this.getFarm(connection, farmId);
+    return new FarmInfoWrapper(farm);
+  }
+
   static parseFarm(data: Buffer, farmId: PublicKey): types.FarmInfo {
     let buffer = Buffer.from(data);
     let rawFarm = FARM_LAYOUT.decode(buffer);

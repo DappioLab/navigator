@@ -195,14 +195,17 @@ infos = class InstanceLarix {
 
   static async getAllFarmWrappers(connection: Connection, rewardMint?: PublicKey): Promise<types.FarmInfoWrapper[]> {
     let farms = await this.getAllFarms(connection);
-    return farms.map((farm) => {
-      return new FarmInfoWrapper(farm);
-    });
+    return farms.map((farm) => new FarmInfoWrapper(farm));
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
     const farmAccountInfo = await connection.getAccountInfo(farmId);
     return this.parseFarm(farmAccountInfo?.data, farmId);
+  }
+
+  static async getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<FarmInfoWrapper> {
+    const farm = await this.getFarm(connection, farmId);
+    return new FarmInfoWrapper(farm);
   }
 
   static parseFarm(data: Buffer | undefined, farmId: PublicKey): types.FarmInfo {
