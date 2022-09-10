@@ -57,6 +57,11 @@ infos = class InstanceRaydium {
     return pool;
   }
 
+  static async getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<PoolInfoWrapper> {
+    const pool = await this.getPool(connection, poolId);
+    return new PoolInfoWrapper(pool);
+  }
+
   static parsePool(data: Buffer, infoPubkey: PublicKey): PoolInfo {
     let poolData = Buffer.from(data);
     let rawPoolData = POOL_LAYOUT_V4.decode(poolData);
@@ -199,6 +204,11 @@ infos = class InstanceRaydium {
     const farm = this.parseFarm(farmInfoAccount?.data as Buffer, farmId);
 
     return farm;
+  }
+
+  static async getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<FarmInfoWrapper> {
+    const farm = await this.getFarm(connection, farmId);
+    return new FarmInfoWrapper(farm);
   }
 
   static parseFarm(data: Buffer, farmId: PublicKey): FarmInfo {

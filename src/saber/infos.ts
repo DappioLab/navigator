@@ -105,6 +105,11 @@ infos = class InstanceSaber {
     return saberAccountInfo;
   }
 
+  static async getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<PoolInfoWrapper> {
+    const pool = await this.getPool(connection, poolId);
+    return new PoolInfoWrapper(pool);
+  }
+
   static parsePool(data: Buffer, poolId: PublicKey, poolAuthority?: PublicKey): PoolInfo {
     const decodedData = POOL_LAYOUT.decode(data);
 
@@ -192,6 +197,11 @@ infos = class InstanceSaber {
       farm = this.parseFarm(farmInfoAccount?.data, farmId);
     }
     return farm;
+  }
+
+  static async getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<FarmInfoWrapper> {
+    const farm = await this.getFarm(connection, farmId);
+    return new FarmInfoWrapper(farm);
   }
 
   static getFarmFromLpMint(allFarms: FarmInfo[], mint: PublicKey): FarmInfo | null {
