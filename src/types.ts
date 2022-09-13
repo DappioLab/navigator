@@ -164,7 +164,7 @@ export interface IInstanceVault {
   getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]>;
   getDepositor(connection: Connection, depositorId: PublicKey): Promise<IDepositorInfo>;
   getDepositorId(vaultId: PublicKey, userKey: PublicKey, programId?: PublicKey): Promise<PublicKey>;
-  getDepositorIdWithBump(
+  getDepositorIdWithBump?(
     vaultId: PublicKey,
     userKey: PublicKey,
     programId?: PublicKey
