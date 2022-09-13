@@ -1,41 +1,17 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { BN } from "bn.js";
-import { find } from "lodash";
 import { NFTFarmInfo, NFTPoolInfo, NFTRarityInfo, infos, NFTFarmerInfo, NFTLockerInfo } from ".";
 
 export async function getStakedAmount(
   connection: Connection,
   collection: string = "",
   rarity: string = "",
-  rarityInfos?: NFTRarityInfo[],
-  poolInfos?: NFTPoolInfo[],
-  farmInfos?: NFTFarmInfo[]
+  fullInfos?: { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[]
 ): Promise<number> {
-  const rarityMap = new Map<string, number>();
-  const farmMap = new Map<string, number>();
-  const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
-  const allPoolInfos = poolInfos ? poolInfos : ((await infos.getAllPools(connection)) as NFTPoolInfo[]);
-  const allFarmInfos = farmInfos ? farmInfos : ((await infos.getAllFarms(connection)) as NFTFarmInfo[]);
-  allRarityInfos.forEach((rarityInfo, index) => {
-    rarityMap.set(rarityInfo.rarityId.toString(), index);
-  });
-  allFarmInfos.forEach((farmInfo, index) => {
-    farmMap.set(farmInfo.proveTokenMint.toString(), index);
-  });
+  if (!fullInfos) {
+    fullInfos = await getFullInfo(connection);
+  }
 
-  // bind infos
-  const allFullInfos = allPoolInfos
-    .map((poolInfo) => {
-      const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
-      const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
-
-      return rarityIndex != undefined && farmIndex != undefined
-        ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
-        : null;
-    })
-    .filter((info) => Boolean(info));
-
-  const totalStaked = allFullInfos
+  const totalStaked = fullInfos
     .filter(
       (fullInfo) =>
         (fullInfo!.rarityInfo.collection == collection || collection == "") &&
@@ -52,50 +28,29 @@ export async function getNFTUUnclaimedAmount(
   userKey: PublicKey,
   collection: string = "",
   rarity: string = "",
-  rarityInfos?: NFTRarityInfo[],
-  poolInfos?: NFTPoolInfo[],
-  farmInfos?: NFTFarmInfo[],
+  fullInfos?: { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[],
   farmerInfos?: NFTFarmerInfo[]
 ): Promise<number> {
-  const rarityMap = new Map<string, number>();
-  const farmMap = new Map<string, number>();
+  if (!fullInfos) {
+    fullInfos = await getFullInfo(connection);
+  }
+
   const fullInfoMap = new Map<string, number>();
-  const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
-  const allPoolInfos = poolInfos ? poolInfos : ((await infos.getAllPools(connection)) as NFTPoolInfo[]);
-  const allFarmInfos = farmInfos ? farmInfos : ((await infos.getAllFarms(connection)) as NFTFarmInfo[]);
   const allFarmerInfos = farmerInfos
     ? farmerInfos
     : ((await infos.getAllNFTFarmers(connection)).filter((farmer) =>
         farmer.userKey.equals(userKey)
       ) as NFTFarmerInfo[]);
-  allRarityInfos.forEach((rarityInfo, index) => {
-    rarityMap.set(rarityInfo.rarityId.toString(), index);
-  });
-  allFarmInfos.forEach((farmInfo, index) => {
-    farmMap.set(farmInfo.proveTokenMint.toString(), index);
-  });
-
-  // bind infos
-  const allFullInfos = allPoolInfos
-    .map((poolInfo) => {
-      const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
-      const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
-
-      return rarityIndex != undefined && farmIndex != undefined
-        ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
-        : null;
-    })
-    .filter((info) => Boolean(info));
 
   const currentSlot = await connection.getSlot();
-  allFullInfos.forEach((fullInfo, index) => {
+  fullInfos.forEach((fullInfo, index) => {
     if (fullInfo) fullInfoMap.set(fullInfo.farmInfo.farmId.toString(), index);
   });
 
   let totalUnclaimAmount = 0;
   allFarmerInfos.forEach((farmer) => {
     const fullInfoIndex = fullInfoMap.get(farmer.farmId.toString());
-    const fullInfo = allFullInfos[fullInfoIndex || 0];
+    const fullInfo = fullInfos![fullInfoIndex || 0];
     if (
       fullInfoIndex != undefined &&
       fullInfo &&
@@ -117,9 +72,7 @@ export async function getNFTUUnclaimedAmount(
 export async function getFullInfosByMints(
   connection: Connection,
   nftMints: PublicKey[],
-  rarityInfos?: NFTRarityInfo[],
-  poolInfos?: NFTPoolInfo[],
-  farmInfos?: NFTFarmInfo[]
+  fullInfos?: { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[]
 ): Promise<
   (
     | {
@@ -130,56 +83,34 @@ export async function getFullInfosByMints(
     | undefined
   )[]
 > {
-  const rarityMap = new Map<string, number>();
+  if (!fullInfos) {
+    fullInfos = await getFullInfo(connection);
+  }
+
   const mintMap = new Map<string, string>();
-  const farmMap = new Map<string, number>();
   const fullInfoMap = new Map<string, number>();
-  const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
-  const allPoolInfos = poolInfos ? poolInfos : ((await infos.getAllPools(connection)) as NFTPoolInfo[]);
-  const allFarmInfos = farmInfos ? farmInfos : ((await infos.getAllFarms(connection)) as NFTFarmInfo[]);
-  allRarityInfos.forEach((rarityInfo, index) => {
-    rarityMap.set(rarityInfo.rarityId.toString(), index);
-  });
-  allFarmInfos.forEach((farmInfo, index) => {
-    farmMap.set(farmInfo.proveTokenMint.toString(), index);
-  });
-
-  // bind infos
-  const allFullInfos = allPoolInfos
-    .map((poolInfo) => {
-      const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
-      const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
-
-      return rarityIndex != undefined && farmIndex != undefined
-        ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
-        : undefined;
-    })
-    .filter((info) => Boolean(info));
-
-  allFullInfos.forEach((fullInfo, index) => {
+  fullInfos!.forEach((fullInfo, index) => {
     fullInfo!.rarityInfo.mintList.forEach((mint) => {
       mintMap.set(mint.toString(), fullInfo!.rarityInfo.rarityId.toString());
     });
     fullInfoMap.set(fullInfo!.rarityInfo.rarityId.toString(), index);
   });
 
-  let fullInfos = nftMints.map((nftMint) => {
+  let targetFullInfos = nftMints.map((nftMint) => {
     const rarityId = mintMap.get(nftMint.toString());
     const fullInfoIndex = rarityId != undefined ? fullInfoMap.get(rarityId) : undefined;
 
-    return fullInfoIndex != undefined ? allFullInfos[fullInfoIndex] : undefined;
+    return fullInfoIndex != undefined ? fullInfos![fullInfoIndex] : undefined;
   });
 
-  return fullInfos;
+  return targetFullInfos;
 }
 
 // getAllInfoFromPoolInfoKey (deprecated)
 export async function getFullInfoByPoolId(
   connection: Connection,
   poolId: PublicKey,
-  rarityInfos?: NFTRarityInfo[],
-  poolInfos?: NFTPoolInfo[],
-  farmInfos?: NFTFarmInfo[]
+  fullInfos?: { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[]
 ): Promise<
   | {
       rarityInfo: NFTRarityInfo;
@@ -188,25 +119,10 @@ export async function getFullInfoByPoolId(
     }
   | undefined
 > {
-  const rarityMap = new Map<string, number>();
-  const farmMap = new Map<string, number>();
-  const allRarityInfos = rarityInfos ? rarityInfos : ((await infos.getAllRarities(connection)) as NFTRarityInfo[]);
-  const allPoolInfos = poolInfos ? poolInfos : ((await infos.getAllPools(connection)) as NFTPoolInfo[]);
-  const allFarmInfos = farmInfos ? farmInfos : ((await infos.getAllFarms(connection)) as NFTFarmInfo[]);
-  allRarityInfos.forEach((rarityInfo, index) => {
-    rarityMap.set(rarityInfo.rarityId.toString(), index);
-  });
-  allFarmInfos.forEach((farmInfo, index) => {
-    farmMap.set(farmInfo.proveTokenMint.toString(), index);
-  });
-
-  const targetPoolInfo = allPoolInfos.find((poolInfo) => poolInfo.poolId.equals(poolId));
-  const rarityIndex = rarityMap.get(targetPoolInfo?.rarityId?.toString() || "");
-  const farmIndex = farmMap.get(targetPoolInfo?.proveTokenMint?.toString() || "");
-
-  return targetPoolInfo && rarityIndex != undefined && farmIndex != undefined
-    ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: targetPoolInfo, farmInfo: allFarmInfos[farmIndex] }
-    : undefined;
+  if (!fullInfos) {
+    fullInfos = await getFullInfo(connection);
+  }
+  return fullInfos.find((fullInfo) => fullInfo.poolInfo.poolId.equals(poolId));
 }
 
 // getFarmInfosFromFarmInfoKeys (deprecated)
@@ -234,16 +150,38 @@ export async function getFarmInfosByFarmIds(
 }
 
 // fetchAll (deprecated)
-export async function getFullInfo(connection: Connection): Promise<{
-  rarityInfos: NFTRarityInfo[];
-  poolInfos: NFTPoolInfo[];
-  farmInfos: NFTFarmInfo[];
-}> {
-  const rarityInfos = (await infos.getAllRarities(connection)) as NFTRarityInfo[];
-  const poolInfos = (await infos.getAllPools(connection)) as NFTPoolInfo[];
-  const farmInfos = (await infos.getAllFarms(connection)) as NFTFarmInfo[];
+export async function getFullInfo(connection: Connection): Promise<
+  {
+    rarityInfo: NFTRarityInfo;
+    poolInfo: NFTPoolInfo;
+    farmInfo: NFTFarmInfo;
+  }[]
+> {
+  const rarityMap = new Map<string, number>();
+  const farmMap = new Map<string, number>();
+  const allRarityInfos = (await infos.getAllRarities(connection)) as NFTRarityInfo[];
+  const allPoolInfos = (await infos.getAllPools(connection)) as NFTPoolInfo[];
+  const allFarmInfos = (await infos.getAllFarms(connection)) as NFTFarmInfo[];
+  allRarityInfos.forEach((rarityInfo, index) => {
+    rarityMap.set(rarityInfo.rarityId.toString(), index);
+  });
+  allFarmInfos.forEach((farmInfo, index) => {
+    farmMap.set(farmInfo.proveTokenMint.toString(), index);
+  });
 
-  return { rarityInfos: rarityInfos, poolInfos: poolInfos, farmInfos: farmInfos };
+  // bind infos
+  const fullInfos = allPoolInfos
+    .map((poolInfo) => {
+      const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
+      const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
+
+      return rarityIndex != undefined && farmIndex != undefined
+        ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
+        : null;
+    })
+    .filter((info) => Boolean(info)) as { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[];
+
+  return fullInfos;
 }
 
 // fetchUser (deprecated)
