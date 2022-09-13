@@ -7,9 +7,7 @@ export async function getStakedAmount(
   rarity: string = "",
   fullInfos?: { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[]
 ): Promise<number> {
-  if (!fullInfos) {
-    fullInfos = await getFullInfo(connection);
-  }
+  fullInfos ||= await getFullInfo(connection);
 
   const totalStaked = fullInfos
     .filter(
@@ -31,9 +29,7 @@ export async function getNFTUUnclaimedAmount(
   fullInfos?: { rarityInfo: NFTRarityInfo; poolInfo: NFTPoolInfo; farmInfo: NFTFarmInfo }[],
   farmerInfos?: NFTFarmerInfo[]
 ): Promise<number> {
-  if (!fullInfos) {
-    fullInfos = await getFullInfo(connection);
-  }
+  fullInfos ||= await getFullInfo(connection);
 
   const fullInfoMap = new Map<string, number>();
   const allFarmerInfos = farmerInfos
@@ -83,9 +79,7 @@ export async function getFullInfosByMints(
     | undefined
   )[]
 > {
-  if (!fullInfos) {
-    fullInfos = await getFullInfo(connection);
-  }
+  fullInfos ||= await getFullInfo(connection);
 
   const mintMap = new Map<string, string>();
   const fullInfoMap = new Map<string, number>();
@@ -119,9 +113,7 @@ export async function getFullInfoByPoolId(
     }
   | undefined
 > {
-  if (!fullInfos) {
-    fullInfos = await getFullInfo(connection);
-  }
+  fullInfos ||= await getFullInfo(connection);
   return fullInfos.find((fullInfo) => fullInfo.poolInfo.poolId.equals(poolId));
 }
 
