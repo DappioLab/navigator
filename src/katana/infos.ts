@@ -18,146 +18,262 @@ import {
 } from "./layouts";
 import { ADMIN, IDENTIFIER, KATANA_COVER_PROGRAM_ID, KATANA_PUT_PROGRAM_ID, PSY_PROGRAM_ID } from "./ids";
 import { struct, u128 } from "@project-serum/borsh";
-import { IDepositorInfo, IInstanceVault, IVaultInfo } from "../types";
-
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-// TODO: Implement InstanceKatana
+import { IInstanceVault } from "../types";
+import * as types from ".";
 
 let infos: IInstanceVault;
-export enum VaultType {
-  putSell,
-  coverCall,
-}
 
 infos = class InstanceKatana {
-  static async getAllVaults(connection: Connection): Promise<IVaultInfo[]> {
-    return [];
+  static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
+    const adminIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: ADMIN.toString(),
+      },
+    };
+    const identifierMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: IDENTIFIER.toString(),
+      },
+    };
+    const coverSizeFilter: DataSizeFilter = {
+      dataSize: 741,
+    };
+    const putSizeFilter: DataSizeFilter = {
+      dataSize: 773, // TODO: is there 2 different Vault layout?
+    };
+    let coverOptionPrams = await getOptionPramsMaps(connection, KATANA_COVER_PROGRAM_ID);
+
+    let putOptionPrams = await getOptionPramsMaps(connection, KATANA_PUT_PROGRAM_ID);
+
+    const coverFilters = [adminIdMemcmp, coverSizeFilter];
+    const coverConfig: GetProgramAccountsConfig = { filters: coverFilters };
+    const allCoverVaultAccount = await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, coverConfig);
+
+    const putFilters = [identifierMemcmp, putSizeFilter];
+    const putConfig: GetProgramAccountsConfig = { filters: putFilters };
+    const allPutVaultAccount = await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, putConfig);
+
+    let coverVaultInfos = allCoverVaultAccount.map((accountInfo) => {
+      return this.parseVault(
+        accountInfo.account.data,
+        accountInfo.pubkey,
+        types.VaultType.coverCall,
+        coverOptionPrams.get(accountInfo.pubkey.toString())
+      );
+    });
+    let putVaultInfos = allPutVaultAccount.map((accountInfo) => {
+      return this.parseVault(
+        accountInfo.account.data,
+        accountInfo.pubkey,
+        types.VaultType.putSell,
+        putOptionPrams.get(accountInfo.pubkey.toString())
+      );
+    });
+    return [...coverVaultInfos, ...putVaultInfos];
   }
 
-  static async getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo> {
-    return {} as IVaultInfo;
+  static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
+    const vaultAccount = (await connection.getAccountInfo(vaultId)) as AccountInfo<Buffer>;
+    let type = vaultAccount?.owner.equals(KATANA_COVER_PROGRAM_ID)
+      ? types.VaultType.coverCall
+      : types.VaultType.putSell;
+    let optionPrams = await getOptionPramsMaps(connection, vaultAccount?.owner);
+    let vault: types.VaultInfo;
+
+    vault = await this.parseVault(vaultAccount?.data, vaultId, type, optionPrams.get(vaultId.toString()));
+
+    return vault;
   }
 
-  static parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo {
-    return {} as IVaultInfo;
+  static parseVault(
+    data: Buffer,
+    vaultId: PublicKey,
+    vaultType?: types.VaultType,
+    optionPram?: types.OptionParameters
+  ): types.VaultInfo {
+    let dataBuffer = data as Buffer;
+    let stateData = dataBuffer.slice(8);
+    let state;
+    let programId: PublicKey;
+    switch (vaultType) {
+      case types.VaultType.coverCall: {
+        state = COVER_VAULT_LAYOUT.decode(stateData);
+        programId = KATANA_COVER_PROGRAM_ID;
+        break;
+      }
+      case types.VaultType.putSell: {
+        state = PUT_VAULT_LAYOUT.decode(stateData);
+        programId = KATANA_PUT_PROGRAM_ID;
+        break;
+      }
+      default: {
+        throw new Error("Type not found");
+      }
+    }
+    let {
+      admin,
+      pendingAdmin,
+      vaultAuthority,
+      cap,
+      lockedAmount,
+      lastLockedAmount,
+      totalPendingDeposits,
+      queuedWithdrawShares,
+      totalShares,
+      round,
+      underlyingTokenMint,
+      quoteTokenMint,
+      optionTokenMint,
+      nextOptionTokenMint,
+      nextOptionTokenVault,
+      writerTokenMint,
+      nextWriterTokenMint,
+      nextWriterTokenVault,
+      derivativeTokenMint,
+      earlyAccessTokenMint,
+      underlyingTokenVault,
+      quoteTokenVault,
+      optionTokenVault,
+      writerTokenVault,
+      derivativeTokenVault,
+      openOrders,
+      decimals,
+      bump,
+      authorityBump,
+      derivativeMintBump,
+      vaultBumpsUnderlying,
+      vaultBumpsQuote,
+      vaultBumpsOption,
+      vaultBumpsWriter,
+      vaultBumpsDerivative,
+      pendingvaultBumpsOption,
+      pendingvaultBumpsWriter,
+      isPaused,
+      onlyEarlyAccess,
+    } = state;
+    let identifier = state.identifier ? state.identifier : undefined;
+    return {
+      type: vaultType,
+      vaultId,
+      admin,
+      pendingAdmin,
+      vaultAuthority,
+      cap,
+      lockedAmount,
+      lastLockedAmount,
+      totalPendingDeposits,
+      queuedWithdrawShares,
+      totalShares,
+      round,
+      underlyingTokenMint,
+      shareMint: derivativeTokenMint,
+      quoteTokenMint,
+      optionTokenMint,
+      nextOptionTokenMint,
+      nextOptionTokenVault,
+      writerTokenMint,
+      nextWriterTokenMint,
+      nextWriterTokenVault,
+      derivativeTokenMint,
+      earlyAccessTokenMint,
+      underlyingTokenVault,
+      quoteTokenVault,
+      optionTokenVault,
+      writerTokenVault,
+      derivativeTokenVault,
+      openOrders,
+      decimals,
+      bump,
+      authorityBump,
+      derivativeMintBump,
+      vaultBumpsUnderlying,
+      vaultBumpsQuote,
+      vaultBumpsOption,
+      vaultBumpsWriter,
+      vaultBumpsDerivative,
+      pendingvaultBumpsOption,
+      pendingvaultBumpsWriter,
+      isPaused,
+      onlyEarlyAccess,
+      optionPram,
+      programId: programId,
+      identifier: identifier,
+    };
   }
 
-  static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]> {
-    return [];
+  static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
+    const adminIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: userKey.toString(),
+      },
+    };
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 121,
+    };
+    const filters = [adminIdMemcmp, sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const allCoverDepositorAccount = await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, config);
+    const allPutDepositorAccount = await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, config);
+    return [...allPutDepositorAccount, ...allCoverDepositorAccount].map((accountInfo) => {
+      return this.parseDepositor(accountInfo.account.data, accountInfo.pubkey);
+    });
   }
 
-  static async getDepositor(connection: Connection, depositorId: PublicKey): Promise<IDepositorInfo> {
-    return {} as IDepositorInfo;
+  static async getDepositor(connection: Connection, depositorId: PublicKey): Promise<types.DepositorInfo> {
+    const accountInfo = (await connection.getAccountInfo(depositorId)) as AccountInfo<Buffer>;
+    return this.parseDepositor(accountInfo.data, depositorId);
   }
+  static async getDepositorId(
+    vaultId: PublicKey,
+    userKey: PublicKey,
+    programId: PublicKey = KATANA_PUT_PROGRAM_ID
+  ): Promise<PublicKey> {
+    return (await this.getDepositorIdWithBump(vaultId, userKey, programId)).pda;
+  }
+  static async getDepositorIdWithBump(
+    vaultId: PublicKey,
+    userKey: PublicKey,
+    programId: PublicKey = KATANA_PUT_PROGRAM_ID
+  ): Promise<{ pda: PublicKey; bump: number }> {
+    let prefix = "user-account";
+    let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
+    let address = await PublicKey.findProgramAddress([minerBytes, userKey.toBuffer(), vaultId.toBuffer()], programId);
+    return { pda: address[0], bump: address[1] };
+  }
+  static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
+    let dataBuffer = data as Buffer;
+    let userData = dataBuffer.slice(8);
+    let depositor = DEPOSITOR_LAYOUT.decode(userData);
+    let {
+      owner,
+      PendingDepositDataRound,
+      PendingDepositDataAmount,
+      PendingDepositDataUnredeemedShares,
+      PendingWithdrawDataRound,
+      PendingWithdrawDatShares,
+      bump,
+    } = depositor;
 
-  static parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo {
-    return {} as IDepositorInfo;
+    return {
+      depositorId,
+      userKey: owner,
+      PendingDepositDataRound,
+      PendingDepositDataAmount,
+      PendingDepositDataUnredeemedShares,
+      PendingWithdrawDataRound,
+      PendingWithdrawDatShares,
+      bump,
+    };
   }
 };
 
 export { infos };
 
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////
-
-export interface VaultInfo extends IVaultInfo {
-  // vaultId
-  // shareMint (equivalent to derivativeTokenMint)
-  type: VaultType;
-  admin: PublicKey;
-  pendingAdmin: PublicKey;
-  vaultAuthority: PublicKey;
-  cap: BN;
-  lockedAmount: BN;
-  lastLockedAmount: BN;
-  totalPendingDeposits: BN;
-  queuedWithdrawShares: BN;
-  totalShares: BN;
-  round: BN;
-  underlyingTokenMint: PublicKey;
-  quoteTokenMint: PublicKey;
-  optionTokenMint: PublicKey;
-  nextOptionTokenMint: PublicKey;
-  nextOptionTokenVault: PublicKey;
-  writerTokenMint: PublicKey;
-  nextWriterTokenMint: PublicKey;
-  nextWriterTokenVault: PublicKey;
-  derivativeTokenMint: PublicKey;
-  earlyAccessTokenMint: PublicKey;
-  underlyingTokenVault: PublicKey;
-  quoteTokenVault: PublicKey;
-  optionTokenVault: PublicKey;
-  writerTokenVault: PublicKey;
-  derivativeTokenVault: PublicKey;
-  openOrders: PublicKey;
-  decimals: BN;
-  bump: BN;
-  authorityBump: BN;
-  derivativeMintBump: BN;
-  vaultBumpsUnderlying: BN;
-  vaultBumpsQuote: BN;
-  vaultBumpsOption: BN;
-  vaultBumpsWriter: BN;
-  vaultBumpsDerivative: BN;
-  pendingvaultBumpsOption: BN;
-  pendingvaultBumpsWriter: BN;
-  isPaused: boolean;
-  onlyEarlyAccess: boolean;
-  programId: PublicKey;
-  optionPram?: OptionParameters;
-  identifier?: PublicKey;
-}
-
-export interface DepositorInfo extends IDepositorInfo {
-  // depositorId
-  // userKey
-  PendingDepositDataRound: BN;
-  PendingDepositDataAmount: BN;
-  PendingDepositDataUnredeemedShares: BN;
-  PendingWithdrawDataRound: BN;
-  PendingWithdrawDatShares: BN;
-  bump: BN;
-}
-
-export interface OtcTermInfo {
-  otcTermId: PublicKey;
-  round: BN;
-  totalPrice: BN;
-  tokenMintToBuy: PublicKey;
-  tokenMintToSell: PublicKey;
-  bump: BN;
-}
-
-interface PricePerSharePageInfo {
-  infoPubkey: PublicKey;
-  page: BN;
-  bump: BN;
-  prices: BN[];
-}
-
-interface OptionMarketInfo {
-  optionMarketId: PublicKey;
-  optionMint: PublicKey;
-  writerTokenMint: PublicKey;
-  underlyingAssetMint: PublicKey;
-  quoteAssetMint: PublicKey;
-  underlyingAmountPerContract: BN;
-  quoteAmountPerContract: BN;
-  expirationUnixTimestamp: BN;
-  underlyingAssetPool: PublicKey;
-  quoteAssetPool: PublicKey;
-  mintFeeAccount: PublicKey;
-  exerciseFeeAccount: PublicKey;
-  expired: boolean;
-  bumpSeed: BN;
-}
-
 export class VaultInfoWrapper {
-  constructor(public readonly vaultInfo: VaultInfo) {}
+  constructor(public readonly vaultInfo: types.VaultInfo) {}
 
   async getPricePerPage() {
     let prefix = "price-per-share";
@@ -199,319 +315,32 @@ export class VaultInfoWrapper {
   }
 }
 
-export async function parseVaultData(
-  data: any,
-  vaultId: PublicKey,
-  vaultType: VaultType,
-  optionPram?: OptionParameters
-): Promise<VaultInfo> {
-  let dataBuffer = data as Buffer;
-  let stateData = dataBuffer.slice(8);
-  switch (vaultType) {
-    case VaultType.coverCall: {
-      let state = COVER_VAULT_LAYOUT.decode(stateData);
-      let {
-        admin,
-        pendingAdmin,
-        vaultAuthority,
-        cap,
-        lockedAmount,
-        lastLockedAmount,
-        totalPendingDeposits,
-        queuedWithdrawShares,
-        totalShares,
-        round,
-        underlyingTokenMint,
-        quoteTokenMint,
-        optionTokenMint,
-        nextOptionTokenMint,
-        nextOptionTokenVault,
-        writerTokenMint,
-        nextWriterTokenMint,
-        nextWriterTokenVault,
-        derivativeTokenMint,
-        earlyAccessTokenMint,
-        underlyingTokenVault,
-        quoteTokenVault,
-        optionTokenVault,
-        writerTokenVault,
-        derivativeTokenVault,
-        openOrders,
-        decimals,
-        bump,
-        authorityBump,
-        derivativeMintBump,
-        vaultBumpsUnderlying,
-        vaultBumpsQuote,
-        vaultBumpsOption,
-        vaultBumpsWriter,
-        vaultBumpsDerivative,
-        pendingvaultBumpsOption,
-        pendingvaultBumpsWriter,
-        isPaused,
-        onlyEarlyAccess,
-      } = state;
-
-      return {
-        type: vaultType,
-        vaultId,
-        admin,
-        pendingAdmin,
-        vaultAuthority,
-        cap,
-        lockedAmount,
-        lastLockedAmount,
-        totalPendingDeposits,
-        queuedWithdrawShares,
-        totalShares,
-        round,
-        underlyingTokenMint,
-        shareMint: derivativeTokenMint,
-        quoteTokenMint,
-        optionTokenMint,
-        nextOptionTokenMint,
-        nextOptionTokenVault,
-        writerTokenMint,
-        nextWriterTokenMint,
-        nextWriterTokenVault,
-        derivativeTokenMint,
-        earlyAccessTokenMint,
-        underlyingTokenVault,
-        quoteTokenVault,
-        optionTokenVault,
-        writerTokenVault,
-        derivativeTokenVault,
-        openOrders,
-        decimals,
-        bump,
-        authorityBump,
-        derivativeMintBump,
-        vaultBumpsUnderlying,
-        vaultBumpsQuote,
-        vaultBumpsOption,
-        vaultBumpsWriter,
-        vaultBumpsDerivative,
-        pendingvaultBumpsOption,
-        pendingvaultBumpsWriter,
-        isPaused,
-        onlyEarlyAccess,
-        optionPram,
-        programId: KATANA_COVER_PROGRAM_ID,
-      };
-    }
-    default: {
-      let putState = PUT_VAULT_LAYOUT.decode(stateData);
-      let {
-        identifier,
-        admin,
-        pendingAdmin,
-        vaultAuthority,
-        cap,
-        lockedAmount,
-        lastLockedAmount,
-        totalPendingDeposits,
-        queuedWithdrawShares,
-        totalShares,
-        round,
-        underlyingTokenMint,
-        quoteTokenMint,
-        optionTokenMint,
-        nextOptionTokenMint,
-        nextOptionTokenVault,
-        writerTokenMint,
-        nextWriterTokenMint,
-        nextWriterTokenVault,
-        derivativeTokenMint,
-        earlyAccessTokenMint,
-        underlyingTokenVault,
-        quoteTokenVault,
-        optionTokenVault,
-        writerTokenVault,
-        derivativeTokenVault,
-        openOrders,
-        decimals,
-        bump,
-        authorityBump,
-        derivativeMintBump,
-        vaultBumpsUnderlying,
-        vaultBumpsQuote,
-        vaultBumpsOption,
-        vaultBumpsWriter,
-        vaultBumpsDerivative,
-        pendingvaultBumpsOption,
-        pendingvaultBumpsWriter,
-        isPaused,
-        onlyEarlyAccess,
-      } = putState;
-
-      return {
-        type: vaultType,
-        vaultId,
-        admin,
-        pendingAdmin,
-        vaultAuthority,
-        cap,
-        lockedAmount,
-        lastLockedAmount,
-        totalPendingDeposits,
-        queuedWithdrawShares,
-        totalShares,
-        round,
-        underlyingTokenMint,
-        shareMint: derivativeTokenMint,
-        quoteTokenMint,
-        optionTokenMint,
-        nextOptionTokenMint,
-        nextOptionTokenVault,
-        writerTokenMint,
-        nextWriterTokenMint,
-        nextWriterTokenVault,
-        derivativeTokenMint,
-        earlyAccessTokenMint,
-        underlyingTokenVault,
-        quoteTokenVault,
-        optionTokenVault,
-        writerTokenVault,
-        derivativeTokenVault,
-        openOrders,
-        decimals,
-        bump,
-        authorityBump,
-        derivativeMintBump,
-        vaultBumpsUnderlying,
-        vaultBumpsQuote,
-        vaultBumpsOption,
-        vaultBumpsWriter,
-        vaultBumpsDerivative,
-        pendingvaultBumpsOption,
-        pendingvaultBumpsWriter,
-        isPaused,
-        onlyEarlyAccess,
-        identifier: identifier,
-        optionPram,
-        programId: KATANA_PUT_PROGRAM_ID,
-      };
-    }
-  }
+export async function checkDepositorCreated(
+  wallet: PublicKey,
+  vault: PublicKey,
+  connection: Connection,
+  programId: PublicKey
+) {
+  let address = await infos.getDepositorId(vault, wallet, programId);
+  let accountInfo = await connection.getAccountInfo(address);
+  return Boolean(accountInfo?.owner.equals(programId));
 }
 
-export async function getAllCoverVaults(connection: Connection) {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 8,
-      bytes: ADMIN.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 741, // TODO: is there 2 different Vault layout?
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allVaultAccount = await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, config);
-  let allVault: VaultInfo[] = [];
-  let optionPrams = await getOptionPramsMaps(connection, KATANA_COVER_PROGRAM_ID);
-
-  for (let accountInfo of allVaultAccount) {
-    allVault.push(
-      await parseVaultData(
-        accountInfo.account.data,
-        accountInfo.pubkey,
-        VaultType.coverCall,
-        optionPrams.get(accountInfo.pubkey.toString())
-      )
-    );
-  }
-  return allVault;
+async function getPricePerPageAccount(vault: VaultInfoWrapper, connection: Connection) {
+  let infoPubkey = await vault.getPricePerPage();
+  let account = await connection.getAccountInfo(infoPubkey);
+  let ppsp = parsePricePerSharePageData(account?.data, infoPubkey);
+  return ppsp;
 }
-
-export async function getAllPutVaults(connection: Connection) {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 8,
-      bytes: IDENTIFIER.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 773, // TODO: is there 2 different Vault layout?
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allVaultAccount = await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, config);
-  let allVault: VaultInfo[] = [];
-  let optionPrams = await getOptionPramsMaps(connection, KATANA_PUT_PROGRAM_ID);
-  for (let accountInfo of allVaultAccount) {
-    allVault.push(
-      await parseVaultData(
-        accountInfo.account.data,
-        accountInfo.pubkey,
-        VaultType.putSell,
-        optionPrams.get(accountInfo.pubkey.toString())
-      )
-    );
-  }
-  return allVault;
-}
-
-export async function getVault(connection: Connection, infoPubkey: PublicKey) {
-  const vaultAccount = await connection.getAccountInfo(infoPubkey);
-  let type = vaultAccount?.owner.equals(KATANA_COVER_PROGRAM_ID) ? VaultType.coverCall : VaultType.putSell;
-  let optionPrams = await getOptionPramsMaps(connection, vaultAccount?.owner);
-  let vault!: VaultInfo;
-
-  vault = await parseVaultData(vaultAccount?.data, infoPubkey, type, optionPrams.get(infoPubkey.toString()));
-
-  return vault;
-}
-
-export async function getAllDepositors(connection: Connection, wallet: PublicKey, programId: PublicKey) {
-  const adminIdMemcmp: MemcmpFilter = {
-    memcmp: {
-      offset: 8,
-      bytes: wallet.toString(),
-    },
-  };
-  const sizeFilter: DataSizeFilter = {
-    dataSize: 121,
-  };
-  const filters = [adminIdMemcmp, sizeFilter];
-  const config: GetProgramAccountsConfig = { filters: filters };
-  const allDepositorAccount = await connection.getProgramAccounts(programId, config);
-  let allDepositor: DepositorInfo[] = [];
-  for (let accountInfo of allDepositorAccount) {
-    allDepositor.push(await parseDepositorData(accountInfo.account.data, accountInfo.pubkey));
-  }
-  return allDepositor;
-}
-
-export interface OptionParameters {
-  infoPubkey: PublicKey;
-  vault: PublicKey;
-  expiry: BN;
-  strike: BN;
-}
-
-export class OptionParameters implements OptionParameters {
-  infoPubkey: PublicKey;
-  vault: PublicKey;
-  expiry: BN;
-  strike: BN;
-  constructor(infoPubkey: PublicKey, vault: PublicKey, expiry: BN, strike: BN) {
-    this.infoPubkey = infoPubkey;
-    this.vault = vault;
-    this.expiry = expiry;
-    this.strike = strike;
-  }
-}
-
-export function parseOptionParameters(data: any, infoPubkey: PublicKey) {
+function parseOptionParameters(data: any, infoPubkey: PublicKey): types.OptionParameters {
   let dataBuffer = data as Buffer;
   let optionData = dataBuffer.slice(8);
   let optionRaw = OPTION_PRAM_LAYOUT.decode(optionData);
   let { vault, expiry, strike } = optionRaw;
-  return new OptionParameters(infoPubkey, vault, expiry, strike);
+  return { infoPubkey, vault, expiry, strike };
 }
 
-export async function getOptionPramsMaps(connection: Connection, programId?: PublicKey) {
+async function getOptionPramsMaps(connection: Connection, programId?: PublicKey) {
   const sizeFilter: DataSizeFilter = {
     dataSize: 57,
   };
@@ -540,62 +369,15 @@ export async function getOptionPramsMaps(connection: Connection, programId?: Pub
     ];
   }
 
-  let optionMaps: Map<string, OptionParameters> = new Map();
-  for (let accountInfo of allOptionPramAccount) {
+  let optionMaps: Map<string, types.OptionParameters> = new Map();
+  allOptionPramAccount.forEach((accountInfo) => {
     let optionInfo = parseOptionParameters(accountInfo.account.data, accountInfo.pubkey);
     optionMaps.set(optionInfo.vault.toString(), optionInfo);
-  }
+  });
   return optionMaps;
 }
 
-export async function parseDepositorData(data: any, depositorId: PublicKey): Promise<DepositorInfo> {
-  let dataBuffer = data as Buffer;
-  let userData = dataBuffer.slice(8);
-  let depositor = DEPOSITOR_LAYOUT.decode(userData);
-  let {
-    owner,
-    PendingDepositDataRound,
-    PendingDepositDataAmount,
-    PendingDepositDataUnredeemedShares,
-    PendingWithdrawDataRound,
-    PendingWithdrawDatShares,
-    bump,
-  } = depositor;
-
-  return {
-    depositorId,
-    userKey: owner,
-    PendingDepositDataRound,
-    PendingDepositDataAmount,
-    PendingDepositDataUnredeemedShares,
-    PendingWithdrawDataRound,
-    PendingWithdrawDatShares,
-    bump,
-  };
-}
-
-export async function getDepositorId(wallet: PublicKey, vault: PublicKey, programId: PublicKey) {
-  let prefix = "user-account";
-  let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
-  let address = await PublicKey.findProgramAddress([minerBytes, wallet.toBuffer(), vault.toBuffer()], programId);
-  return address;
-}
-
-export async function checkDepositorCreated(
-  wallet: PublicKey,
-  vault: PublicKey,
-  connection: Connection,
-  programId: PublicKey
-) {
-  let address = await getDepositorId(wallet, vault, programId);
-  let accountInfo = await connection.getAccountInfo(address[0]);
-  if (accountInfo?.owner.equals(programId)) {
-    return true;
-  }
-  return false;
-}
-
-export function parseOtcTermsData(data: any, otcTermId: PublicKey): OtcTermInfo {
+function parseOtcTermsData(data: any, otcTermId: PublicKey): types.OtcTermInfo {
   let dataBuffer = data as Buffer;
   let otcData = dataBuffer.slice(8);
   let otcRaw = OTC_TERMS_LAYOUT.decode(otcData);
@@ -611,7 +393,7 @@ export function parseOtcTermsData(data: any, otcTermId: PublicKey): OtcTermInfo 
   };
 }
 
-export async function getOtcTermsAccount(connection: Connection, vault: VaultInfoWrapper): Promise<OtcTermInfo> {
+async function getOtcTermsAccount(connection: Connection, vault: VaultInfoWrapper): Promise<types.OtcTermInfo> {
   let otcTermId = await vault.getOtcTermId();
   let account = await connection.getAccountInfo(otcTermId);
   if (account == undefined) {
@@ -621,7 +403,7 @@ export async function getOtcTermsAccount(connection: Connection, vault: VaultInf
   return otc;
 }
 
-export function defaultOtcTerms(otcTermId: PublicKey) {
+function defaultOtcTerms(otcTermId: PublicKey) {
   return {
     otcTermId,
     round: new BN(0),
@@ -632,7 +414,7 @@ export function defaultOtcTerms(otcTermId: PublicKey) {
   };
 }
 
-export function parsePricePerSharePageData(data: any, infoPubkey: PublicKey): PricePerSharePageInfo {
+function parsePricePerSharePageData(data: any, infoPubkey: PublicKey): types.PricePerSharePageInfo {
   let dataBuffer = data as Buffer;
   let ppspData = dataBuffer.slice(8);
   let ppspRaw = PRICE_PER_PAGE_LAYOUT.decode(ppspData);
@@ -653,14 +435,7 @@ export function parsePricePerSharePageData(data: any, infoPubkey: PublicKey): Pr
   };
 }
 
-export async function getPricePerPageAccount(vault: VaultInfoWrapper, connection: Connection) {
-  let infoPubkey = await vault.getPricePerPage();
-  let account = await connection.getAccountInfo(infoPubkey);
-  let ppsp = parsePricePerSharePageData(account?.data, infoPubkey);
-  return ppsp;
-}
-
-export function parseOptionMarketInfo(data: any, optionMarketId: PublicKey): OptionMarketInfo {
+function parseOptionMarketInfo(data: any, optionMarketId: PublicKey): types.OptionMarketInfo {
   let dataBuffer = data as Buffer;
   if (!data || !optionMarketId) {
     return {
@@ -717,10 +492,10 @@ export function parseOptionMarketInfo(data: any, optionMarketId: PublicKey): Opt
   };
 }
 
-export async function getOptionMarketByOptionTokenMint(
+async function getOptionMarketByOptionTokenMint(
   optionMint: PublicKey,
   connection: Connection
-): Promise<OptionMarketInfo> {
+): Promise<types.OptionMarketInfo> {
   const mintMemcmp: MemcmpFilter = {
     memcmp: {
       offset: 8,
