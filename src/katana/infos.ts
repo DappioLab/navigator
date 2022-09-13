@@ -63,7 +63,7 @@ infos = class InstanceKatana {
         coverOptionPrams.get(accountInfo.pubkey.toString())
       );
     });
-    let putVaultInfos = await allPutVaultAccount.map((accountInfo) => {
+    let putVaultInfos = allPutVaultAccount.map((accountInfo) => {
       return this.parseVault(
         accountInfo.account.data,
         accountInfo.pubkey,
