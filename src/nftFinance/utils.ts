@@ -48,7 +48,7 @@ export async function getNFTUUnclaimedAmount(
     const fullInfoIndex = fullInfoMap.get(farmer.farmId.toString());
     const fullInfo = fullInfos![fullInfoIndex || 0];
     if (
-      fullInfoIndex != undefined &&
+      fullInfoIndex !== undefined &&
       fullInfo &&
       (collection == "" || fullInfo.rarityInfo.collection == collection) &&
       (rarity == "" || fullInfo.rarityInfo.rarity == rarity)
@@ -92,9 +92,9 @@ export async function getFullInfosByMints(
 
   let targetFullInfos = nftMints.map((nftMint) => {
     const rarityId = mintMap.get(nftMint.toString());
-    const fullInfoIndex = rarityId != undefined ? fullInfoMap.get(rarityId) : undefined;
+    const fullInfoIndex = rarityId !== undefined ? fullInfoMap.get(rarityId) : undefined;
 
-    return fullInfoIndex != undefined ? fullInfos![fullInfoIndex] : undefined;
+    return fullInfoIndex !== undefined ? fullInfos![fullInfoIndex] : undefined;
   });
 
   return targetFullInfos;
@@ -133,7 +133,7 @@ export async function getFarmInfosByFarmIds(
   let targetFarmInfos: NFTFarmInfo[] = [];
   farmIds.forEach((farmId) => {
     const farmIndex = farmInfoMap.get(farmId.toString());
-    if (farmIndex != undefined) {
+    if (farmIndex !== undefined) {
       targetFarmInfos.push(allFarmInfos[farmIndex]);
     }
   });
@@ -167,7 +167,7 @@ export async function getFullInfo(connection: Connection): Promise<
       const rarityIndex = rarityMap.get(poolInfo.rarityId.toString());
       const farmIndex = farmMap.get(poolInfo.proveTokenMint.toString());
 
-      return rarityIndex != undefined && farmIndex != undefined
+      return rarityIndex !== undefined && farmIndex !== undefined
         ? { rarityInfo: allRarityInfos[rarityIndex], poolInfo: poolInfo, farmInfo: allFarmInfos[farmIndex] }
         : null;
     })
