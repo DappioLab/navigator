@@ -53,7 +53,7 @@ infos = class InstanceKatana {
 
     const putFilters = [identifierMemcmp, putSizeFilter];
     const putConfig: GetProgramAccountsConfig = { filters: putFilters };
-    const allPutVaultAccount = connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, putConfig);
+    const allPutVaultAccount = await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, putConfig);
 
     let coverVaultInfos = allCoverVaultAccount.map((accountInfo) => {
       return this.parseVault(
@@ -63,7 +63,7 @@ infos = class InstanceKatana {
         coverOptionPrams.get(accountInfo.pubkey.toString())
       );
     });
-    let putVaultInfos = (await allPutVaultAccount).map((accountInfo) => {
+    let putVaultInfos = await allPutVaultAccount.map((accountInfo) => {
       return this.parseVault(
         accountInfo.account.data,
         accountInfo.pubkey,
@@ -370,7 +370,7 @@ async function getOptionPramsMaps(connection: Connection, programId?: PublicKey)
   }
 
   let optionMaps: Map<string, types.OptionParameters> = new Map();
-  allOptionPramAccount.map((accountInfo) => {
+  allOptionPramAccount.forEach((accountInfo) => {
     let optionInfo = parseOptionParameters(accountInfo.account.data, accountInfo.pubkey);
     optionMaps.set(optionInfo.vault.toString(), optionInfo);
   });
