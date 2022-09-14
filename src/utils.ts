@@ -1,19 +1,18 @@
-import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
-import * as sha256 from "js-sha256";
 import {
   PublicKey,
-  SYSVAR_CLOCK_PUBKEY,
   Transaction,
   TransactionInstruction,
   SystemProgram,
-  TransferParams,
   Connection,
   SYSVAR_RENT_PUBKEY,
   Keypair,
   sendAndConfirmTransaction,
+  AccountInfo,
 } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import { publicKey, struct, u64, u32 } from "@project-serum/borsh";
 import BN from "bn.js";
-import { publicKey, struct, u64, u128, u8, bool, u16, u32 } from "@project-serum/borsh";
+import * as sha256 from "js-sha256";
 import request from "graphql-request";
 
 export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection?: Connection, createAta?: boolean) {
@@ -64,20 +63,6 @@ export async function getTokenAccountAmount(connection: Connection, tokenAccount
   return new BN(tokenAccountInfo.amount);
 }
 
-export async function getAllTokenAccount(wallet: PublicKey, connection: Connection): Promise<TokenAccount[]> {
-  const tokenAccountInfos = await (
-    await connection.getTokenAccountsByOwner(wallet, {
-      programId: TOKEN_PROGRAM_ID,
-    })
-  ).value;
-  const tokenAccounts = [];
-  for (const info of tokenAccountInfos) {
-    const tokenAccount = parseTokenAccount(info.account.data, info.pubkey);
-    tokenAccounts.push(tokenAccount);
-  }
-  return tokenAccounts;
-}
-
 export async function getTokenSupply(connection: Connection, tokenMintPubkey: PublicKey) {
   let mintLayout = struct([u32("option"), publicKey("authority"), u64("amount")]);
   let accountInfo = await connection.getAccountInfo(tokenMintPubkey);
@@ -106,31 +91,6 @@ export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey
     keys,
     programId: programId,
   });
-}
-
-export async function getTokenAccount(connection: Connection, tokenAccountPubkey: PublicKey) {
-  let accountInfo = await connection.getAccountInfo(tokenAccountPubkey);
-  return parseTokenAccount(accountInfo?.data, tokenAccountPubkey);
-}
-
-export function parseTokenAccount(data: any, infoPubkey: PublicKey) {
-  let tokenLayout = struct([publicKey("mint"), publicKey("owner"), u64("amount")]);
-  let tokenAccountInfo = tokenLayout.decode(data);
-  let { mint, owner, amount } = tokenAccountInfo;
-  return new TokenAccount(infoPubkey, mint, owner, amount);
-}
-
-export class TokenAccount {
-  infoPubkey: PublicKey;
-  mint: PublicKey;
-  owner: PublicKey;
-  amount: BN;
-  constructor(infoPubkey: PublicKey, mint: PublicKey, owner: PublicKey, amount: BN) {
-    this.infoPubkey = infoPubkey;
-    this.mint = mint;
-    this.owner = owner;
-    this.amount = new BN(amount);
-  }
 }
 
 export function getAnchorInsByIdl(name: string): Buffer {
@@ -264,3 +224,13 @@ export const getTokenList = async () => {
   let tokenInfos: IServicesTokenInfo[] = data.TokenInfos;
   return tokenInfos;
 };
+
+export async function getMultipleAccounts(connection: Connection, keys: PublicKey[], BATCH_SIZE: number = 99) {
+  let accounts: (AccountInfo<Buffer> | null)[] = [];
+  for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+    let slices = keys.slice(i, i + BATCH_SIZE);
+    let results = await connection.getMultipleAccountsInfo(slices);
+    accounts = [...accounts, ...results];
+  }
+  return accounts;
+}

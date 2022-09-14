@@ -1,18 +1,25 @@
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IFarmerInfo, IFarmInfo, IPoolInfo } from "../types";
-import { TokenAccount } from "../utils";
 
 export * from "./ids";
 export * from "./infos";
 export * from "./layouts";
 
 export interface PoolInfo extends IPoolInfo {
+  // poolId
+  // tokenAMint
+  // tokenBMint
+  // lpMint
+
+  // Decoded form account
   version: number;
   status: BN;
   nonce: BN;
   orderNum: BN;
   depth: BN;
+  swapFeeNumerator: BN;
+  swapFeeDenominator: BN;
   coinDecimals: BN;
   pcDecimals: BN;
   state: BN;
@@ -41,15 +48,22 @@ export interface PoolInfo extends IPoolInfo {
   poolTempLpTokenAccount: PublicKey;
   ammOwner: PublicKey;
   pnlOwner: PublicKey;
-  coinAccountAmount?: BN;
-  pcAccountAmount?: BN;
+
+  // Additioal attributes
   srmTokenAccount?: PublicKey;
   ammQuantities?: PublicKey;
-  ammOrderbaseTokenTotal?: BN;
-  ammOrderquoteTokenTotal?: BN;
+  tokenAAmount?: bigint;
+  tokenBAmount?: bigint;
+  lpSupplyAmount?: bigint;
+  lpDecemals?: bigint;
+  ammOrderBaseTokenTotal?: bigint;
+  ammOrderQuoteTokenTotal?: bigint;
 }
 
 export interface FarmInfo extends IFarmInfo {
+  // farmId
+
+  // Decoded form account
   version: number;
   state: BN;
   nonce: BN;
@@ -60,6 +74,8 @@ export interface FarmInfo extends IFarmInfo {
   perShare: BN;
   perBlock: BN;
   lastBlock: BN;
+
+  // Additional attributes
   totalRewardB?: BN;
   perShareB?: BN;
   perBlockB?: BN;
@@ -67,6 +83,16 @@ export interface FarmInfo extends IFarmInfo {
   poolLpTokenAccount?: TokenAccount;
   poolRewardTokenAccount?: TokenAccount;
   poolRewardTokenAccountB?: TokenAccount;
+  poolLpDecimals?: bigint;
+  poolRewardADecimals?: bigint;
+  poolRewardBDecimals?: bigint;
+}
+
+export interface TokenAccount {
+  key: PublicKey;
+  mint: PublicKey;
+  owner: PublicKey;
+  amount: bigint;
 }
 
 export interface FarmerInfo extends IFarmerInfo {

@@ -375,14 +375,12 @@ export { infos };
 
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
-  // this.withdrawFee = withdrawFeeNumerator
-  //   .mul(DIGIT)
-  //   .div(withdrawFeeDenominator);
-  // this.tradingFee = tradeFeeNumerator.mul(DIGIT).div(tradeFeeDenominator);
+
   async updateAmount(connection: Connection) {
     this.poolInfo.AtokenAccountAmount = await getTokenAccountAmount(connection, this.poolInfo.tokenAccountA);
     this.poolInfo.BtokenAccountAmount = await getTokenAccountAmount(connection, this.poolInfo.tokenAccountB);
   }
+
   async calculateDepositRecieve(connection: Connection, AtokenIn: BN, BtokenIN: BN) {
     if (!this.poolInfo.AtokenAccountAmount) {
       await this.updateAmount(connection);

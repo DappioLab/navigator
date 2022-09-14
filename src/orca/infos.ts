@@ -10,7 +10,7 @@ import BN from "bn.js";
 import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper } from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
-import { MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { utils } from "..";
 import * as types from ".";
 import { IServicesTokenInfo } from "../utils";
@@ -21,10 +21,9 @@ infos = class InstanceOrca {
   static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
     let allPools: types.PoolInfo[] = [];
     let accounts: {
-      tokenAccountA: BN;
-      tokenAccountB: BN;
-      LPsupply: BN;
-      LPDecimals: number;
+      tokenAAmount: bigint;
+      tokenBAmount: bigint;
+      lpSupply: bigint;
     }[] = [];
 
     let pubKeys: PublicKey[] = [];
@@ -48,35 +47,33 @@ infos = class InstanceOrca {
       let pubKeysChunk = pubKeys.splice(0, pubKeys.length > 99 ? 99 : pubKeys.length);
       let amountInfos = await connection.getMultipleAccountsInfo(pubKeysChunk);
       for (let i = 0; i < amountInfos.length / 3; i++) {
-        let tokenAAmount = utils.parseTokenAccount(amountInfos[i * 3]?.data, pubKeysChunk[i * 3]).amount;
-        let tokenBAmount = utils.parseTokenAccount(amountInfos[i * 3 + 1]?.data, pubKeysChunk[i * 3 + 1]).amount;
-        let lpSupply = new BN(Number(MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply));
-        let lpDecimals = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).decimals;
+        let tokenAAmount = AccountLayout.decode(amountInfos[i * 3]!.data).amount;
+        let tokenBAmount = AccountLayout.decode(amountInfos[i * 3 + 1]!.data).amount;
+        let lpSupply = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply;
 
         accounts.push({
-          tokenAccountA: tokenAAmount,
-          tokenAccountB: tokenBAmount,
-          LPsupply: lpSupply,
-          LPDecimals: lpDecimals,
+          tokenAAmount,
+          tokenBAmount,
+          lpSupply,
         });
       }
     }
 
     return allPools
       .map((item, index) => {
-        const { tokenAccountA, tokenAccountB, LPsupply, LPDecimals } = accounts[index];
+        const { tokenAAmount, tokenBAmount, lpSupply } = accounts[index];
         let newItem = item;
 
         newItem = {
           ...newItem,
-          tokenSupplyA: tokenAccountA,
-          tokenSupplyB: tokenAccountB,
-          lpSupply: LPsupply,
-          lpDecimals: LPDecimals,
+          tokenSupplyA: tokenAAmount,
+          tokenSupplyB: tokenBAmount,
+          lpSupply,
         };
+
         return newItem;
       })
-      .filter((item) => item.lpSupply.cmpn(0));
+      .filter((item) => (item.lpSupply as bigint) > 0);
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
@@ -90,13 +87,14 @@ infos = class InstanceOrca {
 
     let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
     let balanceAccounts = (await connection.getMultipleAccountsInfo(accounts)) as AccountInfo<Buffer>[];
-    let tokenAccountABalance = utils.parseTokenAccount(balanceAccounts[0].data, accounts[0]).amount;
-    let tokenAccountBBalance = utils.parseTokenAccount(balanceAccounts[1].data, accounts[1]).amount;
-    let lpMintBalance = new BN(Number(MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply));
+    let tokenAccountABalance = AccountLayout.decode(balanceAccounts[0].data).amount;
+    let tokenAccountBBalance = AccountLayout.decode(balanceAccounts[1].data).amount;
+    let lpMintBalance = MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply;
 
     pool.tokenSupplyA = tokenAccountABalance;
     pool.tokenSupplyB = tokenAccountBBalance;
     pool.lpSupply = lpMintBalance;
+
     return pool;
   }
 
@@ -134,10 +132,10 @@ infos = class InstanceOrca {
       lpMint: LPmint,
       tokenAMint: mintA,
       tokenBMint: mintB,
-      lpSupply: new BN(0),
-      tokenSupplyA: new BN(0),
-      tokenSupplyB: new BN(0),
       lpDecimals: LPDecimals,
+      // lpSupply: new BN(0),
+      // tokenSupplyA: new BN(0),
+      // tokenSupplyB: new BN(0),
     };
   }
 
@@ -182,8 +180,8 @@ infos = class InstanceOrca {
 
     tokenAccounts.forEach((account, index) => {
       const key = tokenPublicKeys[index];
-      const token = utils.parseTokenAccount(account?.data, key);
-      let obj: types.ITokenVaultInfo = { mint: token.mint, amount: token.amount, owner: token.owner };
+      const token = AccountLayout.decode(account!.data);
+      let obj: types.ITokenVaultInfo = { mint: token.mint, amount: new BN(Number(token.amount)), owner: token.owner };
       tokenAccountSet.set(key, obj);
       rewardMintPublicKeys.push(token.mint);
     });
@@ -440,28 +438,25 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: types.PoolInfo, public allAPIPools: { [key: string]: types.IOrcaAPI }) {}
 
-  async calculateSwapOutAmount(fromSide: string, amountIn: BN) {
+  async getSwapOutAmount(fromSide: string, amountIn: BN) {
+    let amountOut = new BN(0);
     if (fromSide == "coin") {
-      let x1 = this.poolInfo.tokenSupplyA;
-      let y1 = this.poolInfo.tokenSupplyB;
-      let k = x1.mul(y1);
-      let x2 = x1.add(amountIn);
-      let y2 = k.div(x2);
-      let amountOut = y1.sub(y2);
-
-      return amountOut;
+      let x1 = this.poolInfo.tokenSupplyA as bigint;
+      let y1 = this.poolInfo.tokenSupplyB as bigint;
+      let k = x1 * y1;
+      let x2 = x1 + BigInt(amountIn.toNumber());
+      let y2 = k / x2;
+      amountOut = new BN(Number(y1 - y2));
     } else if (fromSide == "pc") {
-      let x1 = this.poolInfo.tokenSupplyB;
-      let y1 = this.poolInfo.tokenSupplyA;
-      let k = x1.mul(y1);
-      let x2 = x1.add(amountIn);
-      let y2 = k.div(x2);
-      let amountOut = y1.sub(y2);
-
-      return amountOut;
+      let x1 = this.poolInfo.tokenSupplyB as bigint;
+      let y1 = this.poolInfo.tokenSupplyA as bigint;
+      let k = x1 * y1;
+      let x2 = x1 + BigInt(amountIn.toNumber());
+      let y2 = k / x2;
+      amountOut = new BN(Number(y1 - y2));
     }
 
-    return new BN(0);
+    return amountOut;
   }
 
   async getAuthority() {
