@@ -19,10 +19,12 @@ export interface PoolInfo extends IPoolInfo {
   tokenAccountA: PublicKey;
   tokenAccountB: PublicKey;
   feeAccount: PublicKey;
-  tokenSupplyA: BN;
-  tokenSupplyB: BN;
-  lpSupply: BN;
   lpDecimals: number;
+
+  // Additional Attrbutes
+  tokenSupplyA?: bigint;
+  tokenSupplyB?: bigint;
+  lpSupply?: bigint;
 }
 
 export interface FarmInfo extends IFarmInfo {
