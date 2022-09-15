@@ -465,12 +465,12 @@ infos = class InstanceRaydium {
   }
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version: number): Promise<FarmerInfo> {
-    const farmerAcccountInfo = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
+    const farmerAccountInfo = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
     const info =
-      farmerAcccountInfo &&
+      farmerAccountInfo &&
       (await this._getFarmer(
         connection,
-        { pubkey: farmerId, account: farmerAcccountInfo },
+        { pubkey: farmerId, account: farmerAccountInfo },
         version === 3 ? FARMER_LAYOUT_V3_2 : FARMER_LAYOUT_V5_2,
         version as 3 | 5
       ));
@@ -538,7 +538,7 @@ infos = class InstanceRaydium {
     };
   }
 
-  // Inner fucntions used by getFarmerInfos
+  // Inner functions used by getFarmerInfos
   private static async _getFarmRelatedMints(connection: Connection, decoded: any, farmVersion: 3 | 5) {
     let farmIdPubkey = new PublicKey(decoded.id.toBase58());
     let farmAccInfo = await connection.getAccountInfo(farmIdPubkey);
