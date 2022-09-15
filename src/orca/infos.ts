@@ -11,9 +11,8 @@ import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper } from
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
-import { utils } from "..";
 import * as types from ".";
-import { IServicesTokenInfo } from "../utils";
+import { IServicesTokenInfo, getTokenList, getMultipleAccounts } from "../utils";
 import axios from "axios";
 
 let infos: IInstancePool & IInstanceFarm;
@@ -24,6 +23,7 @@ infos = class InstanceOrca {
       tokenAAmount: bigint;
       tokenBAmount: bigint;
       lpSupply: bigint;
+      lpDecimals: number;
     }[] = [];
 
     let pubKeys: PublicKey[] = [];
@@ -43,25 +43,24 @@ infos = class InstanceOrca {
       pubKeys.push(poolData.lpMint);
     }
 
-    while (pubKeys.length > 0) {
-      let pubKeysChunk = pubKeys.splice(0, pubKeys.length > 99 ? 99 : pubKeys.length);
-      let amountInfos = await connection.getMultipleAccountsInfo(pubKeysChunk);
-      for (let i = 0; i < amountInfos.length / 3; i++) {
-        let tokenAAmount = AccountLayout.decode(amountInfos[i * 3]!.data).amount;
-        let tokenBAmount = AccountLayout.decode(amountInfos[i * 3 + 1]!.data).amount;
-        let lpSupply = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply;
+    let amountInfos = await getMultipleAccounts(connection, pubKeys);
+    for (let i = 0; i < amountInfos.length / 3; i++) {
+      let tokenAAmount = AccountLayout.decode(amountInfos[i * 3]!.data).amount;
+      let tokenBAmount = AccountLayout.decode(amountInfos[i * 3 + 1]!.data).amount;
+      let lpSupply = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply;
+      let lpDecimals = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).decimals;
 
-        accounts.push({
-          tokenAAmount,
-          tokenBAmount,
-          lpSupply,
-        });
-      }
+      accounts.push({
+        tokenAAmount,
+        tokenBAmount,
+        lpSupply,
+        lpDecimals,
+      });
     }
 
     return allPools
       .map((item, index) => {
-        const { tokenAAmount, tokenBAmount, lpSupply } = accounts[index];
+        const { tokenAAmount, tokenBAmount, lpSupply, lpDecimals } = accounts[index];
         let newItem = item;
 
         newItem = {
@@ -69,6 +68,7 @@ infos = class InstanceOrca {
           tokenSupplyA: tokenAAmount,
           tokenSupplyB: tokenBAmount,
           lpSupply,
+          lpDecimals,
         };
 
         return newItem;
@@ -82,18 +82,20 @@ infos = class InstanceOrca {
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {
-    let data = (await connection.getAccountInfo(poolId)) as AccountInfo<Buffer>;
-    let pool = this.parsePool(data.data, poolId);
+    const poolInfoAccount = await connection.getAccountInfo(poolId);
+    let pool = this.parsePool(poolInfoAccount?.data as Buffer, poolId);
 
     let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
-    let balanceAccounts = (await connection.getMultipleAccountsInfo(accounts)) as AccountInfo<Buffer>[];
-    let tokenAccountABalance = AccountLayout.decode(balanceAccounts[0].data).amount;
-    let tokenAccountBBalance = AccountLayout.decode(balanceAccounts[1].data).amount;
+    let balanceAccounts = await connection.getMultipleAccountsInfo(accounts);
+    let tokenAccountABalance = AccountLayout.decode(balanceAccounts[0]?.data as Buffer).amount;
+    let tokenAccountBBalance = AccountLayout.decode(balanceAccounts[1]?.data as Buffer).amount;
     let lpMintBalance = MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply;
+    let lpDecimals = MintLayout.decode(balanceAccounts[2]?.data as Buffer).decimals;
 
     pool.tokenSupplyA = tokenAccountABalance;
     pool.tokenSupplyB = tokenAccountBBalance;
     pool.lpSupply = lpMintBalance;
+    pool.lpDecimals = lpDecimals;
 
     return pool;
   }
@@ -117,7 +119,6 @@ infos = class InstanceOrca {
       mintA,
       mintB,
       feeAccount,
-      LPDecimals,
     } = decodedData;
 
     return {
@@ -132,10 +133,6 @@ infos = class InstanceOrca {
       lpMint: LPmint,
       tokenAMint: mintA,
       tokenBMint: mintB,
-      lpDecimals: LPDecimals,
-      // lpSupply: new BN(0),
-      // tokenSupplyA: new BN(0),
-      // tokenSupplyB: new BN(0),
     };
   }
 
@@ -215,7 +212,7 @@ infos = class InstanceOrca {
   }
 
   static async getAllFarmWrappers(connection: Connection): Promise<types.FarmInfoWrapper[]> {
-    const tokenList = await utils.getTokenList();
+    const tokenList = await getTokenList();
     const farms = await this.getAllFarms(connection);
     const pools = await this.getAllPools(connection);
     const aprSet = this._getParsedPoolAndFarmAPR(farms, pools, tokenList);
@@ -277,7 +274,7 @@ infos = class InstanceOrca {
           let stakeRate =
             Number(item.farm.baseTokenVaultAccountData!.amount) /
             10 ** Number(item.farm.baseTokenMintAccountData!.decimals) /
-            (Number(item.lpSupply) / 10 ** item.lpDecimals);
+            (Number(item.lpSupply) / 10 ** item.lpDecimals!);
 
           emissionAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
         }
@@ -302,7 +299,7 @@ infos = class InstanceOrca {
           let stakeRate =
             Number(item.doubleDip.baseTokenVaultAccountData!.amount) /
             10 ** Number(item.doubleDip.baseTokenMintAccountData!.decimals) /
-            (Number(item.lpSupply) / 10 ** item.lpDecimals);
+            (Number(item.lpSupply) / 10 ** item.lpDecimals!);
 
           doubleDipAPR = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
         }
