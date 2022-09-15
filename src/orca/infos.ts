@@ -156,15 +156,15 @@ infos = class InstanceOrca {
       farms.push(farmData);
     });
 
-    let tokenAccountSet = new Map<PublicKey, types.ITokenVaultInfo>();
-    let mintAccountSet = new Map<PublicKey, types.IMintVaultInfo>();
+    let tokenAccountSet = new Map<string, types.ITokenVaultInfo>();
+    let mintAccountSet = new Map<string, types.IMintVaultInfo>();
 
     let tokenAccounts = await getMultipleAccounts(connection, tokenPublicKeys);
     tokenAccounts.forEach((account, index) => {
       const key = tokenPublicKeys[index];
       const token = AccountLayout.decode(account!.data);
       let obj: types.ITokenVaultInfo = { mint: token.mint, amount: new BN(Number(token.amount)), owner: token.owner };
-      tokenAccountSet.set(key, obj);
+      tokenAccountSet.set(key.toString(), obj);
       rewardMintPublicKeys.push(token.mint);
     });
 
@@ -177,24 +177,34 @@ infos = class InstanceOrca {
       let { supply, decimals } = mintData;
       let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
       let obj = { mint: key, supplyDividedByDecimals, decimals };
-      mintAccountSet.set(key, obj);
+      mintAccountSet.set(key.toString(), obj);
     });
 
     farms.forEach((farm) => {
-      farm.baseTokenMintAccountData = mintAccountSet.get(farm.baseTokenMint);
-      farm.baseTokenVaultAccountData = tokenAccountSet.get(farm.baseTokenVault);
-      farm.rewardTokenVaultAccountData = tokenAccountSet.get(farm.rewardTokenVault);
+      farm.baseTokenMintAccountData = mintAccountSet.get(farm.baseTokenMint.toString());
+      farm.baseTokenVaultAccountData = tokenAccountSet.get(farm.baseTokenVault.toString());
+      farm.rewardTokenVaultAccountData = tokenAccountSet.get(farm.rewardTokenVault.toString());
 
-      const rewardMint = tokenAccountSet.get(farm.rewardTokenVault)!.mint;
-      farm.rewardTokenMintAccountData = mintAccountSet.get(rewardMint);
+      const rewardMint = tokenAccountSet.get(farm.rewardTokenVault.toString())!.mint;
+      farm.rewardTokenMintAccountData = mintAccountSet.get(rewardMint.toString());
     });
 
     // store additional attributes for calculate apr
     const tokenList = await getTokenList();
     const pools = await this.getAllPools(connection);
 
+    const farmSet = new Map<string, types.FarmInfo>();
+    const poolSet = new Map<string, types.PoolInfo>();
+
+    farms.forEach((farm) => {
+      farmSet.set(farm.baseTokenMint.toString(), farm);
+    });
+    pools.forEach((pool) => {
+      poolSet.set(pool.lpMint.toString(), pool);
+    });
+
     return farms.map((farm) => {
-      const doubleDip = farms.find((f) => f.baseTokenMint.equals(farm.farmTokenMint));
+      const doubleDip = farmSet.get(farm.farmTokenMint.toString());
       if (doubleDip) {
         farm.doubleDipEmissionsPerSecondNumerator = doubleDip.emissionsPerSecondNumerator;
         farm.doubleDipEmissionsPerSecondDenominator = doubleDip.emissionsPerSecondDenominator;
@@ -202,11 +212,11 @@ infos = class InstanceOrca {
         farm.doubleDipBaseTokenVaultAccountData = doubleDip.baseTokenVaultAccountData;
         farm.doubleDipRewardTokenMintAccountData = doubleDip.rewardTokenMintAccountData;
       }
-      const pool = pools.find((p) => p.lpMint.equals(farm.baseTokenMint));
+      const pool = poolSet.get(farm.baseTokenMint.toString());
       if (pool) {
         let tokenA = tokenList.find((t) => t.mint === pool.tokenAMint.toBase58());
         let tokenB = tokenList.find((t) => t.mint === pool.tokenBMint.toBase58());
-        let rewardToken = tokenList?.find((t) => t.mint === farm.rewardTokenMintAccountData?.mint.toBase58());
+        let rewardToken = tokenList.find((t) => t.mint === farm.rewardTokenMintAccountData?.mint.toBase58());
         farm.tokenAPrice = tokenA?.price;
         farm.tokenADecimals = tokenA?.decimals;
         farm.tokenBPrice = tokenB?.price;
