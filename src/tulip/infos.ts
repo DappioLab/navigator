@@ -123,6 +123,26 @@ infos = class InstanceTulip {
     return this.parseDepositor(depositorAccountInfo.data, depositorId);
   }
 
+  static async getDepositorId(
+    vaultId: PublicKey,
+    userKey: PublicKey,
+    programId: PublicKey = TULIP_VAULT_V2_PROGRAM_ID
+  ): Promise<PublicKey> {
+    return (await this.getDepositorIdWithBump(vaultId, userKey, programId)).pda;
+  }
+
+  static async getDepositorIdWithBump(
+    vaultId: PublicKey,
+    userKey: PublicKey,
+    programId: PublicKey = TULIP_VAULT_V2_PROGRAM_ID
+  ): Promise<{ pda: PublicKey; bump: number }> {
+    let [pda, bump] = await PublicKey.findProgramAddress(
+      [Buffer.from("tracking"), vaultId.toBuffer(), userKey.toBuffer()],
+      programId
+    );
+    return { pda, bump };
+  }
+
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
     const decodeData = DEPOSITOR_LAYOUT.decode(data);
     const {
