@@ -20,16 +20,20 @@ export interface PoolInfo extends IPoolInfo {
   adminKey: PublicKey;
   tokenAccountA: PublicKey;
   tokenAccountB: PublicKey;
-  AtokenAccountAmount?: BN;
-  BtokenAccountAmount?: BN;
-  mintAWrapped?: Boolean;
-  mintAWrapInfo?: WrapInfo;
-  mintBWrapped?: Boolean;
-  mintBWrapInfo?: WrapInfo;
   adminFeeAccountA: PublicKey;
   adminFeeAccountB: PublicKey;
   tradingFee: BN;
   withdrawFee: BN;
+
+  // Additional Attributes
+  mintAWrapped?: Boolean;
+  mintAWrapInfo?: WrapInfo;
+  mintBWrapped?: Boolean;
+  mintBWrapInfo?: WrapInfo;
+  lpSupply?: BN;
+  lpDecimals?: number;
+  AtokenAccountAmount?: BN;
+  BtokenAccountAmount?: BN;
 }
 
 export interface FarmInfo extends IFarmInfo {
