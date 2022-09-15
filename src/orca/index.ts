@@ -60,9 +60,9 @@ export interface FarmInfo extends IFarmInfo {
   rewardTokenPrice?: number;
   doubleDipEmissionsPerSecondNumerator?: BN;
   doubleDipEmissionsPerSecondDenominator?: BN;
-  doubleDipRewardTokenMintAccountData?: IMintVaultInfo | undefined;
-  doubleDipBaseTokenVaultAccountData?: ITokenVaultInfo | undefined;
-  doubleDipBaseTokenMintAccountData?: IMintVaultInfo | undefined;
+  doubleDipRewardTokenMintAccountData?: IMintVaultInfo;
+  doubleDipBaseTokenVaultAccountData?: ITokenVaultInfo;
+  doubleDipBaseTokenMintAccountData?: IMintVaultInfo;
 }
 
 export interface ITokenVaultInfo {
