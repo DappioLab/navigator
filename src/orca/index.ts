@@ -46,6 +46,23 @@ export interface FarmInfo extends IFarmInfo {
   baseTokenMintAccountData: IMintVaultInfo | undefined;
   rewardTokenVaultAccountData: ITokenVaultInfo | undefined;
   rewardTokenMintAccountData: IMintVaultInfo | undefined;
+
+  // Additional Attributes
+  poolId?: PublicKey;
+  tokenSupplyA?: bigint;
+  tokenSupplyB?: bigint;
+  lpSupply?: bigint;
+  lpDecimals?: number;
+  tokenAPrice?: number;
+  tokenADecimals?: number;
+  tokenBPrice?: number;
+  tokenBDecimals?: number;
+  rewardTokenPrice?: number;
+  doubleDipEmissionsPerSecondNumerator?: BN;
+  doubleDipEmissionsPerSecondDenominator?: BN;
+  doubleDipRewardTokenMintAccountData?: IMintVaultInfo | undefined;
+  doubleDipBaseTokenVaultAccountData?: ITokenVaultInfo | undefined;
+  doubleDipBaseTokenMintAccountData?: IMintVaultInfo | undefined;
 }
 
 export interface ITokenVaultInfo {

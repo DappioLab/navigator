@@ -54,17 +54,18 @@ describe("Orca", () => {
     const pools = (await orca.infos.getAllPools(connection)) as PoolInfo[];
     const farms = (await orca.infos.getAllFarmWrappers(connection)) as FarmInfoWrapper[];
     const tokenList = await utils.getTokenList();
+    console.log("# of farms:", farms.length);
 
-    farms.map((farm) => {
-      const aprData = farm.getApr();
-      if (aprData) {
-        let pool = pools.find((item) => item.poolId.equals(aprData!.poolId));
+    farms.forEach((farm) => {
+      const apr = farm.getApr();
+
+      if (apr) {
+        let pool = pools.find((item) => item.poolId.equals(farm.farmInfo.poolId!));
         let tokenA = tokenList.find((t) => t.mint === pool?.tokenAMint.toBase58());
         let tokenB = tokenList.find((t) => t.mint === pool?.tokenBMint.toBase58());
         console.log(tokenA?.symbol, "-", tokenB?.symbol, ":");
-        console.log("pool id:", aprData!.poolId.toBase58());
-        console.log("is emission: ", aprData!.isEmission);
-        console.log("apr", aprData!.apr);
+        console.log("pool id:", pool!.poolId.toBase58());
+        console.log(`apr: ${apr}`);
       }
     });
   });
