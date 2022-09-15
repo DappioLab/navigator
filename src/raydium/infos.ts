@@ -89,7 +89,7 @@ infos = class InstanceRaydium {
       pool.tokenAAmount = accountSet.get(pool.poolCoinTokenAccount)?.tokenAmount;
       pool.tokenBAmount = accountSet.get(pool.poolPcTokenAccount)?.tokenAmount;
       pool.lpSupplyAmount = accountSet.get(pool.lpMint)?.lpSupplyAmount;
-      pool.lpDecemals = accountSet.get(pool.lpMint)?.lpDecimal;
+      pool.lpDecimals = accountSet.get(pool.lpMint)?.lpDecimal;
       pool.ammOrderBaseTokenTotal = accountSet.get(pool.ammOpenOrders)?.baseTokenTotal;
       pool.ammOrderQuoteTokenTotal = accountSet.get(pool.ammOpenOrders)?.quoteTokenTotal;
     });
@@ -132,7 +132,7 @@ infos = class InstanceRaydium {
     pool.tokenAAmount = AccountLayout.decode(tokenAAccountData!.data).amount;
     pool.tokenBAmount = AccountLayout.decode(tokenBAccountData!.data).amount;
     pool.lpSupplyAmount = supply;
-    pool.lpDecemals = BigInt(decimals);
+    pool.lpDecimals = BigInt(decimals);
     pool.ammOrderBaseTokenTotal = BigInt(baseTokenTotal);
     pool.ammOrderQuoteTokenTotal = BigInt(quoteTokenTotal);
 
@@ -721,7 +721,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const coinBalance = poolBalances.coin.balance;
     const pcBalance = poolBalances.pc.balance;
     const lpSupply = Number(this.poolInfo.lpSupplyAmount);
-    const lpDecimals = Number(this.poolInfo.lpDecemals);
+    const lpDecimals = Number(this.poolInfo.lpDecimals);
 
     const coinPrice = tokenAPrice;
     const pcPrice = tokenBPrice;
@@ -746,7 +746,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
         : 0; // 0.03% out of 0.25%(radium swap fee) will deposit into stake
 
     const lpSupply = Number(this.poolInfo.lpSupplyAmount);
-    const lpDecimals = Number(this.poolInfo.lpDecemals);
+    const lpDecimals = Number(this.poolInfo.lpDecimals);
 
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
     const apr = lpValue > 0 ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100 : 0;

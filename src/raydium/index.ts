@@ -49,13 +49,13 @@ export interface PoolInfo extends IPoolInfo {
   ammOwner: PublicKey;
   pnlOwner: PublicKey;
 
-  // Additioal attributes
+  // Additional attributes
   srmTokenAccount?: PublicKey;
   ammQuantities?: PublicKey;
   tokenAAmount?: bigint;
   tokenBAmount?: bigint;
   lpSupplyAmount?: bigint;
-  lpDecemals?: bigint;
+  lpDecimals?: bigint;
   ammOrderBaseTokenTotal?: bigint;
   ammOrderQuoteTokenTotal?: bigint;
 }
