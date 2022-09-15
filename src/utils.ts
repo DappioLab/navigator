@@ -234,3 +234,27 @@ export async function getMultipleAccounts(connection: Connection, keys: PublicKe
   }
   return accounts;
 }
+
+export async function getMultipleAccountsWithKey(publicKeys: PublicKey[], connection: Connection) {
+  let infos: {
+    pubkey: PublicKey;
+    account: AccountInfo<Buffer>;
+  }[] = [];
+  for (
+    let index = 0;
+    index < publicKeys.length;
+    index += publicKeys.length - index > 99 ? 99 : publicKeys.length - index
+  ) {
+    const slice = publicKeys.slice(index, index + publicKeys.length - index > 99 ? 99 : publicKeys.length - index);
+    const result = await connection.getMultipleAccountsInfo(slice);
+    for (let sliceIndex = 0; sliceIndex < slice.length; sliceIndex++) {
+      if (result[sliceIndex]) {
+        infos.push({
+          pubkey: slice[sliceIndex],
+          account: result[sliceIndex]!,
+        });
+      }
+    }
+  }
+  return infos;
+}
