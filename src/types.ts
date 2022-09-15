@@ -170,4 +170,9 @@ export interface IInstanceVault {
     programId?: PublicKey
   ): Promise<{ pda: PublicKey; bump: number }>;
   parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo;
+
+  getWithdrawerId?(vaultId: PublicKey, userKey: PublicKey, programId?: PublicKey): Promise<PublicKey>;
+  getWithdrawer?(connection: Connection, withdrawerId: PublicKey): Promise<IDepositorInfo>;
+  parseWithdrawer?(data: Buffer, withdrawerId: PublicKey): IDepositorInfo;
+  getAllWithdrawers?(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]>;
 }
