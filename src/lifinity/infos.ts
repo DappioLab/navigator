@@ -1,27 +1,31 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { IInstancePool, IPoolInfo, IPoolInfoWrapper } from "../types";
+import { IInstancePool, IPoolInfoWrapper } from "../types";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
+import * as types from ".";
+
+const DIGIT = new BN(10000000000);
 
 let infos: IInstancePool;
 
 infos = class InstanceLifinity {
-  static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
-    const allLifinityAccount = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
+  static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
+    const lifinityAccounts = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
 
-    const poolInfoAndConfigKeys = allLifinityAccount
+    const pools = lifinityAccounts
       .filter((accountInfo) => accountInfo)
       .map((accountInfo, index) => {
-        const poolInfo = this.parsePool(accountInfo!.data, LIFINITY_ALL_AMM_ID[index]);
-        return { poolInfo, poolConfigKey: poolInfo.poolConfig.key };
+        const pool = this.parsePool(accountInfo!.data, LIFINITY_ALL_AMM_ID[index]);
+        return pool;
       });
 
-    const poolConfigInfos = await connection.getMultipleAccountsInfo(poolInfoAndConfigKeys.map((p) => p.poolConfigKey));
+    const poolConfigKeys = pools.map((p) => p.poolConfig.key);
+    const poolConfigInfos = await connection.getMultipleAccountsInfo(poolConfigKeys);
 
-    return poolInfoAndConfigKeys.map((poolInfoAndConfigKey, index) => ({
-      ...poolInfoAndConfigKey.poolInfo,
-      poolConfig: this._parsePoolConfig(poolConfigInfos[index]?.data, poolInfoAndConfigKeys[index].poolConfigKey),
+    return pools.map((pool, index) => ({
+      ...pool,
+      poolConfig: this._parsePoolConfig(poolConfigInfos[index]?.data, pools[index].poolConfig.key),
     }));
   }
 
@@ -30,7 +34,7 @@ infos = class InstanceLifinity {
     return pools.map((pool) => new PoolInfoWrapper(pool));
   }
 
-  static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
+  static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {
     const lifinityAccount = await connection.getAccountInfo(poolId);
     if (!lifinityAccount) throw Error("Could not get Lifinity Account info");
     let poolInfo = this.parsePool(lifinityAccount.data, poolId);
@@ -48,10 +52,9 @@ infos = class InstanceLifinity {
     return new PoolInfoWrapper(pool);
   }
 
-  static parsePool(data: Buffer, poolId: PublicKey): PoolInfo {
+  static parsePool(data: Buffer, poolId: PublicKey): types.PoolInfo {
     const decodedData = LIFINITY_AMM_LAYOUT.decode(data);
     let {
-      index,
       initializerKey,
       initializerDepositTokenAccount,
       initializerReceiveTokenAccount,
@@ -90,7 +93,6 @@ infos = class InstanceLifinity {
 
     return {
       poolId,
-      index: new BN(index),
       initializerKey,
       initializerDepositTokenAccount,
       initializerReceiveTokenAccount,
@@ -111,17 +113,16 @@ infos = class InstanceLifinity {
       poolFeeAccount,
       pythAccount,
       pythPcAccount,
-      poolConfig: { ...defaultPoolConfig, key: configAccount },
+      poolConfig: { ...types.defaultPoolConfig, key: configAccount },
       tradeFee: new BN(tradeFee),
       hostFee: new BN(hostFee),
       curveType: new BN(curveType),
       curveParameters: new BN(curveParameters),
     };
   }
-  private static _parsePoolConfig(data: any, pubkey: PublicKey): PoolConfig {
+  private static _parsePoolConfig(data: any, pubkey: PublicKey): types.PoolConfig {
     const decodedData = CONFIG_LAYOUT.decode(data);
     let {
-      index,
       concentrationRatio,
       lastPrice,
       adjustRatio,
@@ -142,7 +143,6 @@ infos = class InstanceLifinity {
 
     return {
       key: pubkey,
-      index: new BN(index),
       concentrationRatio: new BN(concentrationRatio),
       lastPrice: new BN(lastPrice),
       adjustRatio: new BN(adjustRatio),
@@ -165,80 +165,10 @@ infos = class InstanceLifinity {
 
 export { infos };
 
-export interface PoolInfo extends IPoolInfo {
-  index: BN; // discriminator
-  initializerKey: PublicKey;
-  initializerDepositTokenAccount: PublicKey;
-  initializerReceiveTokenAccount: PublicKey;
-  initializerAmount: BN;
-  takerAmount: BN;
-  initialized: BN;
-  bumpSeed: BN;
-  freezeTrade: BN;
-  freezeDeposit: BN;
-  freezeWithdraw: BN;
-  baseDecimals: BN;
-  tokenProgramId: PublicKey;
-  tokenAAccount: PublicKey;
-  tokenBAccount: PublicKey;
-  poolFeeAccount: PublicKey;
-  pythAccount: PublicKey;
-  pythPcAccount: PublicKey;
-  poolConfig: PoolConfig;
-  tradeFee: BN;
-  hostFee: BN;
-  curveType: BN;
-  curveParameters: BN;
-}
-
-interface PoolConfig {
-  key: PublicKey;
-  index: BN; // discriminator
-  concentrationRatio: BN;
-  lastPrice: BN;
-  adjustRatio: BN;
-  balanceRatio: BN;
-  lastBalancedPrice: BN;
-  configDenominator: BN;
-  pythConfidenceLimit: BN;
-  pythSlotLimit: BN;
-  volumeX: BN;
-  volumeY: BN;
-  volumeXinY: BN;
-  coefficientUp: BN;
-  coefficientDown: BN;
-  oracleStatus: BN;
-  depositCap: BN;
-  configTemp2: BN;
-}
-
 export class PoolInfoWrapper implements IPoolInfoWrapper {
-  constructor(public poolInfo: PoolInfo) {}
+  constructor(public poolInfo: types.PoolInfo) {}
 
   getTargetLiquidity() {
     return this.poolInfo.poolConfig.depositCap;
   }
 }
-
-const DIGIT = new BN(10000000000);
-
-export const defaultPoolConfig: PoolConfig = {
-  key: new PublicKey(0),
-  index: new BN(0),
-  concentrationRatio: new BN(0),
-  lastPrice: new BN(0),
-  adjustRatio: new BN(0),
-  balanceRatio: new BN(0),
-  lastBalancedPrice: new BN(0),
-  configDenominator: new BN(0),
-  pythConfidenceLimit: new BN(0),
-  pythSlotLimit: new BN(0),
-  volumeX: new BN(0),
-  volumeY: new BN(0),
-  volumeXinY: new BN(0),
-  coefficientUp: new BN(0),
-  coefficientDown: new BN(0),
-  oracleStatus: new BN(0),
-  depositCap: new BN(0),
-  configTemp2: new BN(0),
-};

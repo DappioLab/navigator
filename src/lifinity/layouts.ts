@@ -1,16 +1,7 @@
-import {
-  publicKey,
-  struct,
-  u64,
-  u128,
-  u8,
-  bool,
-  u16,
-  i64,
-} from "@project-serum/borsh";
+import { publicKey, struct, u64, u8 } from "@project-serum/borsh";
 
 export const LIFINITY_AMM_LAYOUT = struct([
-  u64("index"),
+  u64("index"), // discriminator
   publicKey("initializerKey"),
   publicKey("initializerDepositTokenAccount"),
   publicKey("initializerReceiveTokenAccount"),
@@ -48,7 +39,7 @@ export const LIFINITY_AMM_LAYOUT = struct([
 ]);
 
 export const CONFIG_LAYOUT = struct([
-  u64("index"),
+  u64("index"), // discriminator
   u64("concentrationRatio"),
   u64("lastPrice"),
   u64("adjustRatio"),
