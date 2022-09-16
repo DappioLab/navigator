@@ -213,11 +213,11 @@ infos = class InstanceSaber {
     const filters = [adminIdMemcmp, sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
     const farmAccounts = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
-    let farms: FarmInfo[] = [];
-    for (let farmAccount of farmAccounts) {
-      let farmInfo = this.parseFarm(farmAccount.account.data, farmAccount.pubkey);
-      farms.push(farmInfo);
-    }
+    let farms: FarmInfo[] = farmAccounts.map((farmAccount) => {
+      let farm = this.parseFarm(farmAccount.account.data, farmAccount.pubkey);
+      return farm;
+    });
+
     return farms;
   }
 
