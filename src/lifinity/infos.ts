@@ -168,7 +168,7 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: types.PoolInfo) {}
 
-  getTargetLiquidity() {
+  getLiquidityUpperCap() {
     return this.poolInfo.poolConfig.depositCap;
   }
 }
