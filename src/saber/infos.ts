@@ -50,11 +50,11 @@ infos = class InstanceSaber {
       }
 
       let wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(poolInfo.tokenAMint));
-      poolInfo.mintAWrapped = Boolean(wrap) ? true : false;
+      poolInfo.mintAWrapped = Boolean(wrap);
       poolInfo.mintAWrapInfo = Boolean(wrap) ? wrap : undefined;
 
       wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(poolInfo.tokenBMint));
-      poolInfo.mintBWrapped = Boolean(wrap) ? true : false;
+      poolInfo.mintBWrapped = Boolean(wrap);
       poolInfo.mintBWrapInfo = Boolean(wrap) ? wrap : undefined;
 
       tokenAccountKeys.push(poolInfo.tokenAccountA);
@@ -112,11 +112,11 @@ infos = class InstanceSaber {
     pool.poolId = poolId;
 
     let wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(pool.tokenAMint));
-    pool.mintAWrapped = Boolean(wrap) ? true : false;
+    pool.mintAWrapped = Boolean(wrap);
     pool.mintAWrapInfo = Boolean(wrap) ? wrap : undefined;
 
     wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(pool.tokenBMint));
-    pool.mintBWrapped = Boolean(wrap) ? true : false;
+    pool.mintBWrapped = Boolean(wrap);
     pool.mintBWrapInfo = Boolean(wrap) ? wrap : undefined;
 
     let accountKeys: PublicKey[] = [];
