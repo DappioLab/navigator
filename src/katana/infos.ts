@@ -226,21 +226,21 @@ infos = class InstanceKatana {
     const accountInfo = (await connection.getAccountInfo(depositorId)) as AccountInfo<Buffer>;
     return this.parseDepositor(accountInfo.data, depositorId);
   }
-  static async getDepositorId(
+  static getDepositorId(
     vaultId: PublicKey,
     userKey: PublicKey,
     programId: PublicKey = KATANA_PUT_PROGRAM_ID
-  ): Promise<PublicKey> {
-    return (await this.getDepositorIdWithBump(vaultId, userKey, programId)).pda;
+  ): PublicKey {
+    return ( this.getDepositorIdWithBump(vaultId, userKey, programId)).pda;
   }
-  static async getDepositorIdWithBump(
+  static getDepositorIdWithBump(
     vaultId: PublicKey,
     userKey: PublicKey,
     programId: PublicKey = KATANA_PUT_PROGRAM_ID
-  ): Promise<{ pda: PublicKey; bump: number }> {
+  ): { pda: PublicKey; bump: number } {
     let prefix = "user-account";
     let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
-    let address = await PublicKey.findProgramAddress([minerBytes, userKey.toBuffer(), vaultId.toBuffer()], programId);
+    let address =  PublicKey.findProgramAddressSync([minerBytes, userKey.toBuffer(), vaultId.toBuffer()], programId);
     return { pda: address[0], bump: address[1] };
   }
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {

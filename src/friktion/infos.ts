@@ -52,11 +52,9 @@ infos = class InstanceFriktion {
   }
   static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
     let vaults = await this.getAllVaults(connection);
-    let allPendingDepositKeys: PublicKey[] = await Promise.all(
-      vaults.map((vault) => {
-        return this.getDepositorId(vault.vaultId, userKey);
-      })
-    );
+    let allPendingDepositKeys: PublicKey[] = vaults.map((vault) => {
+      return this.getDepositorId(vault.vaultId, userKey);
+    });
 
     let allPendingDepositMeta = await utils.getMultipleAccountsWithKey(allPendingDepositKeys, connection);
     return allPendingDepositMeta
@@ -82,11 +80,7 @@ infos = class InstanceFriktion {
     depositor.type = types.DepositorType.PendingDeposit;
     return depositor;
   }
-  static async getDepositorId(
-    vaultId: PublicKey,
-    userKey: PublicKey,
-    programId: PublicKey = VOLT_PROGRAM_ID
-  ): Promise<PublicKey> {
+  static getDepositorId(vaultId: PublicKey, userKey: PublicKey, programId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [vaultId.toBuffer(), userKey.toBuffer(), new Uint8Array(Buffer.from("pendingDeposit", "utf-8"))],
       programId
@@ -98,16 +92,10 @@ infos = class InstanceFriktion {
     depositor.type = types.DepositorType.PendingDeposit;
     return depositor;
   }
-  static async getWithdrawerId(
-    vaultId: PublicKey,
-    userKey: PublicKey,
-    programId: PublicKey = VOLT_PROGRAM_ID
-  ): Promise<PublicKey> {
-    return (
-      await PublicKey.findProgramAddress(
-        [vaultId.toBuffer(), userKey.toBuffer(), new Uint8Array(Buffer.from("pendingWithdrawal", "utf-8"))],
-        programId
-      )
+  static getWithdrawerId(vaultId: PublicKey, userKey: PublicKey, programId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [vaultId.toBuffer(), userKey.toBuffer(), new Uint8Array(Buffer.from("pendingWithdrawal", "utf-8"))],
+      programId
     )[0];
   }
   static async getWithdrawer(connection: Connection, withdrawerId: PublicKey): Promise<types.DepositorInfo> {
@@ -125,11 +113,9 @@ infos = class InstanceFriktion {
   }
   static async getAllWithdrawers(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
     let vaults = await this.getAllVaults(connection);
-    let allPendingWithdrawalKeys: PublicKey[] = await Promise.all(
-      vaults.map((vault) => {
-        return this.getWithdrawerId(vault.vaultId, userKey);
-      })
-    );
+    let allPendingWithdrawalKeys: PublicKey[] = vaults.map((vault) => {
+      return this.getWithdrawerId(vault.vaultId, userKey);
+    });
     let allPendingWithdrawalMeta = await utils.getMultipleAccountsWithKey(allPendingWithdrawalKeys, connection);
     return allPendingWithdrawalMeta
       .filter((meta) => {
