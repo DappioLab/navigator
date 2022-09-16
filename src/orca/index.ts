@@ -49,6 +49,7 @@ export interface FarmInfo extends IFarmInfo {
 
   // Additional Attributes
   poolId?: PublicKey;
+  isDoubleDip?: boolean;
   tokenSupplyA?: bigint;
   tokenSupplyB?: bigint;
   lpSupply?: bigint;

@@ -205,13 +205,16 @@ infos = class InstanceOrca {
 
     return farms.map((farm) => {
       const doubleDip = farmSet.get(farm.farmTokenMint.toString());
+      farm.isDoubleDip = false;
       if (doubleDip) {
+        farm.isDoubleDip = true;
         farm.doubleDipEmissionsPerSecondNumerator = doubleDip.emissionsPerSecondNumerator;
         farm.doubleDipEmissionsPerSecondDenominator = doubleDip.emissionsPerSecondDenominator;
         farm.doubleDipBaseTokenMintAccountData = doubleDip.baseTokenMintAccountData;
         farm.doubleDipBaseTokenVaultAccountData = doubleDip.baseTokenVaultAccountData;
         farm.doubleDipRewardTokenMintAccountData = doubleDip.rewardTokenMintAccountData;
       }
+
       const pool = poolSet.get(farm.baseTokenMint.toString());
       if (pool) {
         let tokenA = tokenList.find((t) => t.mint === pool.tokenAMint.toBase58());
@@ -402,18 +405,18 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     let baseTokenVaultAccountData: types.ITokenVaultInfo;
     let baseTokenMintAccountData: types.IMintVaultInfo;
 
-    if (!this.farmInfo.doubleDipRewardTokenMintAccountData) {
+    if (this.farmInfo.isDoubleDip) {
+      emissionsPerSecondNumerator = this.farmInfo.doubleDipEmissionsPerSecondNumerator!;
+      emissionsPerSecondDenominator = this.farmInfo.doubleDipEmissionsPerSecondDenominator!;
+      rewardTokenMintAccountData = this.farmInfo.doubleDipRewardTokenMintAccountData!;
+      baseTokenVaultAccountData = this.farmInfo.doubleDipBaseTokenVaultAccountData!;
+      baseTokenMintAccountData = this.farmInfo.doubleDipBaseTokenMintAccountData!;
+    } else {
       emissionsPerSecondNumerator = this.farmInfo.emissionsPerSecondNumerator;
       emissionsPerSecondDenominator = this.farmInfo.emissionsPerSecondDenominator;
       rewardTokenMintAccountData = this.farmInfo.rewardTokenMintAccountData!;
       baseTokenVaultAccountData = this.farmInfo.baseTokenVaultAccountData!;
       baseTokenMintAccountData = this.farmInfo.baseTokenMintAccountData!;
-    } else {
-      emissionsPerSecondNumerator = this.farmInfo.doubleDipEmissionsPerSecondNumerator!;
-      emissionsPerSecondDenominator = this.farmInfo.doubleDipEmissionsPerSecondDenominator!;
-      rewardTokenMintAccountData = this.farmInfo.doubleDipRewardTokenMintAccountData;
-      baseTokenVaultAccountData = this.farmInfo.doubleDipBaseTokenVaultAccountData!;
-      baseTokenMintAccountData = this.farmInfo.doubleDipBaseTokenMintAccountData!;
     }
 
     if (
