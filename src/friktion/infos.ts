@@ -80,10 +80,11 @@ infos = class InstanceFriktion {
     if (!depositorAccount) {
       throw new Error("Depositor account not found");
     }
-    const depositor = this.parseDepositor(depositorAccount.data, depositorId);
-    depositor.depositorId = depositorId;
-    depositor.type = types.DepositorType.PendingDeposit;
-    return depositor;
+    return {
+      ...this.parseDepositor(depositorAccount.data, depositorId),
+      depositorId: depositorId,
+      type: types.DepositorType.PendingDeposit,
+    };
   }
   static getDepositorId(vaultId: PublicKey, userKey: PublicKey, programId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
@@ -92,10 +93,11 @@ infos = class InstanceFriktion {
     )[0];
   }
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
-    const depositor = USER_PENDING_LAYOUT.decode(Buffer.from(data)) as types.DepositorInfo;
-    depositor.depositorId = depositorId;
-    depositor.type = types.DepositorType.PendingDeposit;
-    return depositor;
+    return {
+      ...(USER_PENDING_LAYOUT.decode(Buffer.from(data)) as types.DepositorInfo),
+      depositorId: depositorId,
+      type: types.DepositorType.PendingDeposit,
+    };
   }
   static getWithdrawerId(vaultId: PublicKey, userKey: PublicKey, programId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
@@ -108,10 +110,11 @@ infos = class InstanceFriktion {
     if (!withdrawerAccount) {
       throw new Error("Withdrawer account not found");
     }
-    const withdrawer = this.parseWithdrawer(withdrawerAccount.data, withdrawerId);
-    withdrawer.depositorId = withdrawerId;
-    withdrawer.type = types.DepositorType.PendingWithdrawal;
-    return withdrawer;
+    return {
+      ...this.parseWithdrawer(withdrawerAccount.data, withdrawerId),
+      depositorId: withdrawerId,
+      type: types.DepositorType.PendingWithdrawal,
+    };
   }
   static parseWithdrawer(data: Buffer, withdrawerId: PublicKey): types.DepositorInfo {
     return this.parseDepositor(data, withdrawerId);
@@ -139,13 +142,11 @@ infos = class InstanceFriktion {
     let sizeFilter: DataSizeFilter = { dataSize: ROUND_LAYOUT.span };
     let config: GetProgramAccountsConfig = { filters: [sizeFilter] };
     let allRoundKeys = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
-
     return new Map(
-      allRoundKeys
-        .map((meta) => {
-          return { ...ROUND_LAYOUT.decode(meta.account.data), roundId: meta.pubkey } as types.RoundInfo;
-        })
-        .map((i) => [i.roundId.toString(), i])
+      allRoundKeys.map((key) => [
+        key.pubkey.toString(),
+        { ...ROUND_LAYOUT.decode(key.account.data), roundId: key.pubkey } as types.RoundInfo,
+      ])
     );
   }
 };
