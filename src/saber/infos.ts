@@ -1,14 +1,14 @@
 import { Connection, MemcmpFilter, GetProgramAccountsConfig, DataSizeFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
-import { computeD, getTokenAccountAmount, normalizedTradeFee, N_COINS, ZERO } from "../utils";
-import { ADMIN_KEY, QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
+import { computeD, getMultipleAccounts, normalizedTradeFee, N_COINS, ZERO } from "../utils";
+import { QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT, FARMER_LAYOUT, WRAP_LAYOUT } from "./layouts";
-import { MintLayout } from "@solana/spl-token-v2";
-import { defaultWrap, FarmerInfo, FarmInfo, PoolInfo, WrapInfo } from ".";
+import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
+import { FarmerInfo, FarmInfo, PoolInfo, WrapInfo } from ".";
 
 /**
- * tradingFee and withdrawFee are in units of 6 decimals
+ * tradingFee and withdrawFee are in units of 10 decimals
  */
 
 const DIGIT = new BN(10000000000);
@@ -17,24 +17,21 @@ let infos: IInstancePool & IInstanceFarm;
 
 infos = class InstanceSaber {
   static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
-    const adminIdMemcmp: MemcmpFilter = {
-      memcmp: {
-        offset: 75,
-        bytes: ADMIN_KEY.toString(),
-      },
-    };
     const sizeFilter: DataSizeFilter = {
       dataSize: 395,
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allSaberAccount = await connection.getProgramAccounts(POOL_PROGRAM_ID, config);
-    let infoArray: PoolInfo[] = [];
-    let wrapInfoArray = await this._getAllWraps(connection);
+    const poolAccounts = await connection.getProgramAccounts(POOL_PROGRAM_ID, config);
+    let pools: PoolInfo[] = [];
+    let wrapInfos = await this._getAllWraps(connection);
 
-    // Dead Pools
-    for (let account of allSaberAccount) {
-      const poolId = account.pubkey;
+    let tokenAccountKeys: PublicKey[] = [];
+    let mintAccountKeys: PublicKey[] = [];
+
+    // Skip Dead Pools
+    for (let poolAccount of poolAccounts) {
+      const poolId = poolAccount.pubkey;
 
       if (
         poolId.toString() == "LeekqF2NMKiFNtYD6qXJHZaHx4hUdj4UiPu4t8sz7uK" ||
@@ -47,25 +44,60 @@ infos = class InstanceSaber {
       }
 
       const poolAuthority = await this._getPoolAuthority(poolId);
-      let saberAccountInfo = await this.parsePool(account.account.data, poolId, poolAuthority);
-      if (saberAccountInfo.isPaused) {
+      let poolInfo = this.parsePool(poolAccount.account.data, poolId, poolAuthority);
+      if (poolInfo.isPaused) {
         continue;
       }
-      let mintAwrapped = await this._checkWrapped(saberAccountInfo.tokenAMint, wrapInfoArray);
-      saberAccountInfo.mintAWrapped = mintAwrapped[0];
-      if (mintAwrapped[0]) {
-        saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
-      }
-      let mintBwrapped = await this._checkWrapped(saberAccountInfo.tokenBMint, wrapInfoArray);
-      saberAccountInfo.mintBWrapped = mintBwrapped[0];
-      if (mintBwrapped[0]) {
-        saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
-      }
 
-      infoArray.push(saberAccountInfo);
+      let wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(poolInfo.tokenAMint));
+      poolInfo.mintAWrapped = Boolean(wrap);
+      poolInfo.mintAWrapInfo = Boolean(wrap) ? wrap : undefined;
+
+      wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(poolInfo.tokenBMint));
+      poolInfo.mintBWrapped = Boolean(wrap);
+      poolInfo.mintBWrapInfo = Boolean(wrap) ? wrap : undefined;
+
+      tokenAccountKeys.push(poolInfo.tokenAccountA);
+      tokenAccountKeys.push(poolInfo.tokenAccountB);
+      mintAccountKeys.push(poolInfo.lpMint);
+
+      pools.push(poolInfo);
     }
 
-    return infoArray;
+    const tokenAccounts = await getMultipleAccounts(connection, tokenAccountKeys);
+    const mintAccounts = await getMultipleAccounts(connection, mintAccountKeys);
+
+    interface AdditionalInfoWrapper {
+      tokenAmount?: BN;
+      lpSupplyAmount?: BN;
+      lpDecimal?: number;
+    }
+    let accountSet = new Map<PublicKey, AdditionalInfoWrapper>();
+
+    // CAUTION: The order of 2 loops are dependent
+    tokenAccounts.forEach((account) => {
+      const parsedAccount = AccountLayout.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
+        tokenAmount: new BN(Number(parsedAccount.amount)),
+      });
+    });
+
+    mintAccounts.forEach((account) => {
+      const parsedAccount = MintLayout.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
+        lpDecimal: parsedAccount.decimals,
+        lpSupplyAmount: new BN(Number(parsedAccount.supply)),
+      });
+    });
+
+    pools.forEach((pool) => {
+      pool.AtokenAccountAmount = accountSet.get(pool.tokenAccountA)?.tokenAmount;
+      pool.BtokenAccountAmount = accountSet.get(pool.tokenAccountB)?.tokenAmount;
+      pool.lpSupply = accountSet.get(pool.lpMint)?.lpSupplyAmount;
+      pool.lpDecimals = accountSet.get(pool.lpMint)?.lpDecimal;
+    });
+
+    return pools;
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
@@ -73,36 +105,39 @@ infos = class InstanceSaber {
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
-    // const adminIdMemcmp: MemcmpFilter = {
-    //   memcmp: {
-    //     offset: 75,
-    //     bytes: ADMIN_KEY.toString(),
-    //   },
-    // };
-    // const sizeFilter: DataSizeFilter = {
-    //   dataSize: 395,
-    // };
-    // const filters = [adminIdMemcmp, sizeFilter];
-    // const allFarmInfo = await this.getAllFarms(connection, QUARRY_REWARDER);
-
-    const wrapInfoArray = await this._getAllWraps(connection);
-    const saberAccount: any = await connection.getAccountInfo(poolId);
+    const wrapInfos = await this._getAllWraps(connection);
+    const poolAccount: any = await connection.getAccountInfo(poolId);
     const poolAuthority = await this._getPoolAuthority(poolId);
-    const saberAccountInfo = this.parsePool(saberAccount.data, poolId, poolAuthority);
-    const mintAwrapped = await this._checkWrapped(saberAccountInfo.tokenAMint, wrapInfoArray);
+    const pool = this.parsePool(poolAccount.data, poolId, poolAuthority);
+    pool.poolId = poolId;
 
-    saberAccountInfo.mintAWrapped = mintAwrapped[0];
-    if (mintAwrapped[0]) {
-      saberAccountInfo.mintAWrapInfo = mintAwrapped[1];
-    }
-    let mintBwrapped = await this._checkWrapped(saberAccountInfo.tokenBMint, wrapInfoArray);
-    saberAccountInfo.mintBWrapped = mintBwrapped[0];
-    if (mintBwrapped[0]) {
-      saberAccountInfo.mintBWrapInfo = mintBwrapped[1];
-    }
-    saberAccountInfo.poolId = poolId;
+    let wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(pool.tokenAMint));
+    pool.mintAWrapped = Boolean(wrap);
+    pool.mintAWrapInfo = Boolean(wrap) ? wrap : undefined;
 
-    return saberAccountInfo;
+    wrap = wrapInfos.find((wrapInfo) => wrapInfo.wrappedTokenMint.equals(pool.tokenBMint));
+    pool.mintBWrapped = Boolean(wrap);
+    pool.mintBWrapInfo = Boolean(wrap) ? wrap : undefined;
+
+    let accountKeys: PublicKey[] = [];
+    accountKeys.push(pool.tokenAccountA);
+    accountKeys.push(pool.tokenAccountB);
+    accountKeys.push(pool.lpMint);
+
+    const additionalAccounts = await getMultipleAccounts(connection, accountKeys);
+    // NOTICE: The index used to assign account data needs to be consistent to the order of public keys
+    const tokenAAccountData = additionalAccounts[0];
+    const tokenBAccountData = additionalAccounts[1];
+    const mintAccountData = additionalAccounts[2];
+
+    const { supply, decimals } = MintLayout.decode(mintAccountData.account!.data);
+
+    pool.AtokenAccountAmount = new BN(Number(AccountLayout.decode(tokenAAccountData.account!.data).amount));
+    pool.BtokenAccountAmount = new BN(Number(AccountLayout.decode(tokenBAccountData.account!.data).amount));
+    pool.lpSupply = new BN(Number(supply));
+    pool.lpDecimals = decimals;
+
+    return pool;
   }
 
   static async getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<PoolInfoWrapper> {
@@ -177,13 +212,13 @@ infos = class InstanceSaber {
     };
     const filters = [adminIdMemcmp, sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allFarmAccount = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
-    let allFarmInfo: FarmInfo[] = [];
-    for (let account of allFarmAccount) {
-      let currentFarmInfo = this.parseFarm(account.account.data, account.pubkey);
-      allFarmInfo.push(currentFarmInfo);
-    }
-    return allFarmInfo;
+    const farmAccounts = await connection.getProgramAccounts(QURARRY_MINE_PROGRAM_ID, config);
+    let farms: FarmInfo[] = farmAccounts.map((farmAccount) => {
+      let farm = this.parseFarm(farmAccount.account.data, farmAccount.pubkey);
+      return farm;
+    });
+
+    return farms;
   }
 
   static async getAllFarmWrappers(connection: Connection): Promise<FarmInfoWrapper[]> {
@@ -318,20 +353,20 @@ infos = class InstanceSaber {
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allWrapAccount = await connection.getProgramAccounts(WRAP_PROGRAM_ID, config);
-    let infoArray: WrapInfo[] = [];
-    for (let account of allWrapAccount) {
-      let wrapAccountInfo = this._parseWrap(account.account.data);
-      wrapAccountInfo.wrapAuthority = account.pubkey;
-      infoArray.push(wrapAccountInfo);
-    }
-    return infoArray;
+    const wrapAccounts = await connection.getProgramAccounts(WRAP_PROGRAM_ID, config);
+    let wraps: WrapInfo[] = wrapAccounts.map((wrapAccount) => {
+      let wrap = this._parseWrap(wrapAccount.account.data);
+      wrap.wrapAuthority = wrapAccount.pubkey;
+      return wrap;
+    });
+
+    return wraps;
   }
 
   private static _parseWrap(data: Buffer): WrapInfo {
     const dataBuffer = data as Buffer;
-    const cutttedData = dataBuffer.slice(8);
-    const decodedData = WRAP_LAYOUT.decode(cutttedData);
+    const cutData = dataBuffer.slice(8);
+    const decodedData = WRAP_LAYOUT.decode(cutData);
     let { wrapAuthority, decimal, multiplyer, underlyingWrappedTokenMint, underlyingTokenAccount, wrappedTokenMint } =
       decodedData;
 
@@ -343,16 +378,6 @@ infos = class InstanceSaber {
       underlyingTokenAccount,
       wrappedTokenMint,
     };
-  }
-
-  private static async _checkWrapped(tokenMint: PublicKey, wrapInfoArray: WrapInfo[]): Promise<[boolean, WrapInfo]> {
-    for (let info of wrapInfoArray) {
-      if (info.wrappedTokenMint.equals(tokenMint)) {
-        return [true, info];
-      }
-    }
-
-    return [false, defaultWrap];
   }
 
   private static async _getPoolAuthority(poolId: PublicKey): Promise<PublicKey> {
@@ -376,26 +401,10 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
 
-  async updateAmount(connection: Connection) {
-    this.poolInfo.AtokenAccountAmount = await getTokenAccountAmount(connection, this.poolInfo.tokenAccountA);
-    this.poolInfo.BtokenAccountAmount = await getTokenAccountAmount(connection, this.poolInfo.tokenAccountB);
-  }
-
-  async calculateDepositRecieve(connection: Connection, AtokenIn: BN, BtokenIN: BN) {
-    if (!this.poolInfo.AtokenAccountAmount) {
-      await this.updateAmount(connection);
-    }
-  }
-
-  async getCoinAndPcAmount(conn: Connection, lpAmount: number) {
-    await this.updateAmount(conn);
-
+  getCoinAndPcAmount(lpAmount: number) {
     const coinBalance = this.poolInfo.AtokenAccountAmount!;
     const pcBalance = this.poolInfo.BtokenAccountAmount!;
-    const lpSupply = await conn
-      .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) => new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply)));
-
+    const lpSupply = this.poolInfo.lpSupply!;
     const coinAmountBeforeFee = coinBalance.mul(new BN(lpAmount)).div(lpSupply);
     const coinFee = this.poolInfo.withdrawFee.eq(ZERO)
       ? ZERO
@@ -413,8 +422,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     };
   }
 
-  async getLpAmount(
-    conn: Connection,
+  getLpAmount(
     tokenAAmount: number,
     tokenAMint: PublicKey, // the mint of tokenA Amount
     tokenBAmount?: number,
@@ -423,11 +431,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     if (tokenAAmount === 0) {
       return 0;
     }
-    await this.updateAmount(conn);
-    const lpSupply = await conn
-      .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) => new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply)));
-
+    const lpSupply = this.poolInfo.lpSupply!;
     const amp = this.poolInfo.targetAmpFactor;
     const coinBalance = this.poolInfo.AtokenAccountAmount!;
     const pcBalance = this.poolInfo.BtokenAccountAmount!;
@@ -464,11 +468,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpAmount;
   }
 
-  async getLpPrice(conn: Connection, tokenAPrice: number, tokenBPrice: number) {
-    await this.updateAmount(conn);
-    const lpSupply = await conn
-      .getAccountInfo(this.poolInfo.lpMint)
-      .then((accountInfo) => new BN(Number(MintLayout.decode(accountInfo?.data as Buffer).supply)));
+  getLpPrice(tokenAPrice: number, tokenBPrice: number) {
+    const lpSupply = this.poolInfo.lpSupply!;
     if (lpSupply.eq(ZERO)) {
       return 0;
     }
@@ -486,15 +487,9 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  async getApr(conn: Connection, tradingVolumeIn24Hours: number, lpPrice: number) {
-    await this.updateAmount(conn);
-
-    const [lpSupply, lpDecimals] = await conn.getAccountInfo(this.poolInfo.lpMint).then((accountInfo) => {
-      const lpMintInfo = MintLayout.decode(accountInfo?.data as Buffer);
-      const supply = Number(lpMintInfo.supply);
-      const decimals = lpMintInfo.decimals;
-      return [supply, decimals];
-    });
+  getApr(tradingVolumeIn24Hours: number, lpPrice: number) {
+    const lpSupply = Number(this.poolInfo.lpSupply!);
+    const lpDecimals = this.poolInfo.lpDecimals!;
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
     const tradingFee = Number(this.poolInfo.tradingFee) / 10e9;
     const apr = lpValue > 0 ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100 : 0;
@@ -505,10 +500,6 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
-
-  getStakedAmount(): BN {
-    return this.farmInfo.totalTokensDeposited;
-  }
 
   getApr(lpPrice: number, rewardTokenPrice: number) {
     const lpAmount = Number(this.farmInfo.totalTokensDeposited.div(new BN(10).pow(this.farmInfo.tokenMintDecimals)));

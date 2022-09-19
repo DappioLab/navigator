@@ -19,12 +19,12 @@ export interface PoolInfo extends IPoolInfo {
   tokenAccountA: PublicKey;
   tokenAccountB: PublicKey;
   feeAccount: PublicKey;
-  lpDecimals: number;
 
-  // Additional Attrbutes
+  // Additional Attributes
   tokenSupplyA?: bigint;
   tokenSupplyB?: bigint;
   lpSupply?: bigint;
+  lpDecimals?: number;
 }
 
 export interface FarmInfo extends IFarmInfo {
@@ -46,6 +46,25 @@ export interface FarmInfo extends IFarmInfo {
   baseTokenMintAccountData: IMintVaultInfo | undefined;
   rewardTokenVaultAccountData: ITokenVaultInfo | undefined;
   rewardTokenMintAccountData: IMintVaultInfo | undefined;
+
+  // Additional Attributes
+  poolId?: PublicKey;
+  isDoubleDip?: boolean;
+  tokenSupplyA?: bigint;
+  tokenSupplyB?: bigint;
+  lpSupply?: bigint;
+  lpDecimals?: number;
+  tokenAPrice?: number;
+  tokenADecimals?: number;
+  tokenBPrice?: number;
+  tokenBDecimals?: number;
+  rewardTokenPrice?: number;
+  doubleDipRewardTokenPrice?: number;
+  doubleDipEmissionsPerSecondNumerator?: BN;
+  doubleDipEmissionsPerSecondDenominator?: BN;
+  doubleDipRewardTokenMintAccountData?: IMintVaultInfo;
+  doubleDipBaseTokenVaultAccountData?: ITokenVaultInfo;
+  doubleDipBaseTokenMintAccountData?: IMintVaultInfo;
 }
 
 export interface ITokenVaultInfo {

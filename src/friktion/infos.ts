@@ -61,13 +61,15 @@ infos = class InstanceFriktion {
       return this.getDepositorId(vault.vaultId, userKey);
     });
 
-    let allPendingDepositMeta = await utils.getMultipleAccountsWithKey(allPendingDepositKeys, connection);
+    let allPendingDepositMeta = (await utils.getMultipleAccounts(connection, allPendingDepositKeys)).filter((info) =>
+      Boolean(info.account)
+    );
     return allPendingDepositMeta
       .filter((meta) => {
-        return meta.account.data.length > 0;
+        return meta.account!.data.length > 0;
       })
       .map((meta) => {
-        return this.parseDepositor(meta.account.data, meta.pubkey, userKey);
+        return this.parseDepositor(meta.account!.data, meta.pubkey, userKey);
       });
   }
   static async getDepositor(
@@ -129,13 +131,15 @@ infos = class InstanceFriktion {
     let allPendingWithdrawalKeys: PublicKey[] = vaults.map((vault) => {
       return this.getWithdrawerId(vault.vaultId, userKey);
     });
-    let allPendingWithdrawalMeta = await utils.getMultipleAccountsWithKey(allPendingWithdrawalKeys, connection);
+    let allPendingWithdrawalMeta = (await utils.getMultipleAccounts(connection, allPendingWithdrawalKeys)).filter(
+      (info) => Boolean(info.account)
+    );
     return allPendingWithdrawalMeta
       .filter((meta) => {
-        return meta.account.data.length > 0;
+        return meta.account!.data.length > 0;
       })
       .map((meta) => {
-        return this.parseWithdrawer(meta.account.data, meta.pubkey, userKey);
+        return this.parseWithdrawer(meta.account!.data, meta.pubkey, userKey);
       });
   }
   static async getAllRoundSet(connection: Connection) {
