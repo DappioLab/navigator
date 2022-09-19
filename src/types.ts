@@ -55,6 +55,11 @@ export interface IDepositorInfo {
   userKey: PublicKey;
 }
 
+export interface IWithdrawerInfo {
+  withdrawerId: PublicKey;
+  userKey: PublicKey;
+}
+
 // TODO
 export interface IReserveInfo {
   reserveId: PublicKey;
@@ -172,7 +177,7 @@ export interface IInstanceVault {
   parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo;
 
   getWithdrawerId?(vaultId: PublicKey, userKey: PublicKey, programId?: PublicKey): PublicKey;
-  getWithdrawer?(connection: Connection, withdrawerId: PublicKey): Promise<IDepositorInfo>;
-  parseWithdrawer?(data: Buffer, withdrawerId: PublicKey): IDepositorInfo;
-  getAllWithdrawers?(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]>;
+  getWithdrawer?(connection: Connection, withdrawerId: PublicKey): Promise<IWithdrawerInfo>;
+  parseWithdrawer?(data: Buffer, withdrawerId: PublicKey): IWithdrawerInfo;
+  getAllWithdrawers?(connection: Connection, userKey: PublicKey): Promise<IWithdrawerInfo[]>;
 }

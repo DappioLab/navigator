@@ -2,7 +2,7 @@ export * from "./ids";
 export * from "./infos";
 export * from "./layouts";
 import { PublicKey } from "@solana/web3.js";
-import { IDepositorInfo, IVaultInfo } from "../types";
+import { IDepositorInfo, IVaultInfo, IWithdrawerInfo } from "../types";
 import BN from "bn.js";
 export interface VaultInfo extends IVaultInfo {
   // vaultId
@@ -65,12 +65,18 @@ export interface VaultInfo extends IVaultInfo {
 export interface DepositorInfo extends IDepositorInfo {
   // depositorId
   // userKey
-  type: DepositorType;
   initialized: boolean;
   roundNumber: BN;
   amount: BN;
 }
 
+export interface withdrawerInfo extends IWithdrawerInfo {
+  // withdrawerId
+  // userKey
+  initialized: boolean;
+  roundNumber: BN;
+  amount: BN;
+}
 export interface ExtraVaultInfo {
   vaultId: PublicKey;
   isWhitelisted: boolean;
@@ -82,10 +88,6 @@ export interface ExtraVaultInfo {
   targetLeverageLenience: BN;
 }
 
-export enum DepositorType {
-  PendingDeposit,
-  PendingWithdrawal,
-}
 export interface RoundInfo {
   roundId: PublicKey;
   roundNumber: BN;

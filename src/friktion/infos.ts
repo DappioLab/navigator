@@ -69,8 +69,6 @@ infos = class InstanceFriktion {
       .map((meta) => {
         return {
           ...this.parseDepositor(meta.account.data, meta.pubkey),
-          depositorId: meta.pubkey,
-          type: types.DepositorType.PendingDeposit,
           userKey: userKey,
         };
       });
@@ -80,11 +78,7 @@ infos = class InstanceFriktion {
     if (!depositorAccount) {
       throw new Error("Depositor account not found");
     }
-    return {
-      ...this.parseDepositor(depositorAccount.data, depositorId),
-      depositorId: depositorId,
-      type: types.DepositorType.PendingDeposit,
-    };
+    return this.parseDepositor(depositorAccount.data, depositorId);
   }
   static getDepositorId(vaultId: PublicKey, userKey: PublicKey, programId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
@@ -96,7 +90,6 @@ infos = class InstanceFriktion {
     return {
       ...(USER_PENDING_LAYOUT.decode(Buffer.from(data)) as types.DepositorInfo),
       depositorId: depositorId,
-      type: types.DepositorType.PendingDeposit,
     };
   }
   static getWithdrawerId(vaultId: PublicKey, userKey: PublicKey, programId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
@@ -105,21 +98,20 @@ infos = class InstanceFriktion {
       programId
     )[0];
   }
-  static async getWithdrawer(connection: Connection, withdrawerId: PublicKey): Promise<types.DepositorInfo> {
+  static async getWithdrawer(connection: Connection, withdrawerId: PublicKey): Promise<types.withdrawerInfo> {
     const withdrawerAccount = await connection.getAccountInfo(withdrawerId);
     if (!withdrawerAccount) {
       throw new Error("Withdrawer account not found");
     }
+    return this.parseWithdrawer(withdrawerAccount.data, withdrawerId);
+  }
+  static parseWithdrawer(data: Buffer, withdrawerId: PublicKey): types.withdrawerInfo {
     return {
-      ...this.parseWithdrawer(withdrawerAccount.data, withdrawerId),
-      depositorId: withdrawerId,
-      type: types.DepositorType.PendingWithdrawal,
+      ...(USER_PENDING_LAYOUT.decode(Buffer.from(data)) as types.withdrawerInfo),
+      withdrawerId: withdrawerId,
     };
   }
-  static parseWithdrawer(data: Buffer, withdrawerId: PublicKey): types.DepositorInfo {
-    return this.parseDepositor(data, withdrawerId);
-  }
-  static async getAllWithdrawers(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
+  static async getAllWithdrawers(connection: Connection, userKey: PublicKey): Promise<types.withdrawerInfo[]> {
     let vaults = await this.getAllVaults(connection);
     let allPendingWithdrawalKeys: PublicKey[] = vaults.map((vault) => {
       return this.getWithdrawerId(vault.vaultId, userKey);
@@ -132,8 +124,6 @@ infos = class InstanceFriktion {
       .map((meta) => {
         return {
           ...this.parseWithdrawer(meta.account.data, meta.pubkey),
-          depositorId: meta.pubkey,
-          type: types.DepositorType.PendingWithdrawal,
           userKey: userKey,
         };
       });
