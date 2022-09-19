@@ -68,7 +68,7 @@ infos = class InstanceFriktion {
       })
       .map((meta) => {
         return {
-          ...(USER_PENDING_LAYOUT.decode(meta.account.data) as types.DepositorInfo),
+          ...this.parseDepositor(meta.account.data, meta.pubkey),
           depositorId: meta.pubkey,
           type: types.DepositorType.PendingDeposit,
           userKey: userKey,
@@ -80,7 +80,7 @@ infos = class InstanceFriktion {
     if (!depositorAccount) {
       throw new Error("Depositor account not found");
     }
-    const depositor = USER_PENDING_LAYOUT.decode(Buffer.from(depositorAccount.data)) as types.DepositorInfo;
+    const depositor = this.parseDepositor(depositorAccount.data, depositorId);
     depositor.depositorId = depositorId;
     depositor.type = types.DepositorType.PendingDeposit;
     return depositor;
@@ -108,7 +108,7 @@ infos = class InstanceFriktion {
     if (!withdrawerAccount) {
       throw new Error("Withdrawer account not found");
     }
-    const withdrawer = USER_PENDING_LAYOUT.decode(Buffer.from(withdrawerAccount.data)) as types.DepositorInfo;
+    const withdrawer = this.parseWithdrawer(withdrawerAccount.data, withdrawerId);
     withdrawer.depositorId = withdrawerId;
     withdrawer.type = types.DepositorType.PendingWithdrawal;
     return withdrawer;
@@ -128,7 +128,7 @@ infos = class InstanceFriktion {
       })
       .map((meta) => {
         return {
-          ...(USER_PENDING_LAYOUT.decode(meta.account.data) as types.DepositorInfo),
+          ...this.parseWithdrawer(meta.account.data, meta.pubkey),
           depositorId: meta.pubkey,
           type: types.DepositorType.PendingWithdrawal,
           userKey: userKey,
