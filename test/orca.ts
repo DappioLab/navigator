@@ -58,14 +58,16 @@ describe("Orca", () => {
 
     farms.forEach((farm) => {
       const apr = farm.getApr();
+      const doubleDipApr = farm.getApr(true);
 
-      if (apr) {
+      if (apr || doubleDipApr) {
         let pool = pools.find((item) => item.poolId.equals(farm.farmInfo.poolId!));
         let tokenA = tokenList.find((t) => t.mint === pool?.tokenAMint.toBase58());
         let tokenB = tokenList.find((t) => t.mint === pool?.tokenBMint.toBase58());
         console.log(tokenA?.symbol, "-", tokenB?.symbol, ":");
         console.log("pool id:", pool!.poolId.toBase58());
         console.log(`apr: ${apr}`);
+        console.log(`apr (double dip): ${doubleDipApr}\n`);
       }
     });
   });
