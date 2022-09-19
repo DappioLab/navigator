@@ -39,11 +39,10 @@ describe("Friktion", () => {
     let wallet = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
     let vaults = await friktion.infos.getAllVaults(connection);
     let userDeposits = await friktion.infos.getAllDepositors(connection, wallet);
-    console.table(vaults,["roundNumber","roundInfos"]);
+    console.table(vaults, ["roundNumber", "roundInfos"]);
     console.table(userDeposits, ["depositorId"]);
-    let withdrawer = friktion.infos.getAllWithdrawers
-      ? await friktion.infos.getAllWithdrawers(connection, wallet)
-      : undefined;
+    let withdrawer = await friktion.infos.getAllWithdrawers!(connection, wallet);
+
     console.table(withdrawer, ["depositorId"]);
   });
 });
