@@ -12,7 +12,7 @@ let infos: IInstanceVault;
 export { infos };
 infos = class InstanceFriktion {
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
-    let rounds = await getAllRoundSet(connection);
+    let rounds = await this.getAllRoundSet(connection);
     const sizeFilter: DataSizeFilter = {
       dataSize: VOLT_VAULT_LAYOUT.span,
     };
@@ -20,12 +20,9 @@ infos = class InstanceFriktion {
     const config: GetProgramAccountsConfig = { filters: filters };
     const allVaultAccount = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
     return allVaultAccount.map((account) => {
-      const vault = VOLT_VAULT_LAYOUT.decode(Buffer.from(account.account.data)) as types.VaultInfo;
-      vault.vaultId = account.pubkey;
-      vault.shareMint = vault.vaultMint;
-      vault.roundInfos = [];
+      const vault = this.parseVault(account.account.data, account.pubkey);
       for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
-        let roundId = new VaultInfoWrapper(vault).findRoundInfoAddress(new BN(round));
+        let roundId = new VaultInfoWrapper(vault).getRoundInfoAddress(new BN(round));
         let roundInfo = rounds.get(roundId.toString());
         if (roundInfo) {
           vault.roundInfos.push(roundInfo);
@@ -36,18 +33,26 @@ infos = class InstanceFriktion {
   }
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
     const vaultAccount = await connection.getAccountInfo(vaultId);
+    let rounds = await this.getAllRoundSet(connection);
     if (!vaultAccount) {
       throw new Error("Vault account not found");
     }
-    const vault = VOLT_VAULT_LAYOUT.decode(Buffer.from(vaultAccount?.data)) as types.VaultInfo;
-    vault.vaultId = vaultId;
-    vault.shareMint = vault.vaultMint;
+    const vault = this.parseVault(vaultAccount.data, vaultId);
+    for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
+      let roundId = new VaultInfoWrapper(vault).getRoundInfoAddress(new BN(round));
+      let roundInfo = rounds.get(roundId.toString());
+      if (roundInfo) {
+        vault.roundInfos.push(roundInfo);
+      }
+    }
+
     return vault;
   }
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     const vault = VOLT_VAULT_LAYOUT.decode(Buffer.from(data)) as types.VaultInfo;
     vault.vaultId = vaultId;
     vault.shareMint = vault.vaultMint;
+    vault.roundInfos = [];
     return vault;
   }
   static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
@@ -130,22 +135,35 @@ infos = class InstanceFriktion {
         };
       });
   }
+  static async getAllRoundSet(connection: Connection) {
+    let sizeFilter: DataSizeFilter = { dataSize: ROUND_LAYOUT.span };
+    let config: GetProgramAccountsConfig = { filters: [sizeFilter] };
+    let allRoundKeys = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
+
+    return new Map(
+      allRoundKeys
+        .map((meta) => {
+          return { ...ROUND_LAYOUT.decode(meta.account.data), roundId: meta.pubkey } as types.RoundInfo;
+        })
+        .map((i) => [i.roundId.toString(), i])
+    );
+  }
 };
 export class VaultInfoWrapper {
   constructor(public readonly vaultInfo: types.VaultInfo) {}
-  findExtraVoltDataAddress(voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+  getExtraVoltDataAddress(voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [this.vaultInfo.vaultId.toBuffer(), new Uint8Array(Buffer.from("extraVoltData", "utf-8"))],
       voltProgramId
     )[0];
   }
-  findEntropyLendingAccountAddress(voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+  getEntropyLendingAccountAddress(voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [this.vaultInfo.vaultId.toBuffer(), new Uint8Array(Buffer.from("entropyLendingAccount", "utf-8"))],
       voltProgramId
     )[0];
   }
-  findRoundInfoAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+  getRoundInfoAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
@@ -155,7 +173,7 @@ export class VaultInfoWrapper {
       voltProgramId
     )[0];
   }
-  findRoundVoltTokensAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+  getRoundVoltTokensAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
@@ -165,7 +183,7 @@ export class VaultInfoWrapper {
       voltProgramId
     )[0];
   }
-  findRoundUnderlyingTokensAddress(
+  getRoundUnderlyingTokensAddress(
     voltKey: PublicKey,
     roundNumber: BN,
     voltProgramId: PublicKey = VOLT_PROGRAM_ID
@@ -179,18 +197,4 @@ export class VaultInfoWrapper {
       voltProgramId
     )[0];
   }
-}
-
-export async function getAllRoundSet(connection: Connection) {
-  let sizeFilter: DataSizeFilter = { dataSize: ROUND_LAYOUT.span };
-  let config: GetProgramAccountsConfig = { filters: [sizeFilter] };
-  let allRoundKeys = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
-
-  return new Map(
-    allRoundKeys
-      .map((meta) => {
-        return { ...ROUND_LAYOUT.decode(meta.account.data), roundId: meta.pubkey } as types.RoundInfo;
-      })
-      .map((i) => [i.roundId.toString(), i])
-  );
 }
