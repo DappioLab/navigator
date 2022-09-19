@@ -225,24 +225,21 @@ export const getTokenList = async () => {
   return tokenInfos;
 };
 
-export async function getMultipleAccounts(connection: Connection, publicKeys: PublicKey[]) {
-  let infos: {
+export async function getMultipleAccounts(connection: Connection, publicKeys: PublicKey[], BATCH_SIZE: number = 99) {
+  let accounts: {
     pubkey: PublicKey;
     account: AccountInfo<Buffer> | null;
   }[] = [];
-  for (
-    let index = 0;
-    index < publicKeys.length;
-    index += publicKeys.length - index > 99 ? 99 : publicKeys.length - index
-  ) {
-    const slice = publicKeys.slice(index, index + publicKeys.length - index > 99 ? 99 : publicKeys.length - index);
-    const result = await connection.getMultipleAccountsInfo(slice);
-    for (let sliceIndex = 0; sliceIndex < slice.length; sliceIndex++) {
-      infos.push({
-        pubkey: slice[sliceIndex],
-        account: result[sliceIndex]!,
-      });
-    }
+  for (let i = 0; i < publicKeys.length; i += BATCH_SIZE) {
+    let slices = publicKeys.slice(i, i + BATCH_SIZE);
+    let results = await connection.getMultipleAccountsInfo(slices);
+    let resultWithKeys = results.map((result, j) => {
+      return {
+        pubkey: slices[j],
+        account: result,
+      };
+    });
+    accounts = accounts.concat(resultWithKeys);
   }
-  return infos;
+  return accounts;
 }
