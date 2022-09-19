@@ -4,6 +4,7 @@ import { IInstancePool, IPoolInfoWrapper } from "../types";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
 import * as types from ".";
+import { getMultipleAccounts } from "../utils";
 
 const DIGIT = new BN(10000000000);
 
@@ -11,21 +12,21 @@ let infos: IInstancePool;
 
 infos = class InstanceLifinity {
   static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
-    const lifinityAccounts = await connection.getMultipleAccountsInfo(LIFINITY_ALL_AMM_ID);
+    const lifinityAccounts = await getMultipleAccounts(connection, LIFINITY_ALL_AMM_ID);
 
     const pools = lifinityAccounts
       .filter((accountInfo) => accountInfo)
-      .map((accountInfo, index) => {
-        const pool = this.parsePool(accountInfo!.data, LIFINITY_ALL_AMM_ID[index]);
+      .map((accountInfo) => {
+        const pool = this.parsePool(accountInfo.account!.data, accountInfo.pubkey);
         return pool;
       });
 
     const poolConfigKeys = pools.map((p) => p.poolConfig.key);
-    const poolConfigInfos = await connection.getMultipleAccountsInfo(poolConfigKeys);
+    const poolConfigInfos = await getMultipleAccounts(connection, poolConfigKeys);
 
     return pools.map((pool, index) => ({
       ...pool,
-      poolConfig: this._parsePoolConfig(poolConfigInfos[index]?.data, pools[index].poolConfig.key),
+      poolConfig: this._parsePoolConfig(poolConfigInfos[index].account?.data, pools[index].poolConfig.key),
     }));
   }
 

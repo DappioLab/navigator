@@ -45,10 +45,10 @@ infos = class InstanceOrca {
 
     let amountInfos = await getMultipleAccounts(connection, pubKeys);
     for (let i = 0; i < amountInfos.length / 3; i++) {
-      let tokenAAmount = AccountLayout.decode(amountInfos[i * 3]!.data).amount;
-      let tokenBAmount = AccountLayout.decode(amountInfos[i * 3 + 1]!.data).amount;
-      let lpSupply = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).supply;
-      let lpDecimals = MintLayout.decode(amountInfos[i * 3 + 2]?.data as Buffer).decimals;
+      let tokenAAmount = AccountLayout.decode(amountInfos[i * 3].account!.data).amount;
+      let tokenBAmount = AccountLayout.decode(amountInfos[i * 3 + 1].account!.data).amount;
+      let lpSupply = MintLayout.decode(amountInfos[i * 3 + 2].account?.data as Buffer).supply;
+      let lpDecimals = MintLayout.decode(amountInfos[i * 3 + 2].account?.data as Buffer).decimals;
 
       accounts.push({
         tokenAAmount,
@@ -86,11 +86,11 @@ infos = class InstanceOrca {
     let pool = this.parsePool(poolInfoAccount?.data as Buffer, poolId);
 
     let accounts = [pool.tokenAccountA, pool.tokenAccountB, pool.lpMint];
-    let balanceAccounts = await connection.getMultipleAccountsInfo(accounts);
-    let tokenAccountABalance = AccountLayout.decode(balanceAccounts[0]?.data as Buffer).amount;
-    let tokenAccountBBalance = AccountLayout.decode(balanceAccounts[1]?.data as Buffer).amount;
-    let lpMintBalance = MintLayout.decode(balanceAccounts[2]?.data as Buffer).supply;
-    let lpDecimals = MintLayout.decode(balanceAccounts[2]?.data as Buffer).decimals;
+    let balanceAccounts = await getMultipleAccounts(connection, accounts);
+    let tokenAccountABalance = AccountLayout.decode(balanceAccounts[0].account?.data as Buffer).amount;
+    let tokenAccountBBalance = AccountLayout.decode(balanceAccounts[1].account?.data as Buffer).amount;
+    let lpMintBalance = MintLayout.decode(balanceAccounts[2].account?.data as Buffer).supply;
+    let lpDecimals = MintLayout.decode(balanceAccounts[2].account?.data as Buffer).decimals;
 
     pool.tokenSupplyA = tokenAccountABalance;
     pool.tokenSupplyB = tokenAccountBBalance;
@@ -160,9 +160,9 @@ infos = class InstanceOrca {
     let mintAccountSet = new Map<string, types.IMintVaultInfo>();
 
     let tokenAccounts = await getMultipleAccounts(connection, tokenPublicKeys);
-    tokenAccounts.forEach((account, index) => {
-      const key = tokenPublicKeys[index];
-      const token = AccountLayout.decode(account!.data);
+    tokenAccounts.forEach((account) => {
+      const key = account.pubkey;
+      const token = AccountLayout.decode(account.account!.data);
       let obj: types.ITokenVaultInfo = { mint: token.mint, amount: new BN(Number(token.amount)), owner: token.owner };
       tokenAccountSet.set(key.toString(), obj);
       rewardMintPublicKeys.push(token.mint);
@@ -171,9 +171,9 @@ infos = class InstanceOrca {
     const mintPublicKeys = [...baseMintPublicKeys, ...rewardMintPublicKeys];
     let mintAccounts = await getMultipleAccounts(connection, mintPublicKeys);
 
-    mintAccounts.forEach((account, index) => {
-      const key = mintPublicKeys[index];
-      const mintData = MintLayout.decode(account!.data);
+    mintAccounts.forEach((account) => {
+      const key = account.pubkey;
+      const mintData = MintLayout.decode(account.account!.data);
       let { supply, decimals } = mintData;
       let supplyDividedByDecimals = new BN(Number(supply) / 10 ** decimals);
       let obj = { mint: key, supplyDividedByDecimals, decimals };

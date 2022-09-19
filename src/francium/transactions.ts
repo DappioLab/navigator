@@ -1,4 +1,4 @@
-import { createATAWithoutCheckIx, findAssociatedTokenAddress, wrapNative } from "../utils";
+import { createATAWithoutCheckIx, findAssociatedTokenAddress, getMultipleAccounts, wrapNative } from "../utils";
 import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token-v2";
 import BN from "bn.js";
 import {
@@ -55,10 +55,10 @@ export async function getDepositTx(
   const positionKeySet = await getRaydiumPositionKeySet(wallet, strategy.infoPubkey);
   const initIx = initializeRaydiumPosition(wallet, strategy, positionKeySet);
   let pubkeys = [strategy.lendingPool0, strategy.lendingPool1, strategy.ammId];
-  let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let lending0 = infos.parseReserve(accountsInfo[0]!.data, pubkeys[0]) as ReserveInfo;
-  let lending1 = infos.parseReserve(accountsInfo[1]!.data, pubkeys[1]) as ReserveInfo;
-  let ammInfo = raydiumInfos.parsePool(accountsInfo[2]?.data as Buffer, pubkeys[2]) as RaydiumPoolInfo;
+  let accountsInfo = await getMultipleAccounts(connection, pubkeys);
+  let lending0 = infos.parseReserve(accountsInfo[0].account!.data, pubkeys[0]) as ReserveInfo;
+  let lending1 = infos.parseReserve(accountsInfo[1].account!.data, pubkeys[1]) as ReserveInfo;
+  let ammInfo = raydiumInfos.parsePool(accountsInfo[2].account?.data as Buffer, pubkeys[2]) as RaydiumPoolInfo;
   let serumMarket = await Market.load(connection, ammInfo.serumMarket, undefined, ammInfo.serumProgramId);
 
   preTx.add(initIx);
@@ -110,9 +110,9 @@ export async function getWithdrawTx(
   let cleanUpTx = new Transaction();
 
   let pubkeys = [strategy.ammId, strategy.stakePoolId];
-  let accountsInfo = await connection.getMultipleAccountsInfo(pubkeys);
-  let ammInfo = raydiumInfos.parsePool(accountsInfo[0]?.data as Buffer, pubkeys[0]) as RaydiumPoolInfo;
-  let stakeInfo = raydiumInfos.parseFarm(accountsInfo[1]?.data as Buffer, pubkeys[1]) as RaydiumFarmInfo;
+  let accountsInfo = await getMultipleAccounts(connection, pubkeys);
+  let ammInfo = raydiumInfos.parsePool(accountsInfo[0].account?.data as Buffer, pubkeys[0]) as RaydiumPoolInfo;
+  let stakeInfo = raydiumInfos.parseFarm(accountsInfo[1].account?.data as Buffer, pubkeys[1]) as RaydiumFarmInfo;
   const farmInfoWrapper = new RaydiumFarmInfoWrapper(stakeInfo);
   let serumMarket = await Market.load(connection, ammInfo.serumMarket, undefined, ammInfo.serumProgramId);
 

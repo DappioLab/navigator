@@ -1,11 +1,11 @@
 import { Connection, MemcmpFilter, GetProgramAccountsConfig, DataSizeFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
-import { computeD, getMultipleAccounts, getTokenAccountAmount, normalizedTradeFee, N_COINS, ZERO } from "../utils";
-import { ADMIN_KEY, QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
+import { computeD, getMultipleAccounts, normalizedTradeFee, N_COINS, ZERO } from "../utils";
+import { QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT, FARMER_LAYOUT, WRAP_LAYOUT } from "./layouts";
-import { AccountLayout, MintLayout, RawAccount, RawMint } from "@solana/spl-token-v2";
-import { defaultWrap, FarmerInfo, FarmInfo, PoolInfo, WrapInfo } from ".";
+import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
+import { FarmerInfo, FarmInfo, PoolInfo, WrapInfo } from ".";
 
 /**
  * tradingFee and withdrawFee are in units of 10 decimals
@@ -75,16 +75,16 @@ infos = class InstanceSaber {
     let accountSet = new Map<PublicKey, AdditionalInfoWrapper>();
 
     // CAUTION: The order of 2 loops are dependent
-    tokenAccounts.forEach((account, index) => {
-      const parsedAccount = AccountLayout.decode(account!.data);
-      accountSet.set(tokenAccountKeys[index], {
+    tokenAccounts.forEach((account) => {
+      const parsedAccount = AccountLayout.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
         tokenAmount: new BN(Number(parsedAccount.amount)),
       });
     });
 
-    mintAccounts.forEach((account, index) => {
-      const parsedAccount = MintLayout.decode(account!.data);
-      accountSet.set(mintAccountKeys[index], {
+    mintAccounts.forEach((account) => {
+      const parsedAccount = MintLayout.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
         lpDecimal: parsedAccount.decimals,
         lpSupplyAmount: new BN(Number(parsedAccount.supply)),
       });
@@ -130,10 +130,10 @@ infos = class InstanceSaber {
     const tokenBAccountData = additionalAccounts[1];
     const mintAccountData = additionalAccounts[2];
 
-    const { supply, decimals } = MintLayout.decode(mintAccountData!.data);
+    const { supply, decimals } = MintLayout.decode(mintAccountData.account!.data);
 
-    pool.AtokenAccountAmount = new BN(Number(AccountLayout.decode(tokenAAccountData!.data).amount));
-    pool.BtokenAccountAmount = new BN(Number(AccountLayout.decode(tokenBAccountData!.data).amount));
+    pool.AtokenAccountAmount = new BN(Number(AccountLayout.decode(tokenAAccountData.account!.data).amount));
+    pool.BtokenAccountAmount = new BN(Number(AccountLayout.decode(tokenBAccountData.account!.data).amount));
     pool.lpSupply = new BN(Number(supply));
     pool.lpDecimals = decimals;
 

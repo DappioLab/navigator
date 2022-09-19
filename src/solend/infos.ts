@@ -8,7 +8,7 @@ import {
   SOLEND_PROGRAM_ID,
 } from "./ids";
 import { COLLATERAL_LAYOUT, LOAN_LAYOUT, OBLIGATION_LAYOUT, RESERVE_LAYOUT } from "./layouts";
-import { getTokenList, IServicesTokenInfo } from "../utils";
+import { getMultipleAccounts, getTokenList, IServicesTokenInfo } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";
@@ -140,11 +140,11 @@ infos = class InstanceSolend {
     const obligationKeys = await Promise.all(
       SOLEND_LENDING_MARKET_ID_ALL.map(async (marketId) => await this.getObligationId(marketId, userKey))
     );
-    const obligationAccounts = await connection.getMultipleAccountsInfo(obligationKeys);
+    const obligationAccounts = await getMultipleAccounts(connection, obligationKeys);
     const obligationInfos = obligationAccounts
       .filter((accountInfo) => accountInfo)
       .map((accountInfo, index) => {
-        return this.parseObligation(accountInfo!.data, obligationKeys[index]);
+        return this.parseObligation(accountInfo.account!.data, obligationKeys[index]);
       });
     return obligationInfos;
   }

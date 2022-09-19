@@ -62,24 +62,24 @@ infos = class InstanceRaydium {
     let accountSet = new Map<PublicKey, AdditionalInfoWrapper>();
 
     // CAUTION: The order of 3 loops are dependent
-    tokenAccounts.forEach((account, index) => {
-      const parsedAccount = AccountLayout.decode(account!.data);
-      accountSet.set(tokenAccountKeys[index], {
+    tokenAccounts.forEach((account) => {
+      const parsedAccount = AccountLayout.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
         tokenAmount: parsedAccount.amount,
       });
     });
 
-    mintAccounts.forEach((account, index) => {
-      const parsedAccount = MintLayout.decode(account!.data);
-      accountSet.set(mintAccountKeys[index], {
+    mintAccounts.forEach((account) => {
+      const parsedAccount = MintLayout.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
         lpDecimal: BigInt(parsedAccount.decimals),
         lpSupplyAmount: parsedAccount.supply,
       });
     });
 
-    openOrderAccounts.forEach((account, index) => {
-      const parsedAccount = _OPEN_ORDERS_LAYOUT_V2.decode(account!.data);
-      accountSet.set(openOrderKeys[index], {
+    openOrderAccounts.forEach((account) => {
+      const parsedAccount = _OPEN_ORDERS_LAYOUT_V2.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
         baseTokenTotal: BigInt(parsedAccount.baseTokenTotal),
         quoteTokenTotal: BigInt(parsedAccount.quoteTokenTotal),
       });
@@ -120,17 +120,17 @@ infos = class InstanceRaydium {
 
     const additionalAccounts = await getMultipleAccounts(connection, accountKeys);
 
-    // NOTICE: The index used to assign acccount data needs to be consistent to the order of public keys
+    // NOTICE: The index used to assign account data needs to be consistent to the order of public keys
     const tokenAAccountData = additionalAccounts[0];
     const tokenBAccountData = additionalAccounts[1];
     const mintAccountData = additionalAccounts[2];
     const openOrderData = additionalAccounts[3];
 
-    const { supply, decimals } = MintLayout.decode(mintAccountData!.data);
-    const { baseTokenTotal, quoteTokenTotal } = _OPEN_ORDERS_LAYOUT_V2.decode(openOrderData!.data);
+    const { supply, decimals } = MintLayout.decode(mintAccountData.account!.data);
+    const { baseTokenTotal, quoteTokenTotal } = _OPEN_ORDERS_LAYOUT_V2.decode(openOrderData.account!.data);
 
-    pool.tokenAAmount = AccountLayout.decode(tokenAAccountData!.data).amount;
-    pool.tokenBAmount = AccountLayout.decode(tokenBAccountData!.data).amount;
+    pool.tokenAAmount = AccountLayout.decode(tokenAAccountData.account!.data).amount;
+    pool.tokenBAmount = AccountLayout.decode(tokenBAccountData.account!.data).amount;
     pool.lpSupplyAmount = supply;
     pool.lpDecimals = BigInt(decimals);
     pool.ammOrderBaseTokenTotal = BigInt(baseTokenTotal);
@@ -273,9 +273,9 @@ infos = class InstanceRaydium {
 
     const tokenAccounts = await getMultipleAccounts(connection, tokenAccountKeys);
 
-    tokenAccounts.forEach((account, index) => {
-      const key = tokenAccountKeys[index];
-      const token = AccountLayout.decode(account!.data);
+    tokenAccounts.forEach((account) => {
+      const key = account.pubkey;
+      const token = AccountLayout.decode(account.account!.data);
 
       accountSet.set(key, { token });
 
@@ -285,9 +285,9 @@ infos = class InstanceRaydium {
 
     const mintAccounts = await getMultipleAccounts(connection, mintAccountKeys);
 
-    mintAccounts.forEach((account, index) => {
-      const key = mintAccountKeys[index];
-      const mint = MintLayout.decode(account!.data);
+    mintAccounts.forEach((account) => {
+      const key = account.pubkey;
+      const mint = MintLayout.decode(account.account!.data);
 
       accountSet.set(key, { mint });
     });
@@ -355,26 +355,26 @@ infos = class InstanceRaydium {
 
     const tokenAccounts = await getMultipleAccounts(connection, tokenAccountKeys);
 
-    // NOTICE: The index used to assign acccount data needs to be consistent to the order of public keys
+    // NOTICE: The index used to assign account data needs to be consistent to the order of public keys
 
-    const lpAccount = AccountLayout.decode(tokenAccounts[0]!.data);
-    const rewardAAccount = AccountLayout.decode(tokenAccounts[1]!.data);
+    const lpAccount = AccountLayout.decode(tokenAccounts[0].account!.data);
+    const rewardAAccount = AccountLayout.decode(tokenAccounts[1].account!.data);
     mintAccountKeys.push(lpAccount.mint, rewardAAccount.mint);
 
     let rewardBAccount = {} as RawAccount;
     if (farm.poolRewardTokenAccountPubkeyB) {
-      rewardBAccount = AccountLayout.decode(tokenAccounts[2]!.data);
+      rewardBAccount = AccountLayout.decode(tokenAccounts[2].account!.data);
 
       // Store mints
       mintAccountKeys.push(rewardBAccount.mint);
     }
 
     const mintAccounts = await getMultipleAccounts(connection, mintAccountKeys);
-    const lpMint = MintLayout.decode(mintAccounts[0]!.data);
-    const rewardAMint = MintLayout.decode(mintAccounts[1]!.data);
+    const lpMint = MintLayout.decode(mintAccounts[0].account!.data);
+    const rewardAMint = MintLayout.decode(mintAccounts[1].account!.data);
     let rewardBMint = {} as RawMint;
     if (farm.poolRewardTokenAccountPubkeyB) {
-      rewardBMint = MintLayout.decode(mintAccounts[2]!.data);
+      rewardBMint = MintLayout.decode(mintAccounts[2].account!.data);
     }
 
     // Assign:
