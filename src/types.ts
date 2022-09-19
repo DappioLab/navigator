@@ -167,7 +167,7 @@ export interface IInstanceVault {
   getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo>;
   parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo;
   getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]>;
-  getDepositor(connection: Connection, depositorId: PublicKey): Promise<IDepositorInfo>;
+  getDepositor(connection: Connection, depositorId: PublicKey, userKey?: PublicKey): Promise<IDepositorInfo>;
   getDepositorId(vaultId: PublicKey, userKey: PublicKey, programId?: PublicKey): PublicKey;
   getDepositorIdWithBump?(
     vaultId: PublicKey,
@@ -177,7 +177,7 @@ export interface IInstanceVault {
   parseDepositor(data: Buffer, depositorId: PublicKey): IDepositorInfo;
 
   getWithdrawerId?(vaultId: PublicKey, userKey: PublicKey, programId?: PublicKey): PublicKey;
-  getWithdrawer?(connection: Connection, withdrawerId: PublicKey): Promise<IWithdrawerInfo>;
+  getWithdrawer?(connection: Connection, withdrawerId: PublicKey, userKey?: PublicKey): Promise<IWithdrawerInfo>;
   parseWithdrawer?(data: Buffer, withdrawerId: PublicKey): IWithdrawerInfo;
   getAllWithdrawers?(connection: Connection, userKey: PublicKey): Promise<IWithdrawerInfo[]>;
 }
