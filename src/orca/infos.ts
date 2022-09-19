@@ -204,16 +204,7 @@ infos = class InstanceOrca {
     });
 
     return farms.map((farm) => {
-      const doubleDip = farmSet.get(farm.farmTokenMint.toString());
       farm.isDoubleDip = false;
-      if (doubleDip) {
-        farm.isDoubleDip = true;
-        farm.doubleDipEmissionsPerSecondNumerator = doubleDip.emissionsPerSecondNumerator;
-        farm.doubleDipEmissionsPerSecondDenominator = doubleDip.emissionsPerSecondDenominator;
-        farm.doubleDipBaseTokenMintAccountData = doubleDip.baseTokenMintAccountData;
-        farm.doubleDipBaseTokenVaultAccountData = doubleDip.baseTokenVaultAccountData;
-        farm.doubleDipRewardTokenMintAccountData = doubleDip.rewardTokenMintAccountData;
-      }
 
       const pool = poolSet.get(farm.baseTokenMint.toString());
       if (pool) {
@@ -231,6 +222,18 @@ infos = class InstanceOrca {
         farm.tokenSupplyB = pool.tokenSupplyB;
         farm.lpSupply = pool.lpSupply;
         farm.lpDecimals = pool.lpDecimals;
+
+        const doubleDip = farmSet.get(farm.farmTokenMint.toString());
+        if (doubleDip) {
+          rewardToken = tokenList.find((t) => t.mint === doubleDip.rewardTokenMintAccountData?.mint.toBase58());
+          farm.isDoubleDip = true;
+          farm.doubleDipRewardTokenPrice = rewardToken?.price;
+          farm.doubleDipEmissionsPerSecondNumerator = doubleDip.emissionsPerSecondNumerator;
+          farm.doubleDipEmissionsPerSecondDenominator = doubleDip.emissionsPerSecondDenominator;
+          farm.doubleDipBaseTokenMintAccountData = doubleDip.baseTokenMintAccountData;
+          farm.doubleDipBaseTokenVaultAccountData = doubleDip.baseTokenVaultAccountData;
+          farm.doubleDipRewardTokenMintAccountData = doubleDip.rewardTokenMintAccountData;
+        }
       }
 
       return farm;
@@ -397,32 +400,32 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return authority[0];
   }
 
-  getApr() {
+  getApr(doubleDip?: boolean) {
     let apr = 0;
-    let emissionsPerSecondNumerator: BN;
-    let emissionsPerSecondDenominator: BN;
-    let rewardTokenMintAccountData: types.IMintVaultInfo;
-    let baseTokenVaultAccountData: types.ITokenVaultInfo;
-    let baseTokenMintAccountData: types.IMintVaultInfo;
+    let rewardTokenPrice = this.farmInfo.rewardTokenPrice;
+    let emissionsPerSecondNumerator = this.farmInfo.emissionsPerSecondNumerator;
+    let emissionsPerSecondDenominator = this.farmInfo.emissionsPerSecondDenominator;
+    let rewardTokenMintAccountData = this.farmInfo.rewardTokenMintAccountData!;
+    let baseTokenVaultAccountData = this.farmInfo.baseTokenVaultAccountData!;
+    let baseTokenMintAccountData = this.farmInfo.baseTokenMintAccountData!;
 
-    if (this.farmInfo.isDoubleDip) {
-      emissionsPerSecondNumerator = this.farmInfo.doubleDipEmissionsPerSecondNumerator!;
-      emissionsPerSecondDenominator = this.farmInfo.doubleDipEmissionsPerSecondDenominator!;
-      rewardTokenMintAccountData = this.farmInfo.doubleDipRewardTokenMintAccountData!;
-      baseTokenVaultAccountData = this.farmInfo.doubleDipBaseTokenVaultAccountData!;
-      baseTokenMintAccountData = this.farmInfo.doubleDipBaseTokenMintAccountData!;
-    } else {
-      emissionsPerSecondNumerator = this.farmInfo.emissionsPerSecondNumerator;
-      emissionsPerSecondDenominator = this.farmInfo.emissionsPerSecondDenominator;
-      rewardTokenMintAccountData = this.farmInfo.rewardTokenMintAccountData!;
-      baseTokenVaultAccountData = this.farmInfo.baseTokenVaultAccountData!;
-      baseTokenMintAccountData = this.farmInfo.baseTokenMintAccountData!;
+    if (doubleDip) {
+      if (this.farmInfo.isDoubleDip) {
+        rewardTokenPrice = this.farmInfo.doubleDipRewardTokenPrice;
+        emissionsPerSecondNumerator = this.farmInfo.doubleDipEmissionsPerSecondNumerator!;
+        emissionsPerSecondDenominator = this.farmInfo.doubleDipEmissionsPerSecondDenominator!;
+        rewardTokenMintAccountData = this.farmInfo.doubleDipRewardTokenMintAccountData!;
+        baseTokenVaultAccountData = this.farmInfo.doubleDipBaseTokenVaultAccountData!;
+        baseTokenMintAccountData = this.farmInfo.doubleDipBaseTokenMintAccountData!;
+      } else {
+        return apr;
+      }
     }
 
     if (
       !this.farmInfo.tokenAPrice ||
       !this.farmInfo.tokenBPrice ||
-      !this.farmInfo.rewardTokenPrice ||
+      !rewardTokenPrice ||
       !rewardTokenMintAccountData ||
       !baseTokenVaultAccountData ||
       !baseTokenMintAccountData ||
@@ -438,7 +441,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       10 ** rewardTokenMintAccountData!.decimals;
 
     if (dailyEmission !== 0) {
-      let rewardValueUSD = dailyEmission * 365 * this.farmInfo.rewardTokenPrice;
+      let rewardValueUSD = dailyEmission * 365 * rewardTokenPrice;
 
       let poolValueUSD =
         (Number(this.farmInfo.tokenSupplyA) / 10 ** this.farmInfo.tokenADecimals!) * this.farmInfo.tokenAPrice! +
