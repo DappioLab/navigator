@@ -59,6 +59,7 @@ export interface FarmInfo extends IFarmInfo {
   tokenBPrice?: number;
   tokenBDecimals?: number;
   rewardTokenPrice?: number;
+  doubleDipRewardTokenPrice?: number;
   doubleDipEmissionsPerSecondNumerator?: BN;
   doubleDipEmissionsPerSecondDenominator?: BN;
   doubleDipRewardTokenMintAccountData?: IMintVaultInfo;
