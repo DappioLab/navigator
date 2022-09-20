@@ -7,7 +7,7 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper } from "../types";
+import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper, PoolDirection } from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
@@ -355,16 +355,16 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: types.PoolInfo, public allAPIPools: { [key: string]: types.IOrcaAPI }) {}
 
-  async getSwapOutAmount(fromSide: string, amountIn: BN) {
+  getSwapOutAmount(fromSide: PoolDirection, amountIn: BN) {
     let amountOut = new BN(0);
-    if (fromSide == "coin") {
+    if (fromSide == PoolDirection.Obverse) {
       let x1 = this.poolInfo.tokenSupplyA as bigint;
       let y1 = this.poolInfo.tokenSupplyB as bigint;
       let k = x1 * y1;
       let x2 = x1 + BigInt(amountIn.toNumber());
       let y2 = k / x2;
       amountOut = new BN(Number(y1 - y2));
-    } else if (fromSide == "pc") {
+    } else {
       let x1 = this.poolInfo.tokenSupplyB as bigint;
       let y1 = this.poolInfo.tokenSupplyA as bigint;
       let k = x1 * y1;
@@ -376,10 +376,21 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return amountOut;
   }
 
-  async getAuthority() {
-    let authority = await PublicKey.findProgramAddress([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
-    return authority[0];
+  getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
+    // TODO
+    return { tokenAAmount: 0, tokenBAmount: 0 };
   }
+
+  getLpAmount(tokenAmount: number, tokenMint: PublicKey): number {
+    // TODO
+    return 0;
+  }
+
+  getLpPrice(tokenAPrice: number, tokenBPrice: number): number {
+    return 0;
+  }
+
+  // getApr(tradingVolumeIn24Hours: number, lpPrice: number): number;
 
   getApr() {
     let pool = Object.keys(this.allAPIPools)
@@ -390,17 +401,22 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     return pool ? pool.apy.week * 100 : 0;
   }
+
+  async getAuthority() {
+    let authority = await PublicKey.findProgramAddress([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
+    return authority[0];
+  }
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: types.FarmInfo) {}
 
-  async getAuthority() {
-    let authority = await PublicKey.findProgramAddress([this.farmInfo.farmId.toBuffer()], ORCA_FARM_PROGRAM_ID);
-    return authority[0];
+  getStakedAmount(): number {
+    // TODO
+    return 0;
   }
 
-  getApr(doubleDip?: boolean) {
+  getAprs(_x: number, _y: number, _z: number, doubleDip?: boolean): number[] {
     let apr = 0;
     let rewardTokenPrice = this.farmInfo.rewardTokenPrice;
     let emissionsPerSecondNumerator = this.farmInfo.emissionsPerSecondNumerator;
@@ -418,7 +434,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
         baseTokenVaultAccountData = this.farmInfo.doubleDipBaseTokenVaultAccountData!;
         baseTokenMintAccountData = this.farmInfo.doubleDipBaseTokenMintAccountData!;
       } else {
-        return apr;
+        return [apr];
       }
     }
 
@@ -432,7 +448,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       Number(emissionsPerSecondDenominator) === 0 ||
       Number(this.farmInfo.lpSupply) === 0
     ) {
-      return apr;
+      return [apr];
     }
 
     let dailyEmission =
@@ -455,7 +471,12 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       apr = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
     }
 
-    return apr;
+    return [apr];
+  }
+
+  getAuthority() {
+    let authority = PublicKey.findProgramAddressSync([this.farmInfo.farmId.toBuffer()], ORCA_FARM_PROGRAM_ID);
+    return authority[0];
   }
 }
 

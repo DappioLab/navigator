@@ -43159,4 +43159,4 @@ const poolsFetchedFromAPI = {
   ],
 };
 
-export const poolsWithMarketInfo = poolsFetchedFromAPI.official;
+export const poolsWithMarketInfo = [...poolsFetchedFromAPI.official, ...poolsFetchedFromAPI.unOfficial];

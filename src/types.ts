@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import BN from "bn.js";
 
 export interface IPoolInfo {
   poolId: PublicKey;
@@ -71,14 +72,28 @@ export interface IObligationInfo {
   reserveId?: PublicKey;
 }
 
+export enum PoolDirection {
+  Obverse,
+  Reverse,
+}
+
 // TODO: Util methods
 export interface IPoolInfoWrapper {
   poolInfo: IPoolInfo;
+  getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number };
+  getLpAmount(tokenAmount: number, tokenMint: PublicKey): number;
+  getLpPrice(tokenAPrice: number, tokenBPrice: number): number;
+  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number;
+
+  // Optional
+  getSwapOutAmount?(fromSide: PoolDirection, amountIn: BN): BN;
 }
 
 // TODO: Util methods
 export interface IFarmInfoWrapper {
   farmInfo: IFarmInfo;
+  getStakedAmount(): number;
+  getAprs(lpPrice: number, rewardPrice: number, rewardPriceB?: number): number[];
 }
 
 // TODO: Util methods
