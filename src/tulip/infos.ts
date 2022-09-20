@@ -318,6 +318,10 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
+  getApr() {
+    return Number(this.vaultInfo.base.realizedYield.apr);
+  }
+
   async deriveTrackingAddress(owner: PublicKey): Promise<[PublicKey, number]> {
     return await PublicKey.findProgramAddress(
       [Buffer.from("tracking"), this.vaultInfo.vaultId.toBuffer(), owner.toBuffer()],
