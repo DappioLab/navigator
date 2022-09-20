@@ -75,6 +75,10 @@ infos = class InstanceTulip {
     return vaults;
   }
 
+  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  }
+
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
     if (!vaultAccountInfo) throw Error("Error: Cannot get reserve account (tulip.getVault)");
