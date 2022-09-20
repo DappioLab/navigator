@@ -18,7 +18,7 @@ import {
 } from "./layouts";
 import { ADMIN, IDENTIFIER, KATANA_COVER_PROGRAM_ID, KATANA_PUT_PROGRAM_ID, PSY_PROGRAM_ID } from "./ids";
 import { struct, u128 } from "@project-serum/borsh";
-import { IInstanceVault } from "../types";
+import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import * as types from ".";
 
 let infos: IInstanceVault;
@@ -72,6 +72,10 @@ infos = class InstanceKatana {
       );
     });
     return [...coverVaultInfos, ...putVaultInfos];
+  }
+
+  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
@@ -231,7 +235,7 @@ infos = class InstanceKatana {
     userKey: PublicKey,
     programId: PublicKey = KATANA_PUT_PROGRAM_ID
   ): PublicKey {
-    return ( this.getDepositorIdWithBump(vaultId, userKey, programId)).pda;
+    return this.getDepositorIdWithBump(vaultId, userKey, programId).pda;
   }
   static getDepositorIdWithBump(
     vaultId: PublicKey,
@@ -240,7 +244,7 @@ infos = class InstanceKatana {
   ): { pda: PublicKey; bump: number } {
     let prefix = "user-account";
     let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
-    let address =  PublicKey.findProgramAddressSync([minerBytes, userKey.toBuffer(), vaultId.toBuffer()], programId);
+    let address = PublicKey.findProgramAddressSync([minerBytes, userKey.toBuffer(), vaultId.toBuffer()], programId);
     return { pda: address[0], bump: address[1] };
   }
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {

@@ -163,7 +163,7 @@ export interface IInstanceNFTFarm {
 export interface IInstanceVault {
   getAllVaults(connection: Connection): Promise<IVaultInfo[]>;
   // TODO: Add wrapper for VaultInfo
-  // getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]>;
+  getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]>;
   getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo>;
   parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo;
   getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]>;

@@ -1,7 +1,7 @@
 import { Connection, GetProgramAccountsConfig, DataSizeFilter, PublicKey, MemcmpFilter } from "@solana/web3.js";
 import BN from "bn.js";
 import { utils } from "..";
-import { IInstanceVault } from "../types";
+import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { VOLT_PROGRAM_ID } from "./ids";
 import { ROUND_LAYOUT, USER_PENDING_LAYOUT, VOLT_VAULT_LAYOUT } from "./layouts";
 
@@ -31,6 +31,11 @@ infos = class InstanceFriktion {
       return vault;
     });
   }
+
+  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  }
+
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
     const vaultAccount = await connection.getAccountInfo(vaultId);
     let rounds = await this.getAllRoundSet(connection);

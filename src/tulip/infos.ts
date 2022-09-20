@@ -75,6 +75,10 @@ infos = class InstanceTulip {
     return vaults;
   }
 
+  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  }
+
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
     if (!vaultAccountInfo) throw Error("Error: Cannot get reserve account (tulip.getVault)");
@@ -313,6 +317,10 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
+
+  getApr() {
+    return Number(this.vaultInfo.base.realizedYield.apr);
+  }
 
   async deriveTrackingAddress(owner: PublicKey): Promise<[PublicKey, number]> {
     return await PublicKey.findProgramAddress(
