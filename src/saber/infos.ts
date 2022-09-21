@@ -1,7 +1,8 @@
 import { Connection, MemcmpFilter, GetProgramAccountsConfig, DataSizeFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
-import { computeD, getMultipleAccounts, normalizedTradeFee, N_COINS, ZERO } from "../utils";
+import { getMultipleAccounts } from "../utils";
+import { computeD, normalizedTradeFee, N_COINS, ZERO } from "./utils";
 import { QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT, FARMER_LAYOUT, WRAP_LAYOUT } from "./layouts";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
@@ -401,7 +402,7 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
 
-  getCoinAndPcAmount(lpAmount: number) {
+  getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
     const coinBalance = this.poolInfo.AtokenAccountAmount!;
     const pcBalance = this.poolInfo.BtokenAccountAmount!;
     const lpSupply = this.poolInfo.lpSupply!;
@@ -413,12 +414,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const pcFee = this.poolInfo.withdrawFee.eq(ZERO)
       ? ZERO
       : pcAmountBeforeFee.mul(this.poolInfo.withdrawFee).divRound(DIGIT);
-    const coinAmount = Number(coinAmountBeforeFee.sub(coinFee));
-    const pcAmount = Number(pcAmountBeforeFee.sub(pcFee));
+    const tokenAAmount = Number(coinAmountBeforeFee.sub(coinFee));
+    const tokenBAmount = Number(pcAmountBeforeFee.sub(pcFee));
 
     return {
-      coinAmount,
-      pcAmount,
+      tokenAAmount,
+      tokenBAmount,
     };
   }
 
@@ -427,7 +428,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     tokenAMint: PublicKey, // the mint of tokenA Amount
     tokenBAmount?: number,
     tokenBMint?: PublicKey // the mint of tokenB Amount
-  ) {
+  ): number {
     if (tokenAAmount === 0) {
       return 0;
     }
@@ -468,7 +469,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpAmount;
   }
 
-  getLpPrice(tokenAPrice: number, tokenBPrice: number) {
+  getLpPrice(tokenAPrice: number, tokenBPrice: number): number {
     const lpSupply = this.poolInfo.lpSupply!;
     if (lpSupply.eq(ZERO)) {
       return 0;
@@ -487,7 +488,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  getApr(tradingVolumeIn24Hours: number, lpPrice: number) {
+  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
     const lpSupply = Number(this.poolInfo.lpSupply!);
     const lpDecimals = this.poolInfo.lpDecimals!;
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
@@ -501,7 +502,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
 
-  getApr(lpPrice: number, rewardTokenPrice: number) {
+  getStakedAmount(): number {
+    // TODO
+    return 0;
+  }
+
+  getAprs(lpPrice: number, rewardTokenPrice: number): number[] {
     const lpAmount = Number(this.farmInfo.totalTokensDeposited.div(new BN(10).pow(this.farmInfo.tokenMintDecimals)));
     const lpValue = lpAmount * lpPrice;
     const annualRewardAmount = Number(this.farmInfo.annualRewardsRate.divn(10e5));
@@ -509,6 +515,6 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 
     const apr = lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
 
-    return apr;
+    return [apr];
   }
 }

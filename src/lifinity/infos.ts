@@ -169,6 +169,24 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: types.PoolInfo) {}
 
+  getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
+    // TODO
+    return { tokenAAmount: 0, tokenBAmount: 0 };
+  }
+  getLpAmount(tokenAmount: number, tokenMint: PublicKey): number {
+    // TODO
+    return 0;
+  }
+  getLpPrice(tokenAPrice: number, tokenBPrice: number): number {
+    // TODO
+    return 0;
+  }
+
+  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
+    // TODO
+    return 0;
+  }
+
   getLiquidityUpperCap() {
     return this.poolInfo.poolConfig.depositCap;
   }

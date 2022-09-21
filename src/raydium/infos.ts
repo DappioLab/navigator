@@ -11,7 +11,7 @@ import { POOL_PROGRAM_ID_V4, FARM_PROGRAM_ID_V3, FARM_PROGRAM_ID_V5 } from "./id
 import { POOL_LAYOUT_V4, FARMER_LAYOUT_V3_2, FARMER_LAYOUT_V5_2, FARM_LAYOUT_V3, FARM_LAYOUT_V5 } from "./layouts";
 import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
-import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
+import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm, PoolDirection } from "../types";
 import { getBigNumber, getTokenAccount, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout, RawAccount, RawMint } from "@solana/spl-token-v2";
 import { FarmerInfo, FarmInfo, PoolInfo } from ".";
@@ -613,8 +613,9 @@ export { infos };
 export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: PoolInfo) {}
 
-  async getSwapOutAmount(fromSide: string, amountIn: BN) {
-    if (fromSide == "coin") {
+  getSwapOutAmount(fromSide: PoolDirection, amountIn: BN) {
+    let amountOut = new BN(0);
+    if (fromSide == PoolDirection.Obverse) {
       let x1 =
         (this.poolInfo.tokenAAmount as bigint) +
         (this.poolInfo.ammOrderBaseTokenTotal as bigint) -
@@ -627,10 +628,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       let k = x1 * y1;
       let x2 = x1 + BigInt(amountIn.toNumber());
       let y2 = k / x2;
-      let amountOut = y1 - y2;
-
-      return new BN(Number(amountOut));
-    } else if (fromSide == "pc") {
+      amountOut = new BN(Number(y1 - y2));
+    } else {
       let x1 =
         (this.poolInfo.tokenBAmount as bigint) +
         (this.poolInfo.ammOrderQuoteTokenTotal as bigint) -
@@ -643,83 +642,47 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       let k = x1 * y1;
       let x2 = x1 + BigInt(amountIn.toNumber());
       let y2 = k / x2;
-      let amountOut = y1 - y2;
-
-      return new BN(Number(amountOut));
+      amountOut = new BN(Number(y1 - y2));
     }
 
-    return new BN(0);
+    return new BN(Number(amountOut));
   }
 
-  async getPoolBalances() {
-    const swapFeeNumerator = getBigNumber(this.poolInfo.swapFeeNumerator);
-    const swapFeeDenominator = getBigNumber(this.poolInfo.swapFeeDenominator);
-
-    // Calculate coinBalance and pcBalance
-    let coinBalance = new TokenAmount(
-      Number(this.poolInfo.tokenAAmount) +
-        Number(this.poolInfo.ammOrderBaseTokenTotal) -
-        Number(this.poolInfo.needTakePnlCoin),
-      this.poolInfo.coinDecimals.toNumber()
-    );
-    let pcBalance = new TokenAmount(
-      Number(this.poolInfo.tokenBAmount) +
-        Number(this.poolInfo.ammOrderQuoteTokenTotal) -
-        Number(this.poolInfo.needTakePnlPc),
-      this.poolInfo.pcDecimals.toNumber()
-    );
+  getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
+    const poolBalances = this._getPoolBalances();
+    const tokenABalance = poolBalances.tokenA.balance;
+    const tokenBBalance = poolBalances.tokenB.balance;
+    const tokenAAmount = tokenABalance.toWei().toNumber() * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
+    const tokenBAmount = tokenBBalance.toWei().toNumber() * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
 
     return {
-      coin: {
-        balance: coinBalance,
-        decimals: this.poolInfo.coinDecimals.toNumber(),
-      },
-      pc: {
-        balance: pcBalance,
-        decimals: this.poolInfo.pcDecimals.toNumber(),
-      },
-      fees: {
-        numerator: swapFeeNumerator,
-        denominator: swapFeeDenominator,
-      },
+      tokenAAmount,
+      tokenBAmount,
     };
   }
 
-  async getCoinAndPcAmount(lpAmount: number) {
-    const poolBalances = await this.getPoolBalances();
-    const coinBalance = poolBalances.coin.balance;
-    const pcBalance = poolBalances.pc.balance;
-    const coinAmount = coinBalance.toWei().toNumber() * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
-    const pcAmount = pcBalance.toWei().toNumber() * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
-
-    return {
-      coinAmount,
-      pcAmount,
-    };
-  }
-
-  async getLpAmount(
+  getLpAmount(
     tokenAmount: number,
     tokenMint: PublicKey // the mint of tokenAmount
-  ) {
+  ): number {
     if (!tokenMint.equals(this.poolInfo.tokenAMint) && !tokenMint.equals(this.poolInfo.tokenBMint)) {
       throw new Error("Wrong token mint");
     }
 
-    const poolBalances = await this.getPoolBalances();
-    const coinBalance = poolBalances.coin.balance;
-    const pcBalance = poolBalances.pc.balance;
+    const poolBalances = this._getPoolBalances();
+    const tokenABalance = poolBalances.tokenA.balance;
+    const tokenBBalance = poolBalances.tokenB.balance;
 
-    const balance = tokenMint.equals(this.poolInfo.tokenAMint) ? coinBalance : pcBalance;
+    const balance = tokenMint.equals(this.poolInfo.tokenAMint) ? tokenABalance : tokenBBalance;
     const sharePercent = tokenAmount / (balance.toWei().toNumber() + tokenAmount);
 
     return sharePercent * Number(this.poolInfo.lpSupplyAmount);
   }
 
-  async getLpPrice(tokenAPrice: number, tokenBPrice: number) {
-    const poolBalances = await this.getPoolBalances();
-    const coinBalance = poolBalances.coin.balance;
-    const pcBalance = poolBalances.pc.balance;
+  getLpPrice(tokenAPrice: number, tokenBPrice: number): number {
+    const poolBalances = this._getPoolBalances();
+    const tokenABalance = poolBalances.tokenA.balance;
+    const tokenBBalance = poolBalances.tokenB.balance;
     const lpSupply = Number(this.poolInfo.lpSupplyAmount);
     const lpDecimals = Number(this.poolInfo.lpDecimals);
 
@@ -728,16 +691,16 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const lpPrice =
       lpSupply > 0
-        ? (coinBalance.toEther().toNumber() * 10 ** lpDecimals * coinPrice +
-            pcBalance.toEther().toNumber() * 10 ** lpDecimals * pcPrice) /
+        ? (tokenABalance.toEther().toNumber() * 10 ** lpDecimals * coinPrice +
+            tokenBBalance.toEther().toNumber() * 10 ** lpDecimals * pcPrice) /
           lpSupply
         : 0;
 
     return lpPrice;
   }
 
-  async getApr(tradingVolumeIn24Hours: number, lpPrice: number) {
-    const poolBalances = await this.getPoolBalances();
+  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
+    const poolBalances = this._getPoolBalances();
     const feeNumerator = poolBalances.fees.numerator;
     const feeDenominator = poolBalances.fees.denominator;
     const feeRate =
@@ -753,24 +716,50 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     return apr;
   }
+
+  private _getPoolBalances() {
+    const swapFeeNumerator = getBigNumber(this.poolInfo.swapFeeNumerator);
+    const swapFeeDenominator = getBigNumber(this.poolInfo.swapFeeDenominator);
+
+    // Calculate coinBalance and pcBalance
+    let tokenABalance = new TokenAmount(
+      Number(this.poolInfo.tokenAAmount) +
+        Number(this.poolInfo.ammOrderBaseTokenTotal) -
+        Number(this.poolInfo.needTakePnlCoin),
+      this.poolInfo.coinDecimals.toNumber()
+    );
+    let tokenBBalance = new TokenAmount(
+      Number(this.poolInfo.tokenBAmount) +
+        Number(this.poolInfo.ammOrderQuoteTokenTotal) -
+        Number(this.poolInfo.needTakePnlPc),
+      this.poolInfo.pcDecimals.toNumber()
+    );
+
+    return {
+      tokenA: {
+        balance: tokenABalance,
+        decimals: this.poolInfo.coinDecimals.toNumber(),
+      },
+      tokenB: {
+        balance: tokenBBalance,
+        decimals: this.poolInfo.pcDecimals.toNumber(),
+      },
+      fees: {
+        numerator: swapFeeNumerator,
+        denominator: swapFeeDenominator,
+      },
+    };
+  }
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: FarmInfo) {}
 
-  async authority() {
-    let seed = [this.farmInfo.farmId.toBuffer()];
-    if (this.farmInfo.version > 3) {
-      return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V5);
-    }
-    return await PublicKey.findProgramAddress(seed, FARM_PROGRAM_ID_V3);
+  getStakedAmount(): number {
+    return Number(this.farmInfo.poolLpTokenAccount?.amount) ?? 0;
   }
 
-  async getStakedAmount(conn: Connection) {
-    return this.farmInfo.poolLpTokenAccount?.amount ?? new BN(0);
-  }
-
-  async getApr(conn: Connection, lpPrice: number, rewardPrice: number, rewardPriceB?: number) {
+  getAprs(lpPrice: number, rewardPrice: number, rewardPriceB?: number): number[] {
     const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
     const lpDecimals = Number(this.farmInfo.poolLpDecimals);
     const lpValue = lpAmount * lpPrice;
@@ -791,5 +780,13 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     }
 
     return [apr];
+  }
+
+  authority() {
+    let seed = [this.farmInfo.farmId.toBuffer()];
+    if (this.farmInfo.version > 3) {
+      return PublicKey.findProgramAddressSync(seed, FARM_PROGRAM_ID_V5);
+    }
+    return PublicKey.findProgramAddressSync(seed, FARM_PROGRAM_ID_V3);
   }
 }

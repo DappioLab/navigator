@@ -476,6 +476,16 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: types.FarmInfo) {}
 
+  getStakedAmount(): number {
+    // TODO
+    return 0;
+  }
+
+  getAprs(lpPrice: number, rewardTokenPrice: number): number[] {
+    // TODO
+    return [0];
+  }
+
   borrowedAmount() {
     return this.farmInfo.liquidityBorrowedAmountWads.div(new BN(`1${"".padEnd(18, "0")}`));
   }
