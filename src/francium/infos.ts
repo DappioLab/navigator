@@ -333,6 +333,16 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
   constructor(public farmInfo: types.FarmInfo) {}
+
+  getStakedAmount(): number {
+    // TODO
+    return 0;
+  }
+
+  getAprs(lpPrice: number, rewardTokenPrice: number): number[] {
+    // TODO
+    return [0];
+  }
 }
 
 export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {

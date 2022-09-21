@@ -3,3 +3,4 @@
 /node_modules
 /IDL
 .DS_Store
+/dist
