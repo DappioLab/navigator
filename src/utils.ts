@@ -12,7 +12,6 @@ import {
 import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { publicKey, struct, u64, u32 } from "@project-serum/borsh";
 import BN from "bn.js";
-import * as sha256 from "js-sha256";
 import request from "graphql-request";
 
 export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection?: Connection, createAta?: boolean) {
@@ -93,14 +92,6 @@ export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey
     keys,
     programId: programId,
   });
-}
-
-export function getAnchorInsByIdl(name: string): Buffer {
-  const SIGHASH_GLOBAL_NAMESPACE = "global";
-  const preimage = `${SIGHASH_GLOBAL_NAMESPACE}:${name}`;
-  const hash = sha256.sha256.digest(preimage);
-  const data = Buffer.from(hash).slice(0, 8);
-  return data;
 }
 
 export async function signAndSendAll(
