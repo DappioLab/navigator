@@ -2,7 +2,7 @@
 
 ## Overview
 
-![](https://hackmd.io/_uploads/SJtWPoyxo.png)
+![](https://hackmd.io/_uploads/rJbWYMd-o.jpg)
 
 Navigator is a Typescript client for instantiating various of kinds of DeFi protocols. You can use it as a standalone dependency in your own project or together with [Dappio Gateway](https://guide.dappio.xyz/the-universal-rabbit-hole).
 
