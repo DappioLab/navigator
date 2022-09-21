@@ -353,7 +353,7 @@ infos = class InstanceOrca {
 export { infos };
 
 export class PoolInfoWrapper implements IPoolInfoWrapper {
-  constructor(public poolInfo: types.PoolInfo, public allAPIPools: { [key: string]: types.IOrcaAPI }) {}
+  constructor(public poolInfo: types.PoolInfo, public allAPIPools?: { [key: string]: types.IOrcaAPI }) {}
 
   getSwapOutAmount(fromSide: PoolDirection, amountIn: BN) {
     let amountOut = new BN(0);
@@ -377,8 +377,15 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 
   getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
-    // TODO
-    return { tokenAAmount: 0, tokenBAmount: 0 };
+    let tokenAAmount = Number(
+      (new BN(lpAmount.toString()).toNumber() * new BN(this.poolInfo.tokenSupplyA!.toString()).toNumber()) /
+        new BN(this.poolInfo.lpSupply!.toString()).toNumber()
+    );
+    let tokenBAmount = Number(
+      (new BN(lpAmount.toString()).toNumber() * new BN(this.poolInfo.tokenSupplyB!.toString()).toNumber()) /
+        new BN(this.poolInfo.lpSupply!.toString()).toNumber()
+    );
+    return { tokenAAmount: tokenAAmount, tokenBAmount: tokenBAmount };
   }
 
   getLpAmount(tokenAmount: number, tokenMint: PublicKey): number {
@@ -393,9 +400,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   // getApr(tradingVolumeIn24Hours: number, lpPrice: number): number;
 
   getApr() {
+    if (!this.allAPIPools) {
+      return 0;
+    }
     let pool = Object.keys(this.allAPIPools)
       .map((item: string) => {
-        return this.allAPIPools[item] as types.IOrcaAPI;
+        return this.allAPIPools![item] as types.IOrcaAPI;
       })
       .find((item) => item.poolAccount === this.poolInfo.poolId.toBase58());
 
@@ -405,6 +415,14 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   async getAuthority() {
     let authority = await PublicKey.findProgramAddress([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
     return authority[0];
+  }
+  getSingleSideRemoveLPAmount(toSide: PublicKey, amountIn: BN) {
+    if (toSide.equals(this.poolInfo.tokenAMint)) {
+      return (
+        (amountIn.toNumber() * new BN(this.poolInfo.tokenSupplyA!.toString()).toNumber()) /
+        new BN(this.poolInfo.lpSupply!.toString()).toNumber()
+      );
+    }
   }
 }
 
