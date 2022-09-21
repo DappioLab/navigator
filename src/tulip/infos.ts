@@ -319,7 +319,8 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
   getApr() {
-    return Number(this.vaultInfo.base.realizedYield.apr);
+    // TODO
+    return 0;
   }
 
   async deriveTrackingAddress(owner: PublicKey): Promise<[PublicKey, number]> {
