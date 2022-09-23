@@ -216,7 +216,21 @@ infos = class InstanceFrancium {
   }
 
   static async getAllFarmers(connection: Connection, userKey: PublicKey): Promise<types.FarmerInfo[]> {
-    return [];
+    let offset = 57;
+    const programIdMemcmp: MemcmpFilter = {
+      memcmp: {
+        offset: offset,
+        bytes: userKey.toString(),
+      },
+    };
+    const dataSizeFilters: DataSizeFilter = {
+      dataSize: FARMER_LAYOUT.span,
+    };
+    const filters = [programIdMemcmp, dataSizeFilters];
+    const config: GetProgramAccountsConfig = { filters };
+
+    const farmerAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_REWARD_PROGRAM_ID, config);
+    return farmerAccounts.map((account) => this._parseFarmerInfo(account.account.data, account.pubkey));
   }
 
   static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey> {
