@@ -142,7 +142,7 @@ infos = class InstanceSolend {
     );
     const obligationAccounts = await getMultipleAccounts(connection, obligationKeys);
     const obligationInfos = obligationAccounts
-      .filter((accountInfo) => accountInfo)
+      .filter((accountInfo) => Boolean(accountInfo.account))
       .map((accountInfo, index) => {
         return this.parseObligation(accountInfo.account!.data, obligationKeys[index]);
       });
