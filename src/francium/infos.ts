@@ -370,8 +370,8 @@ export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInf
 
 export async function checkFarmerCreated(wallet: PublicKey, farmInfo: types.FarmInfo, connection: Connection) {
   const { pda, bump } = await getFarmerPubkey(wallet, farmInfo);
-  const farmerAccount = (await connection.getAccountInfo(pda)) as AccountInfo<Buffer>;
-  return farmerAccount.data.length > 0;
+  const farmerAccount = await connection.getAccountInfo(pda);
+  return (farmerAccount?.data.length as number) > 0;
 }
 
 export function parseRaydiumStrategyStateData(data: any, infoPubkey: PublicKey): types.RaydiumStrategyState {

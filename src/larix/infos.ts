@@ -622,8 +622,12 @@ export async function checkFarmerCreated(connection: Connection, wallet: PublicK
   return (farmerInfo?.data.length as number) > 0;
 }
 
-export async function checkObligationCreated(connection: Connection, wallet: PublicKey) {
-  let obligationPub = await infos.getObligationId!(PublicKey.default, wallet);
+export async function checkObligationCreated(
+  connection: Connection,
+  wallet: PublicKey,
+  marketId = LARIX_MARKET_ID_MAIN_POOL
+) {
+  let obligationPub = await infos.getObligationId!(marketId, wallet);
   let obligationInfo = await connection.getAccountInfo(obligationPub);
 
   return (obligationInfo?.data.length as number) > 0;
