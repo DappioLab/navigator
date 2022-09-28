@@ -3,7 +3,7 @@ import BN from "bn.js";
 import { utils } from "..";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { VOLT_PROGRAM_ID } from "./ids";
-import { ROUND_LAYOUT, USER_PENDING_LAYOUT, VOLT_VAULT_LAYOUT } from "./layouts";
+import { EXTRA_VOLT_DATA_LAYOUT, ROUND_LAYOUT, USER_PENDING_LAYOUT, VOLT_VAULT_LAYOUT } from "./layouts";
 
 import * as types from ".";
 
@@ -13,6 +13,7 @@ export { infos };
 infos = class InstanceFriktion {
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
     let rounds = await this.getAllRoundSet(connection);
+    let extraInfos = await this.getAllExtraDataSet(connection);
     const sizeFilter: DataSizeFilter = {
       dataSize: VOLT_VAULT_LAYOUT.span,
     };
@@ -21,13 +22,15 @@ infos = class InstanceFriktion {
     const allVaultAccount = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
     return allVaultAccount.map((account) => {
       const vault = this.parseVault(account.account.data, account.pubkey);
+      const vaultWrapper = new VaultInfoWrapper(vault);
       for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
-        let roundId = new VaultInfoWrapper(vault).getRoundInfoAddress(new BN(round));
+        let roundId = vaultWrapper.getRoundInfoAddress(new BN(round));
         let roundInfo = rounds.get(roundId.toString());
         if (roundInfo) {
           vault.roundInfos.push(roundInfo);
         }
       }
+      vault.extraData = extraInfos.get(vaultWrapper.getExtraVoltDataAddress().toString()) as types.ExtraVaultInfo;
       return vault;
     });
   }
@@ -39,18 +42,20 @@ infos = class InstanceFriktion {
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
     const vaultAccount = await connection.getAccountInfo(vaultId);
     let rounds = await this.getAllRoundSet(connection);
+    let extraInfos = await this.getAllExtraDataSet(connection);
     if (!vaultAccount) {
       throw new Error("Vault account not found");
     }
     const vault = this.parseVault(vaultAccount.data, vaultId);
+    const vaultWrapper = new VaultInfoWrapper(vault);
     for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
-      let roundId = new VaultInfoWrapper(vault).getRoundInfoAddress(new BN(round));
+      let roundId = vaultWrapper.getRoundInfoAddress(new BN(round));
       let roundInfo = rounds.get(roundId.toString());
       if (roundInfo) {
         vault.roundInfos.push(roundInfo);
       }
     }
-
+    vault.extraData = extraInfos.get(vaultWrapper.getExtraVoltDataAddress().toString()) as types.ExtraVaultInfo;
     return vault;
   }
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
@@ -158,6 +163,17 @@ infos = class InstanceFriktion {
       ])
     );
   }
+  static async getAllExtraDataSet(connection: Connection) {
+    let sizeFilter: DataSizeFilter = { dataSize: EXTRA_VOLT_DATA_LAYOUT.span };
+    let config: GetProgramAccountsConfig = { filters: [sizeFilter] };
+    let allExtraDataKeys = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
+    return new Map(
+      allExtraDataKeys.map((key) => [
+        key.pubkey.toString(),
+        { ...EXTRA_VOLT_DATA_LAYOUT.decode(key.account.data), extraDataId: key.pubkey } as types.ExtraVaultInfo,
+      ])
+    );
+  }
 };
 export class VaultInfoWrapper {
   constructor(public readonly vaultInfo: types.VaultInfo) {}
@@ -187,22 +203,28 @@ export class VaultInfoWrapper {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
-        new BN(roundNumber.toString()).toArrayLike(Buffer, "le", 8),
+        roundNumber.toBuffer("le", 8),
         new Uint8Array(Buffer.from("roundVoltTokens", "utf-8")),
       ],
       voltProgramId
     )[0];
   }
-  getRoundUnderlyingTokensAddress(
-    voltKey: PublicKey,
-    roundNumber: BN,
-    voltProgramId: PublicKey = VOLT_PROGRAM_ID
-  ): PublicKey {
+  getRoundUnderlyingTokensAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [
-        voltKey.toBuffer(),
-        new BN(roundNumber.toString()).toArrayLike(Buffer, "le", 8),
+        this.vaultInfo.vaultId.toBuffer(),
+        roundNumber.toBuffer("le", 8),
         new Uint8Array(Buffer.from("roundUnderlyingTokens", "utf-8")),
+      ],
+      voltProgramId
+    )[0];
+  }
+  getEpochInfoAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [
+        this.vaultInfo.vaultId.toBuffer(),
+        roundNumber.toBuffer("le", 8),
+        new Uint8Array(Buffer.from("epochInfo", "utf-8")),
       ],
       voltProgramId
     )[0];

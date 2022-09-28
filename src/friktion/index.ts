@@ -60,6 +60,7 @@ export interface VaultInfo extends IVaultInfo {
   permissionedMarketPremiumPool: PublicKey;
   capacity: BN;
   roundInfos: RoundInfo[];
+  extraData: ExtraVaultInfo;
 }
 
 export interface DepositorInfo extends IDepositorInfo {
@@ -78,7 +79,7 @@ export interface withdrawerInfo extends IWithdrawerInfo {
   amount: BN;
 }
 export interface ExtraVaultInfo {
-  vaultId: PublicKey;
+  extraDataId: PublicKey;
   isWhitelisted: boolean;
   whitelist: PublicKey;
   isForDao: boolean;
@@ -86,6 +87,43 @@ export interface ExtraVaultInfo {
   depositMint: PublicKey;
   targetLeverage: BN;
   targetLeverageLenience: BN;
+  exitEarlyRatio: BN;
+  entropyProgramId: PublicKey;
+  entropyGroup: PublicKey;
+  entropyAccount: PublicKey;
+  powerPerpMarket: PublicKey;
+  haveResolvedDeposits: boolean;
+  doneRebalancing: boolean;
+  daoAuthority: PublicKey;
+  serumProgramId: PublicKey;
+  entropyCache: PublicKey;
+  hedgingSpotPerpMarket: PublicKey;
+  entropyMetadata: PublicKey;
+  hedgingSpotMarket: PublicKey;
+  auctionMetadata: PublicKey;
+  extraKey10: PublicKey;
+  extraKey11: PublicKey;
+  extraKey12: PublicKey;
+  extraKey13: PublicKey;
+  extraKey14: PublicKey;
+  unusedUintOne: BN;
+  maxQuotePosChange: BN;
+  targetHedgeLenience: BN;
+  unusedUintFour: BN;
+  unusedUintFive: BN;
+  unusedUintSix: BN;
+  unusedUint7: BN;
+  unusedUint8: BN;
+  unusedUint9: BN;
+  useCustomFees: BN;
+  performanceFeeBps: BN;
+  withdrawalFeeBps: BN;
+  turnOffDepositsAndWithdrawals: boolean;
+  rebalanceIsReady: boolean;
+  dovPerformanceFeesInUnderlyings: boolean;
+  doneRebalancingPowerPerp: boolean;
+  isHedgingOn: boolean;
+  haveTakenPerformanceFees: boolean;
 }
 
 export interface RoundInfo {
