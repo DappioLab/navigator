@@ -223,16 +223,47 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: types.PoolInfo) {}
 
   getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
-    // TODO
-    return { tokenAAmount: 0, tokenBAmount: 0 };
+    if (lpAmount === 0) return { tokenAAmount: 0, tokenBAmount: 0 };
+    const tokenAAmount = this.poolInfo.lpSupplyAmount
+      ? Number((this.poolInfo.tokenAAmount! * BigInt(lpAmount)) / this.poolInfo.lpSupplyAmount!)
+      : 0;
+    const tokenBAmount = this.poolInfo.lpSupplyAmount
+      ? Number((this.poolInfo.tokenBAmount! * BigInt(lpAmount)) / this.poolInfo.lpSupplyAmount!)
+      : 0;
+
+    return {
+      tokenAAmount,
+      tokenBAmount,
+    };
   }
+
   getLpAmount(tokenAmount: number, tokenMint: PublicKey): number {
-    // TODO
-    return 0;
+    if (tokenAmount === 0) return 0;
+    if (!tokenMint.equals(this.poolInfo.tokenAMint) && !tokenMint.equals(this.poolInfo.tokenBMint)) {
+      throw new Error("Wrong token mint");
+    }
+
+    const balance = tokenMint.equals(this.poolInfo.tokenAMint)
+      ? this.poolInfo.tokenAAmount!
+      : this.poolInfo.tokenBAmount!;
+
+    const sharePercent = tokenAmount / (Number(balance) + tokenAmount);
+
+    return sharePercent * Number(this.poolInfo.lpSupplyAmount);
   }
+
   getLpPrice(tokenAPrice: number, tokenBPrice: number): number {
-    // TODO
-    return 0;
+    const tokenABalance = Number(this.poolInfo.tokenAAmount) / 10 ** this.poolInfo.tokenADecimals!;
+    const tokenBBalance = Number(this.poolInfo.tokenBAmount) / 10 ** this.poolInfo.tokenBDecimals!;
+    const lpSupply = Number(this.poolInfo.lpSupplyAmount);
+    const lpDecimals = this.poolInfo.lpDecimals!;
+
+    const lpPrice =
+      lpSupply > 0
+        ? (tokenABalance * 10 ** lpDecimals * tokenAPrice + tokenBBalance * 10 ** lpDecimals * tokenBPrice) / lpSupply
+        : 0;
+
+    return lpPrice;
   }
 
   getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
