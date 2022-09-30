@@ -29,6 +29,14 @@ export interface PoolInfo extends IPoolInfo {
   hostFee: BN;
   curveType: BN;
   curveParameters: BN;
+
+  // Additional Attributes
+  tokenAAmount?: bigint;
+  tokenADecimals?: number;
+  tokenBAmount?: bigint;
+  tokenBDecimals?: number;
+  lpSupplyAmount?: bigint;
+  lpDecimals?: number;
 }
 
 export interface PoolConfig {
