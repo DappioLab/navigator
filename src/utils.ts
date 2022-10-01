@@ -13,6 +13,7 @@ import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from "@sol
 import { publicKey, struct, u64, u32 } from "@project-serum/borsh";
 import BN from "bn.js";
 import request from "graphql-request";
+import { IServicesTokenInfo } from "./types";
 
 export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection?: Connection, createAta?: boolean) {
   let tx = new Transaction();
@@ -113,18 +114,6 @@ export async function signAndSendAll(
   return result;
 }
 
-export interface IServicesTokenInfo {
-  mint: string;
-  protocol: null | string;
-  price: number;
-  chainId: string;
-  decimals: number;
-  extensions: any;
-  logoURI: string;
-  name: string;
-  symbol: string;
-  tags: string[];
-}
 
 export const getTokenList = async () => {
   const query = `

@@ -26,10 +26,9 @@ import {
   LDO_MINT,
   STSOL_RESERVE_ID,
 } from "./ids";
-import { IInstanceFarm, IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper, IFarmInfoWrapper } from "../types";
+import { IInstanceFarm, IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper, IFarmInfoWrapper, IServicesTokenInfo } from "../types";
 import { utils } from "..";
 import * as types from ".";
-import { IServicesTokenInfo } from "../utils";
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 

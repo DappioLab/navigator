@@ -1,6 +1,6 @@
 import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
-import { IInstanceMoneyMarket, IObligationInfo, IReserveInfo, IReserveInfoWrapper } from "../types";
+import { IInstanceMoneyMarket, IObligationInfo, IReserveInfo, IReserveInfoWrapper, IServicesTokenInfo } from "../types";
 import {
   SLND_PRICE_ORACLE,
   SOLEND_LENDING_MARKET_ID_ALL,
@@ -8,7 +8,7 @@ import {
   SOLEND_PROGRAM_ID,
 } from "./ids";
 import { COLLATERAL_LAYOUT, LOAN_LAYOUT, OBLIGATION_LAYOUT, RESERVE_LAYOUT } from "./layouts";
-import { getMultipleAccounts, getTokenList, IServicesTokenInfo } from "../utils";
+import { getMultipleAccounts, getTokenList } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";

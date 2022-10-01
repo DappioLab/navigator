@@ -3,8 +3,7 @@ export * from "./infos";
 export * from "./layouts";
 import BN from "bn.js";
 import { PublicKey } from "@solana/web3.js";
-import { IFarmerInfo, IFarmInfo, IObligationInfo, IReserveInfo } from "../types";
-import { IServicesTokenInfo } from "../utils";
+import { IFarmerInfo, IFarmInfo, IObligationInfo, IReserveInfo, IServicesTokenInfo } from "../types";
 
 export interface ReserveInfo extends IReserveInfo {
   version: BN;

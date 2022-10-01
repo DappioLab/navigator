@@ -77,6 +77,19 @@ export enum PoolDirection {
   Reverse,
 }
 
+export interface IServicesTokenInfo {
+  mint: string;
+  protocol: null | string;
+  price: number;
+  chainId: string;
+  decimals: number;
+  extensions: any;
+  logoURI: string;
+  name: string;
+  symbol: string;
+  tags: string[];
+}
+
 // TODO: Util methods
 export interface IPoolInfoWrapper {
   poolInfo: IPoolInfo;
