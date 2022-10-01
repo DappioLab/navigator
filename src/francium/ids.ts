@@ -15,6 +15,12 @@ export const LENDING_MARKET = new PublicKey(
 export const LENDING_AUTHORITY = new PublicKey(
   "sCDiYj7X7JmXg5fVq2nqED2q1Wqjo7PnqMgH3casMem"
 );
+export const LDO_MINT = new PublicKey(
+  "HZRCwxP2Vq9PCpPXooayhJ2bxTpo5xfpQrwB1svh332p"
+);
+export const STSOL_RESERVE_ID = new PublicKey(
+  "9ogtxmnUF94KaPn3dB3unT5yyu7rpzSwc5igysgqFxrU"
+);
 
 // Raydium-specific
 export const LFY_RAYDIUM_PROGRAM_ID = new PublicKey(
