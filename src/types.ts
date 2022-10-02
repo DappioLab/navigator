@@ -100,6 +100,8 @@ export interface IPoolInfoWrapper {
 
   // Optional
   getSwapOutAmount?(fromSide: PoolDirection, amountIn: BN): BN;
+  getTokenAAmount?(tokenBAmount: bigint): bigint;
+  getTokenBAmount?(tokenAAmount: bigint): bigint;
 }
 
 // TODO: Util methods

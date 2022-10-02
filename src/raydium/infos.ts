@@ -717,6 +717,22 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return apr;
   }
 
+  getTokenAAmount(tokenBAmount: bigint): bigint {
+    const poolBalances = this._getPoolBalances();
+    const coinBalance = BigInt(poolBalances.tokenA.balance.toWei().toNumber());
+    const pcBalance = BigInt(poolBalances.tokenB.balance.toWei().toNumber());
+
+    return (tokenBAmount * coinBalance) / pcBalance;
+  }
+
+  getTokenBAmount(tokenAAmount: bigint): bigint {
+    const poolBalances = this._getPoolBalances();
+    const coinBalance = BigInt(poolBalances.tokenA.balance.toWei().toNumber());
+    const pcBalance = BigInt(poolBalances.tokenB.balance.toWei().toNumber());
+
+    return (tokenAAmount * pcBalance) / coinBalance;
+  }
+
   private _getPoolBalances() {
     const swapFeeNumerator = getBigNumber(this.poolInfo.swapFeeNumerator);
     const swapFeeDenominator = getBigNumber(this.poolInfo.swapFeeDenominator);
