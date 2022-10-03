@@ -51,6 +51,7 @@ export interface PoolInfo extends IPoolInfo {
 
   // Additional attributes
   srmTokenAccount?: PublicKey;
+  marketEventQueue?: PublicKey;
   ammQuantities?: PublicKey;
   tokenAAmount?: bigint;
   tokenBAmount?: bigint;

@@ -9,7 +9,7 @@ import {
 import { getMultipleAccounts } from "../utils";
 import { POOL_PROGRAM_ID_V4, FARM_PROGRAM_ID_V3, FARM_PROGRAM_ID_V5 } from "./ids";
 import { POOL_LAYOUT_V4, FARMER_LAYOUT_V3_2, FARMER_LAYOUT_V5_2, FARM_LAYOUT_V3, FARM_LAYOUT_V5 } from "./layouts";
-import { _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
+import { MARKET_STATE_LAYOUT_V3, _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
 import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm, PoolDirection } from "../types";
 import { getBigNumber, getTokenAccount, TokenAmount } from "./utils";
@@ -32,6 +32,7 @@ infos = class InstanceRaydium {
     let tokenAccountKeys: PublicKey[] = [];
     let mintAccountKeys: PublicKey[] = [];
     let openOrderKeys: PublicKey[] = [];
+    let serumMarketKeys: PublicKey[] = [];
 
     for (let { pubkey, account } of allV4AMMAccount) {
       let poolInfo = this.parsePool(account.data, pubkey);
@@ -42,6 +43,7 @@ infos = class InstanceRaydium {
         tokenAccountKeys.push(poolInfo.poolPcTokenAccount);
         mintAccountKeys.push(poolInfo.lpMint);
         openOrderKeys.push(poolInfo.ammOpenOrders);
+        serumMarketKeys.push(poolInfo.serumMarket);
 
         pools.push(poolInfo);
       }
@@ -51,6 +53,7 @@ infos = class InstanceRaydium {
     const tokenAccounts = await getMultipleAccounts(connection, tokenAccountKeys);
     const mintAccounts = await getMultipleAccounts(connection, mintAccountKeys);
     const openOrderAccounts = await getMultipleAccounts(connection, openOrderKeys);
+    const serumMarketAccounts = await getMultipleAccounts(connection, serumMarketKeys);
 
     interface AdditionalInfoWrapper {
       tokenAmount?: bigint;
@@ -58,6 +61,7 @@ infos = class InstanceRaydium {
       lpDecimal?: bigint;
       baseTokenTotal?: bigint;
       quoteTokenTotal?: bigint;
+      marketEventQueue?: PublicKey;
     }
     let accountSet = new Map<PublicKey, AdditionalInfoWrapper>();
 
@@ -85,6 +89,13 @@ infos = class InstanceRaydium {
       });
     });
 
+    serumMarketAccounts.forEach((account) => {
+      const parsedAccount = MARKET_STATE_LAYOUT_V3.decode(account.account!.data);
+      accountSet.set(account.pubkey, {
+        marketEventQueue: parsedAccount.eventQueue,
+      });
+    });
+
     pools.forEach((pool) => {
       pool.tokenAAmount = accountSet.get(pool.poolCoinTokenAccount)?.tokenAmount;
       pool.tokenBAmount = accountSet.get(pool.poolPcTokenAccount)?.tokenAmount;
@@ -92,6 +103,7 @@ infos = class InstanceRaydium {
       pool.lpDecimals = accountSet.get(pool.lpMint)?.lpDecimal;
       pool.ammOrderBaseTokenTotal = accountSet.get(pool.ammOpenOrders)?.baseTokenTotal;
       pool.ammOrderQuoteTokenTotal = accountSet.get(pool.ammOpenOrders)?.quoteTokenTotal;
+      pool.marketEventQueue = accountSet.get(pool.serumMarket)?.marketEventQueue;
     });
 
     return pools;
@@ -114,6 +126,7 @@ infos = class InstanceRaydium {
       accountKeys.push(poolInfo.poolPcTokenAccount);
       accountKeys.push(poolInfo.lpMint);
       accountKeys.push(poolInfo.ammOpenOrders);
+      accountKeys.push(poolInfo.serumMarket);
 
       pool = poolInfo;
     }
@@ -125,9 +138,11 @@ infos = class InstanceRaydium {
     const tokenBAccountData = additionalAccounts[1];
     const mintAccountData = additionalAccounts[2];
     const openOrderData = additionalAccounts[3];
+    const marketEventQueueData = additionalAccounts[4];
 
     const { supply, decimals } = MintLayout.decode(mintAccountData.account!.data);
     const { baseTokenTotal, quoteTokenTotal } = _OPEN_ORDERS_LAYOUT_V2.decode(openOrderData.account!.data);
+    const marketEventQueue = MARKET_STATE_LAYOUT_V3.decode(marketEventQueueData.account!.data).eventQueue;
 
     pool.tokenAAmount = AccountLayout.decode(tokenAAccountData.account!.data).amount;
     pool.tokenBAmount = AccountLayout.decode(tokenBAccountData.account!.data).amount;
@@ -135,6 +150,7 @@ infos = class InstanceRaydium {
     pool.lpDecimals = BigInt(decimals);
     pool.ammOrderBaseTokenTotal = BigInt(baseTokenTotal);
     pool.ammOrderQuoteTokenTotal = BigInt(quoteTokenTotal);
+    pool.marketEventQueue = marketEventQueue;
 
     return pool;
   }
