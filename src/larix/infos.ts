@@ -1,7 +1,7 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import * as types from ".";
-import { IFarmInfoWrapper, IInstanceFarm, IInstanceMoneyMarket, IReserveInfoWrapper } from "../types";
+import { IFarmInfoWrapper, IInstanceFarm, IInstanceMoneyMarket, IReserveInfoWrapper,IServicesTokenInfo } from "../types";
 import {
   LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
@@ -24,7 +24,7 @@ import {
 // @ts-ignore
 import { seq } from "buffer-layout";
 import { struct, u64, u8, bool } from "@project-serum/borsh";
-import { IServicesTokenInfo } from "../utils";
+
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 

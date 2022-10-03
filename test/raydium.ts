@@ -1,6 +1,6 @@
 import { Connection } from "@solana/web3.js";
 import BN from "bn.js";
-import { raydium } from "../src";
+import { PoolDirection, raydium } from "../src";
 import { PoolInfo, PoolInfoWrapper } from "../src/raydium";
 
 describe("Raydium", () => {
@@ -35,7 +35,7 @@ describe("Raydium", () => {
     console.log(pool0);
 
     const wrapper = new PoolInfoWrapper(pool0 as PoolInfo);
-    const amountOut = await wrapper.getSwapOutAmount("coin", new BN(100000000));
+    const amountOut = await wrapper.getSwapOutAmount(PoolDirection.Reverse, new BN(100000000));
     console.log(amountOut.toNumber());
 
     const pool1 = await raydium.infos.getPool(connection, poolId);
