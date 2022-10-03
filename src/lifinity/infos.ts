@@ -5,6 +5,7 @@ import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
 import * as types from ".";
 import { getMultipleAccounts } from "../utils";
+import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
 const DIGIT = new BN(10000000000);
 
@@ -21,13 +22,44 @@ infos = class InstanceLifinity {
         return pool;
       });
 
-    const poolConfigKeys = pools.map((p) => p.poolConfig.key);
-    const poolConfigInfos = await getMultipleAccounts(connection, poolConfigKeys);
+    const poolConfigKeys: PublicKey[] = [];
+    const tokenAccountKeys: PublicKey[] = [];
+    const mintAccountKeys: PublicKey[] = [];
 
-    return pools.map((pool, index) => ({
-      ...pool,
-      poolConfig: this._parsePoolConfig(poolConfigInfos[index].account?.data, pools[index].poolConfig.key),
-    }));
+    pools.forEach((p) => {
+      poolConfigKeys.push(p.poolConfig.key);
+
+      tokenAccountKeys.push(p.tokenAAccount);
+      tokenAccountKeys.push(p.tokenBAccount);
+
+      mintAccountKeys.push(p.tokenAMint);
+      mintAccountKeys.push(p.tokenBMint);
+      mintAccountKeys.push(p.lpMint);
+    });
+
+    const poolConfigInfos = await getMultipleAccounts(connection, poolConfigKeys);
+    const tokenAccountInfos = await getMultipleAccounts(connection, tokenAccountKeys);
+    const mintAccountInfos = await getMultipleAccounts(connection, mintAccountKeys);
+
+    return pools.map((pool, index) => {
+      const tokenAAccount = AccountLayout.decode(tokenAccountInfos[index * 2].account!.data);
+      const tokenBAccount = AccountLayout.decode(tokenAccountInfos[index * 2 + 1].account!.data);
+
+      const tokenAMint = MintLayout.decode(mintAccountInfos[index * 3].account!.data);
+      const tokenBMint = MintLayout.decode(mintAccountInfos[index * 3 + 1].account!.data);
+      const lpMint = MintLayout.decode(mintAccountInfos[index * 3 + 2].account!.data);
+
+      return {
+        ...pool,
+        poolConfig: this._parsePoolConfig(poolConfigInfos[index].account?.data, pools[index].poolConfig.key),
+        tokenAAmount: tokenAAccount.amount,
+        tokenADecimals: tokenAMint.decimals,
+        tokenBAmount: tokenBAccount.amount,
+        tokenBDecimals: tokenBMint.decimals,
+        lpSupplyAmount: lpMint.supply,
+        lpDecimals: lpMint.decimals,
+      };
+    });
   }
 
   static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
@@ -39,12 +71,33 @@ infos = class InstanceLifinity {
     const lifinityAccount = await connection.getAccountInfo(poolId);
     if (!lifinityAccount) throw Error("Could not get Lifinity Account info");
     let poolInfo = this.parsePool(lifinityAccount.data, poolId);
-    const poolConfigInfo = await connection.getAccountInfo(poolInfo.poolConfig.key);
-    const poolConfig = this._parsePoolConfig(poolConfigInfo?.data, poolInfo.poolConfig.key);
+
+    const AccountKeys: PublicKey[] = [];
+    AccountKeys.push(poolInfo.poolConfig.key);
+    AccountKeys.push(poolInfo.tokenAAccount);
+    AccountKeys.push(poolInfo.tokenBAccount);
+    AccountKeys.push(poolInfo.tokenAMint);
+    AccountKeys.push(poolInfo.tokenBMint);
+    AccountKeys.push(poolInfo.lpMint);
+
+    const AccountInfos = await getMultipleAccounts(connection, AccountKeys);
+
+    const poolConfig = this._parsePoolConfig(AccountInfos[0].account!.data, AccountInfos[0].pubkey);
+    const tokenAAccount = AccountLayout.decode(AccountInfos[1].account!.data);
+    const tokenBAccount = AccountLayout.decode(AccountInfos[2].account!.data);
+    const tokenAMint = MintLayout.decode(AccountInfos[3].account!.data);
+    const tokenBMint = MintLayout.decode(AccountInfos[4].account!.data);
+    const lpMint = MintLayout.decode(AccountInfos[5].account!.data);
 
     return {
       ...poolInfo,
       poolConfig,
+      tokenAAmount: tokenAAccount.amount,
+      tokenADecimals: tokenAMint.decimals,
+      tokenBAmount: tokenBAccount.amount,
+      tokenBDecimals: tokenBMint.decimals,
+      lpSupplyAmount: lpMint.supply,
+      lpDecimals: lpMint.decimals,
     };
   }
 
@@ -170,16 +223,47 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   constructor(public poolInfo: types.PoolInfo) {}
 
   getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
-    // TODO
-    return { tokenAAmount: 0, tokenBAmount: 0 };
+    if (lpAmount === 0) return { tokenAAmount: 0, tokenBAmount: 0 };
+    const tokenAAmount = this.poolInfo.lpSupplyAmount
+      ? Number((this.poolInfo.tokenAAmount! * BigInt(lpAmount)) / this.poolInfo.lpSupplyAmount!)
+      : 0;
+    const tokenBAmount = this.poolInfo.lpSupplyAmount
+      ? Number((this.poolInfo.tokenBAmount! * BigInt(lpAmount)) / this.poolInfo.lpSupplyAmount!)
+      : 0;
+
+    return {
+      tokenAAmount,
+      tokenBAmount,
+    };
   }
+
   getLpAmount(tokenAmount: number, tokenMint: PublicKey): number {
-    // TODO
-    return 0;
+    if (tokenAmount === 0) return 0;
+    if (!tokenMint.equals(this.poolInfo.tokenAMint) && !tokenMint.equals(this.poolInfo.tokenBMint)) {
+      throw new Error("Wrong token mint");
+    }
+
+    const balance = tokenMint.equals(this.poolInfo.tokenAMint)
+      ? this.poolInfo.tokenAAmount!
+      : this.poolInfo.tokenBAmount!;
+
+    const sharePercent = tokenAmount / (Number(balance) + tokenAmount);
+
+    return sharePercent * Number(this.poolInfo.lpSupplyAmount);
   }
+
   getLpPrice(tokenAPrice: number, tokenBPrice: number): number {
-    // TODO
-    return 0;
+    const tokenABalance = Number(this.poolInfo.tokenAAmount) / 10 ** this.poolInfo.tokenADecimals!;
+    const tokenBBalance = Number(this.poolInfo.tokenBAmount) / 10 ** this.poolInfo.tokenBDecimals!;
+    const lpSupply = Number(this.poolInfo.lpSupplyAmount);
+    const lpDecimals = this.poolInfo.lpDecimals!;
+
+    const lpPrice =
+      lpSupply > 0
+        ? (tokenABalance * 10 ** lpDecimals * tokenAPrice + tokenBBalance * 10 ** lpDecimals * tokenBPrice) / lpSupply
+        : 0;
+
+    return lpPrice;
   }
 
   getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
