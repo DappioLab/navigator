@@ -23,10 +23,20 @@ import {
   LENDING_MARKET,
   FRANCIUM_LENDING_PROGRAM_ID,
   FRANCIUM_LENDING_REWARD_PROGRAM_ID,
+  LDO_MINT,
+  STSOL_RESERVE_ID,
 } from "./ids";
-import { IInstanceFarm, IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper, IFarmInfoWrapper } from "../types";
+import {
+  IInstanceFarm,
+  IInstanceMoneyMarket,
+  IObligationInfo,
+  IReserveInfoWrapper,
+  IFarmInfoWrapper,
+  IServicesTokenInfo,
+} from "../types";
 import { utils } from "..";
 import * as types from ".";
+import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 
@@ -234,7 +244,7 @@ infos = class InstanceFrancium {
   }
 
   static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey> {
-    const ata = await utils.findAssociatedTokenAddress(userKey, farmInfo.stakedTokenMint);
+    const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, userKey);
     const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
       [userKey.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
       FRANCIUM_LENDING_REWARD_PROGRAM_ID
@@ -343,6 +353,35 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
       10 ** 6
     );
   }
+  getPartnerReward(tokenList: IServicesTokenInfo[]): types.IPartnerReward | null {
+    let rewardApy = 0;
+    let tokenInfo: IServicesTokenInfo | null = null;
+    let partnerReward: types.IPartnerReward | null = null;
+    let rewardValue = 0;
+    let supplyValue = 0;
+    switch (this.reserveInfo.reserveId.toString()) {
+      case STSOL_RESERVE_ID.toString(): {
+        if (Date.now() / 1000 > 1665316800) return null;
+        const LDO_PER_YEAR = (365 / 30) * 5000;
+        tokenInfo = tokenList.find((t) => t.mint === LDO_MINT.toBase58()) ?? null;
+        let stsolPriceInfo = tokenList.find((t) => t.mint === this.reserveInfo.tokenMint.toBase58()) ?? null;
+        if (!tokenInfo || !stsolPriceInfo) return null;
+        rewardValue = LDO_PER_YEAR * tokenInfo.price * 100;
+        supplyValue =
+          this.supplyAmount()
+            .div(new BN(`1${"".padEnd(this.supplyTokenDecimal().toNumber(), "0")}`))
+            .toNumber() * stsolPriceInfo.price;
+        rewardApy = rewardValue / supplyValue;
+        partnerReward = {
+          side: "supply",
+          rewardToken: tokenInfo,
+          rate: rewardApy,
+        };
+        break;
+      }
+    }
+    return partnerReward;
+  }
 }
 
 export class FarmInfoWrapper implements IFarmInfoWrapper {
@@ -360,7 +399,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 }
 
 export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
-  const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
+  const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, wallet);
   const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
     [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
     FRANCIUM_LENDING_REWARD_PROGRAM_ID

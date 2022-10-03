@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { PublicKey } from "@solana/web3.js";
-import { IFarmerInfo, IFarmInfo, IObligationInfo, IReserveInfo } from "../types";
+import { IFarmerInfo, IFarmInfo, IObligationInfo, IReserveInfo, IServicesTokenInfo } from "../types";
 export * from "./ids";
 export * from "./infos";
 export * from "./layouts";
@@ -234,3 +234,8 @@ export interface FarmInfo extends IFarmInfo {
 }
 
 export interface ObligationInfo extends IObligationInfo {}
+export interface IPartnerReward {
+  rewardToken: IServicesTokenInfo;
+  rate: number;
+  side: string;
+}

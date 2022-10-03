@@ -5,8 +5,7 @@ export * from ".";
 
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { IObligationInfo, IReserveInfo } from "../types";
-import { IServicesTokenInfo } from "../utils";
+import { IObligationInfo, IReserveInfo ,IServicesTokenInfo} from "../types";
 
 export interface ReserveConfig {
   optimalUtilizationRate: BN;

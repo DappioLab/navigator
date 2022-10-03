@@ -1,6 +1,6 @@
 {
   "name": "@dappio-wonderland/navigator",
-  "version": "0.2.5",
+  "version": "0.2.8",
   "description": "Dappio Navigator: The Universal Typescript Client for Instantiating DeFi Protocols",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "test": "mocha --require ts-node/register --timeout 10000000 ./test/**/*",
     "testRaydium": "mocha --require ts-node/register --timeout 10000000 ./test/raydium.ts",
     "testSaber": "mocha --require ts-node/register --timeout 10000000 ./test/saber.ts",

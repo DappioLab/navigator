@@ -2,10 +2,11 @@ import { Connection, GetProgramAccountsConfig, DataSizeFilter, PublicKey, Memcmp
 import BN from "bn.js";
 import { utils } from "..";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
-import { VOLT_PROGRAM_ID } from "./ids";
+import { VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
 import { EXTRA_VOLT_DATA_LAYOUT, ROUND_LAYOUT, USER_PENDING_LAYOUT, VOLT_VAULT_LAYOUT } from "./layouts";
 
 import * as types from ".";
+import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
 
 let infos: IInstanceVault;
 
@@ -228,5 +229,8 @@ export class VaultInfoWrapper {
       ],
       voltProgramId
     )[0];
+  }
+  async getFeeAccount(): Promise<PublicKey> {
+    return getAssociatedTokenAddress(this.vaultInfo.vaultMint, VOLT_FEE_OWNER);
   }
 }

@@ -1,5 +1,5 @@
-import { createATAWithoutCheckIx, findAssociatedTokenAddress, getMultipleAccounts, wrapNative } from "../utils";
-import { NATIVE_MINT, createCloseAccountInstruction } from "@solana/spl-token-v2";
+import { createATAWithoutCheckIx, getMultipleAccounts, wrapNative } from "../utils";
+import { NATIVE_MINT, createCloseAccountInstruction, getAssociatedTokenAddress } from "@solana/spl-token-v2";
 import BN from "bn.js";
 import {
   Connection,
@@ -65,8 +65,8 @@ export async function getDepositTx(
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenAMint));
 
-  let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.tokenBMint);
-  let usrATA1 = await findAssociatedTokenAddress(wallet, ammInfo.tokenAMint);
+  let usrATA0 = await getAssociatedTokenAddress(ammInfo.tokenBMint, wallet);
+  let usrATA1 = await getAssociatedTokenAddress(ammInfo.tokenAMint, wallet);
 
   if (ammInfo.tokenBMint.equals(NATIVE_MINT)) {
     preTx.add(await wrapNative(amount0, wallet, connection, false));
@@ -119,8 +119,8 @@ export async function getWithdrawTx(
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenBMint));
   preTx.add(await createATAWithoutCheckIx(wallet, ammInfo.tokenAMint));
 
-  let usrATA0 = await findAssociatedTokenAddress(wallet, ammInfo.tokenBMint);
-  let usrATA1 = await findAssociatedTokenAddress(wallet, ammInfo.tokenAMint);
+  let usrATA0 = await getAssociatedTokenAddress(ammInfo.tokenBMint, wallet);
+  let usrATA1 = await getAssociatedTokenAddress(ammInfo.tokenAMint, wallet);
 
   if (ammInfo.tokenBMint.equals(NATIVE_MINT)) {
     cleanUpTx.add(createCloseAccountInstruction(usrATA0, wallet, wallet, []));
