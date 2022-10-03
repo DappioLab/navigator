@@ -19,7 +19,8 @@
     "testLifinity": "mocha --require ts-node/register --timeout 10000000 ./test/lifinity.ts",
     "testTulip": "mocha --require ts-node/register --timeout 10000000 ./test/tulip.ts",
     "testFriktion": "mocha --require ts-node/register --timeout 10000000 ./test/friktion.ts",
-    "testNftFinance": "mocha --require ts-node/register --timeout 10000000 ./test/nftFinance.ts"
+    "testNftFinance": "mocha --require ts-node/register --timeout 10000000 ./test/nftFinance.ts",
+    "testLido": "mocha --require ts-node/register --timeout 10000000 ./test/lido.ts"
   },
   "keywords": [],
   "author": "",
