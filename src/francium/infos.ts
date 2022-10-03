@@ -26,9 +26,17 @@ import {
   LDO_MINT,
   STSOL_RESERVE_ID,
 } from "./ids";
-import { IInstanceFarm, IInstanceMoneyMarket, IObligationInfo, IReserveInfoWrapper, IFarmInfoWrapper, IServicesTokenInfo } from "../types";
+import {
+  IInstanceFarm,
+  IInstanceMoneyMarket,
+  IObligationInfo,
+  IReserveInfoWrapper,
+  IFarmInfoWrapper,
+  IServicesTokenInfo,
+} from "../types";
 import { utils } from "..";
 import * as types from ".";
+import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 
@@ -236,7 +244,7 @@ infos = class InstanceFrancium {
   }
 
   static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey> {
-    const ata = await utils.findAssociatedTokenAddress(userKey, farmInfo.stakedTokenMint);
+    const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, userKey);
     const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
       [userKey.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
       FRANCIUM_LENDING_REWARD_PROGRAM_ID
@@ -391,7 +399,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 }
 
 export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
-  const ata = await utils.findAssociatedTokenAddress(wallet, farmInfo.stakedTokenMint);
+  const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, wallet);
   const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
     [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
     FRANCIUM_LENDING_REWARD_PROGRAM_ID

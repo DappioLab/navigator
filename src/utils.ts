@@ -9,7 +9,12 @@ import {
   sendAndConfirmTransaction,
   AccountInfo,
 } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, NATIVE_MINT, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import {
+  TOKEN_PROGRAM_ID,
+  NATIVE_MINT,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+} from "@solana/spl-token-v2";
 import { publicKey, struct, u64, u32 } from "@project-serum/borsh";
 import BN from "bn.js";
 import request from "graphql-request";
@@ -17,7 +22,7 @@ import { IServicesTokenInfo } from "./types";
 
 export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection?: Connection, createAta?: boolean) {
   let tx = new Transaction();
-  let destinationAta = await findAssociatedTokenAddress(walletPublicKey, NATIVE_MINT);
+  let destinationAta = await getAssociatedTokenAddress(NATIVE_MINT, walletPublicKey);
   let createATA = await createATAWithoutCheckIx(walletPublicKey, NATIVE_MINT);
   tx.add(createATA);
   let transferPram = {
@@ -37,18 +42,6 @@ export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connect
   });
   tx.add(syncNativeIx);
   return tx;
-}
-
-export async function findAssociatedTokenAddress(
-  walletAddress: PublicKey,
-  tokenMintAddress: PublicKey
-): Promise<PublicKey> {
-  return (
-    await PublicKey.findProgramAddress(
-      [walletAddress.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), tokenMintAddress.toBuffer()],
-      ASSOCIATED_TOKEN_PROGRAM_ID
-    )
-  )[0];
 }
 
 export async function checkTokenAccount(publickey: PublicKey, connection: Connection) {
@@ -77,7 +70,7 @@ export async function createATAWithoutCheckIx(wallet: PublicKey, mint: PublicKey
     payer = wallet as PublicKey;
   }
   payer = payer as PublicKey;
-  let ATA = await findAssociatedTokenAddress(wallet, mint);
+  let ATA = await getAssociatedTokenAddress(mint, wallet);
   const programId = new PublicKey("9tiP8yZcekzfGzSBmp7n9LaDHRjxP2w7wJj8tpPJtfG");
   let keys = [
     { pubkey: payer, isSigner: true, isWritable: true },
@@ -113,7 +106,6 @@ export async function signAndSendAll(
   const result = sendAndConfirmTransaction(connection, tx, wallet);
   return result;
 }
-
 
 export const getTokenList = async () => {
   const query = `
