@@ -37,6 +37,8 @@ export interface PoolInfo extends IPoolInfo {
   tokenBDecimals?: number;
   lpSupplyAmount?: bigint;
   lpDecimals?: number;
+  tradingFee?: number;
+  marketMakingProfit?: number;
 }
 
 export interface PoolConfig {
@@ -57,6 +59,27 @@ export interface PoolConfig {
   oracleStatus: BN;
   depositCap: BN;
   configTemp2: BN;
+}
+
+export interface LifinityAPI {
+  symbol: string;
+  volume7Days: number;
+  volume7DaysX: number;
+  volume7DaysY: number;
+  volumeYesterDay: number;
+  volumeYesterDayX: number;
+  volumeYesterDayY: number;
+  fee: number;
+  netapr: number;
+  ca: number;
+  startDate: string;
+  coinBalance: number;
+  pcBalance: number;
+  liquidity: string;
+  liquidityAmount: number;
+  pythPrice: number;
+  pythPcPrice: number;
+  rewardsRate: number;
 }
 
 export const defaultPoolConfig: PoolConfig = {
