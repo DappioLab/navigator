@@ -1,7 +1,13 @@
 import { Connection, DataSizeFilter, GetProgramAccountsConfig, MemcmpFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import * as types from ".";
-import { IFarmInfoWrapper, IInstanceFarm, IInstanceMoneyMarket, IReserveInfoWrapper,IServicesTokenInfo } from "../types";
+import {
+  IFarmInfoWrapper,
+  IInstanceFarm,
+  IInstanceMoneyMarket,
+  IReserveInfoWrapper,
+  IServicesTokenInfo,
+} from "../types";
 import {
   LARIX_BRIDGE_PROGRAM_ID,
   LARIX_MAIN_POOL_FARMER_SEED,
@@ -24,7 +30,6 @@ import {
 // @ts-ignore
 import { seq } from "buffer-layout";
 import { struct, u64, u8, bool } from "@project-serum/borsh";
-
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 
@@ -466,8 +471,8 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     return liquidityAmount.mul(this.reserveTokenSupply()).div(this.supplyAmount());
   }
 
-  async getLendingMarketAuthority(lendingMarket: PublicKey): Promise<PublicKey> {
-    const authority = (await PublicKey.findProgramAddress([lendingMarket.toBuffer()], LARIX_PROGRAM_ID))[0];
+  getLendingMarketAuthority(lendingMarket: PublicKey): PublicKey {
+    const authority = PublicKey.findProgramAddressSync([lendingMarket.toBuffer()], LARIX_PROGRAM_ID)[0];
     return authority;
   }
 }

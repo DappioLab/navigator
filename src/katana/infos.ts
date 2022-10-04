@@ -290,18 +290,18 @@ export class VaultInfoWrapper {
       },
       page
     );
-    let address = await PublicKey.findProgramAddress(
+    let address = await PublicKey.findProgramAddressSync(
       [minerBytes, this.vaultInfo.underlyingTokenMint.toBuffer(), page],
       this.vaultInfo.programId
     );
     return address[0];
   }
 
-  async getOtcTermId() {
+  getOtcTermId() {
     let prefix = "otc";
     let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
 
-    let address = await PublicKey.findProgramAddress(
+    let address = PublicKey.findProgramAddressSync(
       [
         minerBytes,
         this.vaultInfo.vaultId.toBuffer(),

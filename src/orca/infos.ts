@@ -320,7 +320,7 @@ infos = class InstanceOrca {
   }
 
   static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey): Promise<PublicKey> {
-    const [farmerId, _] = await PublicKey.findProgramAddress(
+    const [farmerId, _] = PublicKey.findProgramAddressSync(
       [farmInfo.farmId.toBuffer(), userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer()],
       ORCA_FARM_PROGRAM_ID
     );
@@ -412,8 +412,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return pool ? pool.apy.week * 100 : 0;
   }
 
-  async getAuthority() {
-    let authority = await PublicKey.findProgramAddress([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
+  getAuthority() {
+    let authority = PublicKey.findProgramAddressSync([this.poolInfo.poolId.toBuffer()], ORCA_POOL_PROGRAM_ID);
     return authority[0];
   }
   getSingleSideRemoveLPAmount(toSide: PublicKey, amountIn: BN) {

@@ -139,7 +139,7 @@ export async function getWithdrawTx(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const [strategyFarmInfo, bump] = await PublicKey.findProgramAddress(
+  const [strategyFarmInfo, bump] = await PublicKey.findProgramAddressSync(
     [
       strategy.stakePoolId.toBuffer(),
       strategy.authority.toBuffer(),

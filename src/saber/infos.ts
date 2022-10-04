@@ -382,14 +382,14 @@ infos = class InstanceSaber {
   }
 
   private static async _getPoolAuthority(poolId: PublicKey): Promise<PublicKey> {
-    const authority = (await PublicKey.findProgramAddress([poolId.toBuffer()], POOL_PROGRAM_ID))[0];
+    const authority = (await PublicKey.findProgramAddressSync([poolId.toBuffer()], POOL_PROGRAM_ID))[0];
 
     return authority;
   }
 
-  static async getFarmerIdWithBump(farmId: PublicKey, userKey: PublicKey): Promise<[PublicKey, number]> {
+  static getFarmerIdWithBump(farmId: PublicKey, userKey: PublicKey): [PublicKey, number] {
     let farmerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
-    let farmer = await PublicKey.findProgramAddress(
+    let farmer = PublicKey.findProgramAddressSync(
       [farmerBytes, farmId.toBuffer(), userKey.toBuffer()],
       QURARRY_MINE_PROGRAM_ID
     );

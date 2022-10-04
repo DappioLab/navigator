@@ -309,7 +309,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
   }
 
   async getLendingMarketAuthority(marketId: PublicKey): Promise<PublicKey> {
-    const authority = (await PublicKey.findProgramAddress([marketId.toBuffer()], TULIP_PROGRAM_ID))[0];
+    const authority = (await PublicKey.findProgramAddressSync([marketId.toBuffer()], TULIP_PROGRAM_ID))[0];
 
     return authority;
   }
@@ -324,18 +324,18 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   }
 
   async deriveTrackingAddress(owner: PublicKey): Promise<[PublicKey, number]> {
-    return await PublicKey.findProgramAddress(
+    return await PublicKey.findProgramAddressSync(
       [Buffer.from("tracking"), this.vaultInfo.vaultId.toBuffer(), owner.toBuffer()],
       TULIP_VAULT_V2_PROGRAM_ID
     );
   }
 
   async deriveTrackingPdaAddress(trackingAddress: PublicKey): Promise<[PublicKey, number]> {
-    return await PublicKey.findProgramAddress([trackingAddress.toBuffer()], TULIP_VAULT_V2_PROGRAM_ID);
+    return await PublicKey.findProgramAddressSync([trackingAddress.toBuffer()], TULIP_VAULT_V2_PROGRAM_ID);
   }
 
   async deriveTrackingQueueAddress(trackingPdaAddress: PublicKey): Promise<[PublicKey, number]> {
-    return await PublicKey.findProgramAddress(
+    return await PublicKey.findProgramAddressSync(
       [Buffer.from("queue"), trackingPdaAddress.toBuffer()],
       TULIP_VAULT_V2_PROGRAM_ID
     );
