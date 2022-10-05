@@ -279,7 +279,7 @@ export { infos };
 export class VaultInfoWrapper {
   constructor(public readonly vaultInfo: types.VaultInfo) {}
 
-  async getPricePerPage() {
+  getPricePerPage() {
     let prefix = "price-per-share";
     let minerBytes = new Uint8Array(Buffer.from(prefix, "utf-8"));
     const dataLayout = struct([u128("bump")]);
@@ -290,7 +290,7 @@ export class VaultInfoWrapper {
       },
       page
     );
-    let address = await PublicKey.findProgramAddressSync(
+    let address = PublicKey.findProgramAddressSync(
       [minerBytes, this.vaultInfo.underlyingTokenMint.toBuffer(), page],
       this.vaultInfo.programId
     );
@@ -325,13 +325,13 @@ export async function checkDepositorCreated(
   connection: Connection,
   programId: PublicKey
 ) {
-  let address = await infos.getDepositorId(vault, wallet, programId);
+  let address = infos.getDepositorId(vault, wallet, programId);
   let accountInfo = await connection.getAccountInfo(address);
   return Boolean(accountInfo?.owner.equals(programId));
 }
 
 async function getPricePerPageAccount(vault: VaultInfoWrapper, connection: Connection) {
-  let infoPubkey = await vault.getPricePerPage();
+  let infoPubkey = vault.getPricePerPage();
   let account = await connection.getAccountInfo(infoPubkey);
   let ppsp = parsePricePerSharePageData(account?.data, infoPubkey);
   return ppsp;
@@ -398,7 +398,7 @@ function parseOtcTermsData(data: any, otcTermId: PublicKey): types.OtcTermInfo {
 }
 
 async function getOtcTermsAccount(connection: Connection, vault: VaultInfoWrapper): Promise<types.OtcTermInfo> {
-  let otcTermId = await vault.getOtcTermId();
+  let otcTermId = vault.getOtcTermId();
   let account = await connection.getAccountInfo(otcTermId);
   if (account == undefined) {
     return defaultOtcTerms(otcTermId);

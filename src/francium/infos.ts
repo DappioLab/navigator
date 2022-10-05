@@ -245,7 +245,7 @@ infos = class InstanceFrancium {
 
   static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey> {
     const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, userKey);
-    const [farmInfoPub, nonce] = await PublicKey.findProgramAddressSync(
+    const [farmInfoPub, nonce] = PublicKey.findProgramAddressSync(
       [userKey.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
       FRANCIUM_LENDING_REWARD_PROGRAM_ID
     );
@@ -400,7 +400,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 
 export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
   const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, wallet);
-  const [farmInfoPub, nonce] = await PublicKey.findProgramAddressSync(
+  const [farmInfoPub, nonce] = PublicKey.findProgramAddressSync(
     [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
     FRANCIUM_LENDING_REWARD_PROGRAM_ID
   );
