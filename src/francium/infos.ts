@@ -245,7 +245,7 @@ infos = class InstanceFrancium {
 
   static async getFarmerId(farmInfo: types.FarmInfo, userKey: PublicKey, version?: number): Promise<PublicKey> {
     const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, userKey);
-    const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
+    const [farmInfoPub, nonce] = PublicKey.findProgramAddressSync(
       [userKey.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
       FRANCIUM_LENDING_REWARD_PROGRAM_ID
     );
@@ -400,7 +400,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 
 export async function getFarmerPubkey(wallet: PublicKey, farmInfo: types.FarmInfo) {
   const ata = await getAssociatedTokenAddress(farmInfo.stakedTokenMint, wallet);
-  const [farmInfoPub, nonce] = await PublicKey.findProgramAddress(
+  const [farmInfoPub, nonce] = PublicKey.findProgramAddressSync(
     [wallet.toBuffer(), farmInfo.farmId.toBuffer(), ata.toBuffer()],
     FRANCIUM_LENDING_REWARD_PROGRAM_ID
   );
@@ -749,16 +749,16 @@ export async function getAllRaydiumPositions(
   return allPositionInfos.map((info) => parseRaydiumPositionData(info.account.data, info.pubkey));
 }
 
-export async function getRaydiumPositionKeySet(
+export function getRaydiumPositionKeySet(
   wallet: PublicKey,
   strategyAccount: PublicKey
-): Promise<{ address: PublicKey; nonce: BN; bump: BN }> {
+): { address: PublicKey; nonce: BN; bump: BN } {
   let seed = Buffer.from([97, 110, 99, 104, 111, 114]);
   let nonce = Math.trunc(Date.now() / 1000);
   const nonceLeBytes = Buffer.from([0, 0, 0, 0]);
   nonceLeBytes.writeUInt32LE(nonce);
 
-  const [pda, bump] = await PublicKey.findProgramAddress(
+  const [pda, bump] = PublicKey.findProgramAddressSync(
     [seed, wallet.toBuffer(), strategyAccount.toBuffer(), nonceLeBytes],
     LFY_RAYDIUM_PROGRAM_ID
   );

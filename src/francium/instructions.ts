@@ -307,7 +307,7 @@ export async function stake(
     { pubkey: strategy.stakePoolId, isSigner: false, isWritable: true },
     //authority
     {
-      pubkey: (await stakeInfo.authority())[0],
+      pubkey: stakeInfo.authority()[0],
       isSigner: false,
       isWritable: true,
     },

@@ -52,7 +52,7 @@ export async function getDepositTx(
   let poolTx = new Transaction();
   let cleanUpTx = new Transaction();
 
-  const positionKeySet = await getRaydiumPositionKeySet(wallet, strategy.infoPubkey);
+  const positionKeySet =  getRaydiumPositionKeySet(wallet, strategy.infoPubkey);
   const initIx = initializeRaydiumPosition(wallet, strategy, positionKeySet);
   let pubkeys = [strategy.lendingPool0, strategy.lendingPool1, strategy.ammId];
   let accountsInfo = await getMultipleAccounts(connection, pubkeys);
@@ -139,7 +139,7 @@ export async function getWithdrawTx(
   };
   const filters = [adminIdMemcmp, sizeFilter];
   const config: GetProgramAccountsConfig = { filters: filters };
-  const [strategyFarmInfo, bump] = await PublicKey.findProgramAddress(
+  const [strategyFarmInfo, bump] = PublicKey.findProgramAddressSync(
     [
       strategy.stakePoolId.toBuffer(),
       strategy.authority.toBuffer(),

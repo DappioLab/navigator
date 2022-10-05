@@ -44,7 +44,7 @@ infos = class InstanceSaber {
         continue;
       }
 
-      const poolAuthority = await this._getPoolAuthority(poolId);
+      const poolAuthority = this._getPoolAuthority(poolId);
       let poolInfo = this.parsePool(poolAccount.account.data, poolId, poolAuthority);
       if (poolInfo.isPaused) {
         continue;
@@ -108,7 +108,7 @@ infos = class InstanceSaber {
   static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
     const wrapInfos = await this._getAllWraps(connection);
     const poolAccount: any = await connection.getAccountInfo(poolId);
-    const poolAuthority = await this._getPoolAuthority(poolId);
+    const poolAuthority = this._getPoolAuthority(poolId);
     const pool = this.parsePool(poolAccount.data, poolId, poolAuthority);
     pool.poolId = poolId;
 
@@ -306,7 +306,7 @@ infos = class InstanceSaber {
   }
 
   static async getFarmerId(farmInfo: FarmInfo, userKey: PublicKey): Promise<PublicKey> {
-    let [farmerId, _] = await this.getFarmerIdWithBump(farmInfo.farmId, userKey);
+    let [farmerId, _] = this.getFarmerIdWithBump(farmInfo.farmId, userKey);
     return farmerId;
   }
 
@@ -381,15 +381,15 @@ infos = class InstanceSaber {
     };
   }
 
-  private static async _getPoolAuthority(poolId: PublicKey): Promise<PublicKey> {
-    const authority = (await PublicKey.findProgramAddress([poolId.toBuffer()], POOL_PROGRAM_ID))[0];
+  private static _getPoolAuthority(poolId: PublicKey): PublicKey {
+    const authority = PublicKey.findProgramAddressSync([poolId.toBuffer()], POOL_PROGRAM_ID)[0];
 
     return authority;
   }
 
-  static async getFarmerIdWithBump(farmId: PublicKey, userKey: PublicKey): Promise<[PublicKey, number]> {
+  static getFarmerIdWithBump(farmId: PublicKey, userKey: PublicKey): [PublicKey, number] {
     let farmerBytes = new Uint8Array(Buffer.from("Miner", "utf-8"));
-    let farmer = await PublicKey.findProgramAddress(
+    let farmer = PublicKey.findProgramAddressSync(
       [farmerBytes, farmId.toBuffer(), userKey.toBuffer()],
       QURARRY_MINE_PROGRAM_ID
     );
