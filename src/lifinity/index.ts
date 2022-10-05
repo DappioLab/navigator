@@ -61,7 +61,7 @@ export interface PoolConfig {
   configTemp2: BN;
 }
 
-export interface LifinityAPI {
+export interface LifinityAPIData {
   symbol: string;
   volume7Days: number;
   volume7DaysX: number;

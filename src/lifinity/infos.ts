@@ -43,10 +43,10 @@ infos = class InstanceLifinity {
     const mintAccountInfos = await getMultipleAccounts(connection, mintAccountKeys);
 
     const tokenMap = new Map<string, IServicesTokenInfo>();
-    const poolMap = new Map<string, types.LifinityAPI>();
+    const poolMap = new Map<string, types.LifinityAPIData>();
     const tokenList = await getTokenList();
-    const poolApiData: types.LifinityAPI[] = (await axios.get(ApiEndpoints.poolInfo)).data;
-    poolApiData.forEach((data) => {
+    const allPoolData: types.LifinityAPIData[] = (await axios.get(APIEndPoints.pools)).data;
+    allPoolData.forEach((data) => {
       const symbol = data.symbol.split("-");
       const symbolA = symbol[0];
       const symbolB = symbol[1];
@@ -70,7 +70,7 @@ infos = class InstanceLifinity {
       const tokenAMint = MintLayout.decode(mintAccountInfos[index * 3].account!.data);
       const tokenBMint = MintLayout.decode(mintAccountInfos[index * 3 + 1].account!.data);
       const lpMint = MintLayout.decode(mintAccountInfos[index * 3 + 2].account!.data);
-      const poolApiData = poolMap.get(pool.tokenAMint.toString().concat(pool.tokenBMint.toString()));
+      const poolData = poolMap.get(pool.tokenAMint.toString().concat(pool.tokenBMint.toString()));
 
       return {
         ...pool,
@@ -81,8 +81,8 @@ infos = class InstanceLifinity {
         tokenBDecimals: tokenBMint.decimals,
         lpSupplyAmount: lpMint.supply,
         lpDecimals: lpMint.decimals,
-        tradingFee: poolApiData?.fee,
-        marketMakingProfit: poolApiData?.netapr! - poolApiData?.fee!,
+        tradingFee: poolData?.fee,
+        marketMakingProfit: poolData?.netapr! - poolData?.fee!,
       };
     });
   }
@@ -111,8 +111,8 @@ infos = class InstanceLifinity {
     const symbolA = tokenList.find((t) => t.mint == poolInfo.tokenAMint.toBase58())?.symbol;
     const symbolB = tokenList.find((t) => t.mint == poolInfo.tokenBMint.toBase58())?.symbol;
     const symbol = symbolA! + "-" + symbolB!;
-    const poolApiData: types.LifinityAPI[] = (await axios.get(ApiEndpoints.poolInfo)).data;
-    const poolApi = poolApiData.find((p) => p.symbol == symbol);
+    const allPoolData: types.LifinityAPIData[] = (await axios.get(APIEndPoints.pools)).data;
+    const poolData = allPoolData.find((p) => p.symbol == symbol);
 
     const poolConfig = this._parsePoolConfig(AccountInfos[0].account!.data, AccountInfos[0].pubkey);
     const tokenAAccount = AccountLayout.decode(AccountInfos[1].account!.data);
@@ -130,8 +130,8 @@ infos = class InstanceLifinity {
       tokenBDecimals: tokenBMint.decimals,
       lpSupplyAmount: lpMint.supply,
       lpDecimals: lpMint.decimals,
-      tradingFee: poolApi?.fee,
-      marketMakingProfit: poolApi?.netapr! - poolApi?.fee!,
+      tradingFee: poolData?.fee,
+      marketMakingProfit: poolData?.netapr! - poolData?.fee!,
     };
   }
 
@@ -311,6 +311,6 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 }
 
-enum ApiEndpoints {
-  poolInfo = "https://lifinity.io/api/poolinfo?flat=true",
+enum APIEndPoints {
+  pools = "https://lifinity.io/api/poolinfo?flat=true",
 }
