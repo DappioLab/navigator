@@ -140,7 +140,7 @@ export interface IInstanceFarm {
   getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<IFarmerInfo>;
 
   // Optional Methods
-  getFarmerIdWithBump?(farmId: PublicKey, userKey: PublicKey): Promise<[PublicKey, number]>;
+  getFarmerIdWithBump?(farmId: PublicKey, userKey: PublicKey): [PublicKey, number];
 }
 
 export interface IInstanceMoneyMarket {

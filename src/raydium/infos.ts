@@ -472,7 +472,7 @@ infos = class InstanceRaydium {
   static async getFarmerId(farmInfo: FarmInfo, userKey: PublicKey, version: number): Promise<PublicKey> {
     const programId = version === 3 ? FARM_PROGRAM_ID_V3 : FARM_PROGRAM_ID_V5;
 
-    const [farmerId, _] = await PublicKey.findProgramAddress(
+    const [farmerId, _] = PublicKey.findProgramAddressSync(
       [farmInfo.farmId.toBuffer(), userKey.toBuffer(), Buffer.from("staker_info_v2_associated_seed", "utf-8")],
       programId
     );

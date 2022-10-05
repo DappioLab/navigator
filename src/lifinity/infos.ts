@@ -1,10 +1,11 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import axios from "axios";
 import BN from "bn.js";
-import { IInstancePool, IPoolInfoWrapper } from "../types";
+import { IInstancePool, IPoolInfoWrapper, IServicesTokenInfo } from "../types";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
 import * as types from ".";
-import { getMultipleAccounts } from "../utils";
+import { getMultipleAccounts, getTokenList } from "../utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
 const DIGIT = new BN(10000000000);
@@ -41,6 +42,27 @@ infos = class InstanceLifinity {
     const tokenAccountInfos = await getMultipleAccounts(connection, tokenAccountKeys);
     const mintAccountInfos = await getMultipleAccounts(connection, mintAccountKeys);
 
+    const tokenMap = new Map<string, IServicesTokenInfo>();
+    const poolMap = new Map<string, types.LifinityAPIData>();
+    const tokenList = await getTokenList();
+    const allPoolData: types.LifinityAPIData[] = (await axios.get(APIEndPoints.pools)).data;
+    allPoolData.forEach((data) => {
+      const symbol = data.symbol.split("-");
+      const symbolA = symbol[0];
+      const symbolB = symbol[1];
+      let mintA = tokenMap.get(symbolA);
+      if (!mintA) {
+        mintA = tokenList.find((t) => t.symbol === symbolA);
+        tokenMap.set(symbolA, mintA!);
+      }
+      let mintB = tokenMap.get(symbolB);
+      if (!mintB) {
+        mintB = tokenList.find((t) => t.symbol === symbolB);
+        tokenMap.set(symbolB, mintB!);
+      }
+      poolMap.set(mintA!.mint.concat(mintB!.mint), data);
+    });
+
     return pools.map((pool, index) => {
       const tokenAAccount = AccountLayout.decode(tokenAccountInfos[index * 2].account!.data);
       const tokenBAccount = AccountLayout.decode(tokenAccountInfos[index * 2 + 1].account!.data);
@@ -48,6 +70,7 @@ infos = class InstanceLifinity {
       const tokenAMint = MintLayout.decode(mintAccountInfos[index * 3].account!.data);
       const tokenBMint = MintLayout.decode(mintAccountInfos[index * 3 + 1].account!.data);
       const lpMint = MintLayout.decode(mintAccountInfos[index * 3 + 2].account!.data);
+      const poolData = poolMap.get(pool.tokenAMint.toString().concat(pool.tokenBMint.toString()));
 
       return {
         ...pool,
@@ -58,6 +81,8 @@ infos = class InstanceLifinity {
         tokenBDecimals: tokenBMint.decimals,
         lpSupplyAmount: lpMint.supply,
         lpDecimals: lpMint.decimals,
+        tradingFee: poolData?.fee,
+        marketMakingProfit: poolData?.netapr! - poolData?.fee!,
       };
     });
   }
@@ -82,6 +107,13 @@ infos = class InstanceLifinity {
 
     const AccountInfos = await getMultipleAccounts(connection, AccountKeys);
 
+    const tokenList = await getTokenList();
+    const symbolA = tokenList.find((t) => t.mint == poolInfo.tokenAMint.toBase58())?.symbol;
+    const symbolB = tokenList.find((t) => t.mint == poolInfo.tokenBMint.toBase58())?.symbol;
+    const symbol = symbolA! + "-" + symbolB!;
+    const allPoolData: types.LifinityAPIData[] = (await axios.get(APIEndPoints.pools)).data;
+    const poolData = allPoolData.find((p) => p.symbol == symbol);
+
     const poolConfig = this._parsePoolConfig(AccountInfos[0].account!.data, AccountInfos[0].pubkey);
     const tokenAAccount = AccountLayout.decode(AccountInfos[1].account!.data);
     const tokenBAccount = AccountLayout.decode(AccountInfos[2].account!.data);
@@ -98,6 +130,8 @@ infos = class InstanceLifinity {
       tokenBDecimals: tokenBMint.decimals,
       lpSupplyAmount: lpMint.supply,
       lpDecimals: lpMint.decimals,
+      tradingFee: poolData?.fee,
+      marketMakingProfit: poolData?.netapr! - poolData?.fee!,
     };
   }
 
@@ -266,12 +300,17 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
-    // TODO
-    return 0;
+  getApr(_x: number, _y: number): number {
+    return this.poolInfo.tradingFee && this.poolInfo.marketMakingProfit
+      ? this.poolInfo.tradingFee + this.poolInfo.marketMakingProfit
+      : 0;
   }
 
   getLiquidityUpperCap() {
     return this.poolInfo.poolConfig.depositCap;
   }
+}
+
+enum APIEndPoints {
+  pools = "https://lifinity.io/api/poolinfo?flat=true",
 }
