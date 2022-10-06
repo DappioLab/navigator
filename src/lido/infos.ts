@@ -1,25 +1,19 @@
-import { TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token-v2";
 import { PublicKey, Connection } from "@solana/web3.js";
-import BN from "bn.js";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
-import { LIDO_TOKEN_LAYOUT } from "./layout";
+import { LIDO_LAYOUT, LIDO_TOKEN_LAYOUT } from "./layout";
 import * as types from ".";
 
 let infos: IInstanceVault;
 
 infos = class InstanceLido {
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
-    const memcmpFilter = {
-      memcmp: { bytes: ST_SOL_MINT_ADDRESS.toString(), offset: 0 },
-    };
-    const config = {
-      filters: [{ dataSize: 165 }, memcmpFilter],
-    };
-    const accountInfos = await connection.getProgramAccounts(TOKEN_PROGRAM_ID, config);
-    const vaults: types.VaultInfo[] = accountInfos.map((info) => this.parseVault(info.account.data, info.pubkey));
+    const accountInfos = await connection.getAccountInfo(LIDO_ADDRESS);
 
-    return vaults;
+    if (!accountInfos) throw Error("Error: Could not get solido address");
+    const vault = this.parseVault(accountInfos.data, LIDO_ADDRESS);
+
+    return [vault];
   }
 
   static async getAllVaultWrappers(connection: Connection): Promise<VaultInfoWrapper[]> {
@@ -27,6 +21,8 @@ infos = class InstanceLido {
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
+    if (!vaultId.equals(LIDO_ADDRESS)) throw Error(`Error: Lido vaultId must match ${LIDO_ADDRESS.toBase58()}`);
+
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
     if (!vaultAccountInfo) throw Error("Error: Cannot get solido token account");
 
@@ -37,19 +33,43 @@ infos = class InstanceLido {
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     // Decode the Token data using AccountLayout
-    const decodeData = AccountLayout.decode(data);
-    const { mint, amount } = decodeData;
+    const decodeData = LIDO_LAYOUT.decode(data);
+    const {
+      lidoVersion,
+      manager,
+      stSolMint,
+      exchangeRate,
+      solReserveAuthorityBumpSeed,
+      stakeAuthorityBumpSeed,
+      mintAuthorityBumpSeed,
+      rewardsWithdrawAuthorityBumpSeed,
+      rewardDistribution,
+      feeRecipients,
+      metrics,
+      validators,
+      maintainers,
+    } = decodeData;
 
     // Ensure the mint matches
-    if (!this._isAllowed(mint)) {
+    if (!this._isAllowed(stSolMint)) {
       throw Error("Error: Not a stSOL token account");
     }
 
     return {
       vaultId,
-      shareMint: mint,
-      // TODO: Set amount
-      amount: new BN(0),
+      lidoVersion,
+      manager,
+      shareMint: stSolMint,
+      exchangeRate,
+      solReserveAuthorityBumpSeed,
+      stakeAuthorityBumpSeed,
+      mintAuthorityBumpSeed,
+      rewardsWithdrawAuthorityBumpSeed,
+      rewardDistribution,
+      feeRecipients,
+      metrics,
+      validators,
+      maintainers,
     };
   }
 
@@ -73,8 +93,8 @@ infos = class InstanceLido {
   }
 
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
-    const decodeData = AccountLayout.decode(data);
-    const { mint, owner } = decodeData;
+    const decodeData = LIDO_TOKEN_LAYOUT.decode(data);
+    const { mint, amount, owner } = decodeData;
 
     // Ensure the mint matches
     if (!this._isAllowed(mint)) {
@@ -84,8 +104,11 @@ infos = class InstanceLido {
     return {
       depositorId,
       userKey: owner,
+      amount,
+      mint,
     };
   }
+
   private static _isAllowed(mint: PublicKey): boolean {
     return mint.equals(ST_SOL_MINT_ADDRESS);
   }
