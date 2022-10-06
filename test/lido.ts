@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import { assert } from "console";
 import * as lido from "../src/lido";
 
 describe("Lido", () => {
@@ -11,10 +12,14 @@ describe("Lido", () => {
   const tokenKey = new PublicKey("F9kWLTs28mWKmmvKDhAvtHuVwYKx6L4yG7C3n4WyLVh6");
   it(" Can get all vaults", async () => {
     const vaults = (await lido.infos.getAllVaults(connection)) as lido.VaultInfo[];
-    console.log(`- Fetched ${vaults.length} vaults`);
+
+    // Should only return main Lido Account information
+    assert(vaults.length == 1);
+
+    console.log(`- Fetched ${vaults.length} vault`);
   });
   it(" Can get vault", async () => {
-    const vault = await lido.infos.getVault!(connection, tokenKey);
+    const vault = await lido.infos.getVault!(connection, lido.LIDO_ADDRESS);
     console.log(`- VaultId: ${vault.vaultId.toBase58()}`);
     console.log(`- Vault shareMint: ${vault.shareMint.toBase58()}`);
     // console.log(`- Vault base PDA: ${vault.base.pda.toBase58()}`);
@@ -32,5 +37,19 @@ describe("Lido", () => {
     const depositor = await lido.infos.getDepositor(connection, tokenKey);
     // console.log(`- Deposited Balance: ${depositor.depositedBalance.toNumber()}`);
     console.log(`- Owner: ${depositor.userKey.toBase58()}`);
+  });
+  it(" Can get maintainers", async () => {
+    const vault = (await lido.infos.getVault(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
+    vault.maintainers.entries.forEach((m, i) => {
+      console.log(`\n* Maintainer #${i + 1}`);
+      console.log(`** Maintainer Pubkey: ${m.pubkey.toBase58()}`);
+    });
+  });
+  it(" Can get validators", async () => {
+    const vault = (await lido.infos.getVault(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
+    vault.validators.entries.forEach((v, i) => {
+      console.log(`\n* Validator #${i + 1}`);
+      console.log(`** Validator Pubkey: ${v.pubkey.toBase58()}`);
+    });
   });
 });

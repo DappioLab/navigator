@@ -43,10 +43,8 @@ const VALIDATOR_LAYOUT = struct(
 
 const VALIDATORS_ITEM_LAYOUT = struct([publicKey("pubkey"), VALIDATOR_LAYOUT]);
 
-// TODO: Review the [0] part
-const MAINTAINERS_ITEM_LAYOUT = struct([publicKey("pubkey"), [0]]);
+const MAINTAINERS_ITEM_LAYOUT = struct([publicKey("pubkey")]);
 
-// TODO: Check use of vec here, and if something else is more appropriate here
 export const LIDO_LAYOUT = struct([
   u8("lidoVersion"),
   publicKey("manager"),
@@ -60,14 +58,12 @@ export const LIDO_LAYOUT = struct([
     [u32("treasuryFee"), u32("validationFee"), u32("developerFee"), u32("stSolAppreciation")],
     "rewardDistribution"
   ),
-  struct([publicKey("treasuryAccount"), publicKey("developerAccount"), "feeRecipients"]),
+  struct([publicKey("treasuryAccount"), publicKey("developerAccount")], "feeRecipients"),
   METRICS_LAYOUT,
   struct([vec(VALIDATORS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "validators"),
   struct([vec(MAINTAINERS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "maintainers"),
 ]);
 
-// TODO: Use LIDO_TOKEN_LAYOUT
-// See: https://github.com/solana-labs/solana-program-library/issues/2683
 export const LIDO_TOKEN_LAYOUT = struct([
   publicKey("mint"),
   publicKey("owner"),
