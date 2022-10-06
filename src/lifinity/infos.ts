@@ -307,7 +307,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 
   getLiquidityUpperCap() {
-    return this.poolInfo.poolConfig.depositCap;
+    return this.poolInfo.initializerAmount;
   }
 }
 
