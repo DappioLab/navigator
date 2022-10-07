@@ -13,7 +13,7 @@ export const MARINADE_FINANCE_ACCOUNT_STATE = struct(
     struct(
       [
         struct(
-          [[publicKey("account"), u32("itemSize"), u32("count"), publicKey("newAccount"), u32("copiedCount")]],
+          [publicKey("account"), u32("itemSize"), u32("count"), publicKey("newAccount"), u32("copiedCount")],
           "stakeList"
         ),
         u64("delayedUnstakeCoolingDown"),
