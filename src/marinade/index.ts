@@ -63,7 +63,7 @@ export interface VaultInfo extends IVaultInfo {
 
   rewardFee: Fee;
   stakeSystem: StakeSystem;
-  validatorList: ValidatorSystem;
+  validatorSystem: ValidatorSystem;
   liqPool: LiqPool;
 
   availableReserveBalance: BN;
@@ -83,4 +83,9 @@ export interface TickerAccountData {
   beneficiary: PublicKey;
   lamportsAmount: BN;
   createdEpoch: BN;
+}
+
+export interface DepositorInfo extends IDepositorInfo {
+  mint: PublicKey;
+  amount: BN;
 }
