@@ -1,4 +1,5 @@
 import { PublicKey, Connection } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
 import { LIDO_LAYOUT, LIDO_TOKEN_LAYOUT } from "./layout";
@@ -88,8 +89,11 @@ infos = class InstanceLido {
     return this.parseDepositor(depositorAccountInfo.data, depositorId);
   }
 
-  static getDepositorId(vaultId: PublicKey, _userKey: PublicKey, _programId: PublicKey = LIDO_PROGRAM_ID): PublicKey {
-    return vaultId;
+  static getDepositorId(_vaultId: PublicKey, userKey: PublicKey, _programId: PublicKey = LIDO_PROGRAM_ID): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), ST_SOL_MINT_ADDRESS.toBuffer()],
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    )[0];
   }
 
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
