@@ -16,24 +16,14 @@ const METRICS_LAYOUT = struct(
 );
 
 /**
- * Seed range with a begin and end, both u64
- *
- * @param property optional name for the seed range
- * @returns (named) struct containing a seed range
- */
-function seedRange(property?: string | undefined): struct {
-  return struct([u64("begin"), u64("end")], property);
-}
-
-/**
  * Layout of a single validator
  */
 const VALIDATOR_LAYOUT = struct(
   [
     u64("feeCredit"),
     publicKey("feeAddress"),
-    seedRange("stakeSeeds"),
-    seedRange("unstakeSeeds"),
+    struct([u64("begin"), u64("end")], "stakeSeeds"),
+    struct([u64("begin"), u64("end")], "unstakeSeeds"),
     u64("stakeAccountsBalance"),
     u64("unstakeAccountsBalance"),
     u8("active"),
