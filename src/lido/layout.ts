@@ -53,17 +53,3 @@ export const LIDO_LAYOUT = struct([
   struct([vec(VALIDATORS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "validators"),
   struct([vec(MAINTAINERS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "maintainers"),
 ]);
-
-export const LIDO_TOKEN_LAYOUT = struct([
-  publicKey("mint"),
-  publicKey("owner"),
-  u64("amount"),
-  u8("delegateOption"),
-  publicKey("delegate"),
-  u8("state"),
-  u8("isNativeOption"),
-  u64("isNative"),
-  u64("delegatedAmount"),
-  u8("closeAuthorityOption"),
-  publicKey("closeAuthority"),
-]);

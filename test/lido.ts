@@ -24,17 +24,17 @@ describe("Lido", () => {
     console.log(`- Vault shareMint: ${vault.shareMint.toBase58()}`);
   });
   it(" Can get all depositors", async () => {
-    const depositors = await lido.infos.getAllDepositors(connection, userKey) as lido.DepositorInfo[];
+    const depositors = (await lido.infos.getAllDepositors(connection, userKey)) as lido.DepositorInfo[];
     console.log(`Fetched ${depositors.length} depositors`);
     depositors.forEach((d, i) => {
       console.log(`\n* Depositor #${i + 1}`);
       console.log(`** DepositorId: ${d.depositorId}`);
-      console.log(`** Deposited Balance: ${d.amount.toNumber()}`);
+      console.log(`** Deposited Balance: ${d.rawAccount.amount}`);
     });
   });
   it(" Can get depositor", async () => {
-    const depositor = await lido.infos.getDepositor(connection, tokenKey) as lido.DepositorInfo;
-    console.log(`- Deposited Balance: ${depositor.amount.toNumber()}`);
+    const depositor = (await lido.infos.getDepositor(connection, tokenKey)) as lido.DepositorInfo;
+    console.log(`- Deposited Balance: ${depositor.rawAccount.amount}`);
     console.log(`- Owner: ${depositor.userKey.toBase58()}`);
   });
   it(" Can get maintainers", async () => {
