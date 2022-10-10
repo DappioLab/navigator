@@ -1,8 +1,8 @@
 import { PublicKey, Connection } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token-v2";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
-import { LIDO_LAYOUT, LIDO_TOKEN_LAYOUT } from "./layout";
+import { LIDO_LAYOUT } from "./layout";
 import * as types from ".";
 
 let infos: IInstanceVault;
@@ -97,9 +97,8 @@ infos = class InstanceLido {
   }
 
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
-    const decodeData = LIDO_TOKEN_LAYOUT.decode(data);
-    const { mint, amount, owner } = decodeData;
-
+    const rawAccount = AccountLayout.decode(data);
+    const { mint, owner } = rawAccount;
     // Ensure the mint matches
     if (!this._isAllowed(mint)) {
       throw Error(`Error: Not a stSOL token account`);
@@ -108,8 +107,7 @@ infos = class InstanceLido {
     return {
       depositorId,
       userKey: owner,
-      amount,
-      mint,
+      rawAccount,
     };
   }
 

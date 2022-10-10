@@ -1,6 +1,7 @@
 export * from "./ids";
 export * from "./infos";
 
+import { RawAccount } from "@solana/spl-token-v2";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IDepositorInfo, IVaultInfo } from "../types";
@@ -75,6 +76,5 @@ export interface VaultInfo extends IVaultInfo {
 }
 
 export interface DepositorInfo extends IDepositorInfo {
-  mint: PublicKey;
-  amount: BN;
+  rawAccount: RawAccount;
 }
