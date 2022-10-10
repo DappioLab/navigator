@@ -4,6 +4,7 @@ import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
 import { LIDO_LAYOUT } from "./layout";
 import * as types from ".";
+import axios from "axios";
 
 let infos: IInstanceVault;
 
@@ -121,8 +122,18 @@ export { infos };
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
-  getApr() {
-    // TODO
-    return 0;
-  }
+  // See: https://github.com/lidofinance/solido-sdk/blob/main/src/api/stakeApy.ts
+  static DEFAULT_APY = "5.74";
+  static SOL_API_HOST = "https://sol-api-pub.lido.fi";
+
+  getApr = async () => {
+    const apr: number = await axios.get(`${VaultInfoWrapper.SOL_API_HOST}/v1/apy?since_launch`).then((res) => {
+      return res.data.data.apr;
+    });
+
+    if (apr) {
+      return apr.toFixed(2);
+    }
+    return VaultInfoWrapper.DEFAULT_APY;
+  };
 }
