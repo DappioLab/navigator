@@ -25,8 +25,9 @@ infos = class InstanceMarinade {
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
-    if (!vaultId.equals(MARINADE_PROGRAM_ID))
-      throw Error(`Error: Lido vaultId must match ${MARINADE_PROGRAM_ID.toBase58()}`);
+    if (!vaultId.equals(MSOL_VAULT_ADDRESS)) {
+      throw Error(`Error: Marinade vaultId must match ${MSOL_VAULT_ADDRESS.toBase58()}`);
+    }
 
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
     if (!vaultAccountInfo) throw Error("Error: Cannot get marinade token account");
@@ -38,7 +39,21 @@ infos = class InstanceMarinade {
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     // Decode the Token data using AccountLayout
+
+    // const testLayout = struct(
+    //   [
+    //     blob(8, "identifier"),
+    //     publicKey("msolMint"),
+    //     publicKey("adminAuthority"),
+    //     publicKey("operationalSolAccount"),
+    //     publicKey("treasuryMsolAccount"),
+    //     u8("reserveBumpSeed"),
+    //   ],
+    //   "State"
+    // );
+
     const decodeData = MARINADE_FINANCE_ACCOUNT_STATE.decode(data);
+    console.log({ decodeData });
     const {
       msolMint,
       adminAuthority,

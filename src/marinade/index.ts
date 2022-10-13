@@ -1,12 +1,11 @@
 export * from "./ids";
-// export * from "./infos";
+export * from "./infos";
 export * from "./layouts";
 import BN from "bn.js";
 
-import { IDepositorInfo, IInstanceVault, IVaultInfo } from "../types";
+import { IDepositorInfo, IVaultInfo } from "../types";
 import { PublicKey } from "@solana/web3.js";
-export * from "./infos";
-export * from "./layouts";
+
 interface Fee {
   basisPoints: BN;
 }
