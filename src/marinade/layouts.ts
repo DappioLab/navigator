@@ -1,7 +1,9 @@
 import { publicKey, struct, u64, u8, u32 } from "@project-serum/borsh";
-
+// @ts-ignore
+import { blob } from "buffer-layout";
 export const MARINADE_FINANCE_ACCOUNT_STATE = struct(
   [
+    blob(8, "identifier"),
     publicKey("msolMint"),
     publicKey("adminAuthority"),
     publicKey("operationalSolAccount"),
@@ -29,7 +31,7 @@ export const MARINADE_FINANCE_ACCOUNT_STATE = struct(
     struct(
       [
         struct(
-          [[publicKey("account"), u32("itemSize"), u32("count"), publicKey("newAccount"), u32("copiedCount")]],
+          [publicKey("account"), u32("itemSize"), u32("count"), publicKey("newAccount"), u32("copiedCount")],
           "validatorList"
         ),
         publicKey("managerAuthority"),

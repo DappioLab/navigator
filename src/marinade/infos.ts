@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-import { MARINADE_PROGRAM_ID, MSOL_MINT_ADDRESS } from "./ids";
+import { MARINADE_PROGRAM_ID, MSOL_MINT_ADDRESS, MSOL_VAULT_ADDRESS } from "./ids";
 
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { MARINADE_FINANCE_ACCOUNT_STATE } from "./layouts";
@@ -12,10 +12,10 @@ let infos: IInstanceVault;
 
 infos = class InstanceMarinade {
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
-    const accountInfos = await connection.getAccountInfo(MARINADE_PROGRAM_ID);
+    const accountInfos = await connection.getAccountInfo(MSOL_VAULT_ADDRESS);
 
     if (!accountInfos) throw Error("Error: Could not get solido address");
-    const vault = this.parseVault(accountInfos.data, MARINADE_PROGRAM_ID);
+    const vault = this.parseVault(accountInfos.data, MSOL_VAULT_ADDRESS);
 
     return [vault];
   }
@@ -65,6 +65,7 @@ infos = class InstanceMarinade {
 
     // Ensure the mint matches
     if (!this._isAllowed(msolMint)) {
+      console.log(msolMint.toString());
       throw Error("Error: Not a mSOL token account");
     }
 

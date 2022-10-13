@@ -10,4 +10,5 @@ export * as tulip from "./tulip";
 export * as nftFinance from "./nftFinance";
 export * as utils from "./utils";
 export * as friktion from "./friktion";
+export * as marinade from "./marinade";
 export * from "./types";

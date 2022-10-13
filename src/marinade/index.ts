@@ -5,7 +5,8 @@ import BN from "bn.js";
 
 import { IDepositorInfo, IInstanceVault, IVaultInfo } from "../types";
 import { PublicKey } from "@solana/web3.js";
-
+export * from "./infos";
+export * from "./layouts";
 interface Fee {
   basisPoints: BN;
 }
