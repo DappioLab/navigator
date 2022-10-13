@@ -7,7 +7,7 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper, PoolDirection } from "../types";
+import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper, PageConfig, PoolDirection } from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
@@ -17,7 +17,7 @@ import axios from "axios";
 
 let infos: IInstancePool & IInstanceFarm;
 infos = class InstanceOrca {
-  static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
+  static async getAllPools(connection: Connection, page?: PageConfig): Promise<types.PoolInfo[]> {
     let allPools: types.PoolInfo[] = [];
     let accounts: {
       tokenAAmount: bigint;
@@ -33,8 +33,15 @@ infos = class InstanceOrca {
 
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
+    let allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
+    allOrcaPool.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
+    if (page) {
+      let batchSize = allOrcaPool.length / page.pageSize;
+      let start = page.pageIndex * batchSize;
+      let end = start + batchSize;
+      allOrcaPool = allOrcaPool.slice(start, end);
+    }
     for (const accountInfo of allOrcaPool) {
       let poolData = this.parsePool(accountInfo.account.data, accountInfo.pubkey);
       allPools.push(poolData);
@@ -76,9 +83,9 @@ infos = class InstanceOrca {
       .filter((item) => (item.lpSupply as bigint) > 0);
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
+  static async getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<PoolInfoWrapper[]> {
     const allAPIPools: { [key: string]: types.IOrcaAPI } = await (await axios.get("https://api.orca.so/allPools")).data;
-    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
+    return (await this.getAllPools(connection, page)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {

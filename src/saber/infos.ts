@@ -1,6 +1,6 @@
 import { Connection, MemcmpFilter, GetProgramAccountsConfig, DataSizeFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
-import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm } from "../types";
+import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm, PageConfig } from "../types";
 import { getMultipleAccounts } from "../utils";
 import { computeD, normalizedTradeFee, N_COINS, ZERO } from "./utils";
 import { QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
@@ -17,13 +17,21 @@ const DIGIT = new BN(10000000000);
 let infos: IInstancePool & IInstanceFarm;
 
 infos = class InstanceSaber {
-  static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
+  static async getAllPools(connection: Connection, page?: PageConfig): Promise<PoolInfo[]> {
     const sizeFilter: DataSizeFilter = {
       dataSize: 395,
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const poolAccounts = await connection.getProgramAccounts(POOL_PROGRAM_ID, config);
+    let poolAccounts = await connection.getProgramAccounts(POOL_PROGRAM_ID, config);
+    poolAccounts.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
+
+    if (page) {
+      let batchSize = poolAccounts.length / page.pageSize;
+      let start = page.pageIndex * batchSize;
+      let end = start + batchSize;
+      poolAccounts = poolAccounts.slice(start, end);
+    }
     let pools: PoolInfo[] = [];
     let wrapInfos = await this._getAllWraps(connection);
 
@@ -101,8 +109,8 @@ infos = class InstanceSaber {
     return pools;
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]> {
-    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
+  static async getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<IPoolInfoWrapper[]> {
+    return (await this.getAllPools(connection, page)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {
