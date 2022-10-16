@@ -6,6 +6,25 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IDepositorInfo, IVaultInfo } from "../types";
 
+export interface ValidatorInfo {
+  pubkey: PublicKey;
+  entry: {
+    feeCredit: BN;
+    feeAddress: PublicKey;
+    stakeSeeds: {
+      begin: BN;
+      end: BN;
+    };
+    unstakeSeeds: {
+      begin: BN;
+      end: BN;
+    };
+    stakeAccountsBalance: BN;
+    unstakeAccountsBalance: BN;
+    active: BN;
+  };
+}
+
 export interface VaultInfo extends IVaultInfo {
   lidoVersion: BN;
   manager: PublicKey;
@@ -47,24 +66,7 @@ export interface VaultInfo extends IVaultInfo {
     };
   };
   validators: {
-    entries: {
-      pubkey: PublicKey;
-      entry: {
-        feeCredit: BN;
-        feeAddress: PublicKey;
-        stakeSeeds: {
-          begin: BN;
-          end: BN;
-        };
-        unstakeSeeds: {
-          begin: BN;
-          end: BN;
-        };
-        stakeAccountsBalance: BN;
-        unstakeAccountsBalance: BN;
-        active: BN;
-      };
-    }[];
+    entries: ValidatorInfo[];
     maximumEntries: BN;
   };
   maintainers: {

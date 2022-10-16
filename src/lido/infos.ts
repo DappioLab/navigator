@@ -126,7 +126,7 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   static DEFAULT_APY = "5.74";
   static SOL_API_HOST = "https://sol-api-pub.lido.fi";
 
-  getApy = async () => {
+  async getApy(): Promise<string> {
     const apy: number = await axios.get(`${VaultInfoWrapper.SOL_API_HOST}/v1/apy?since_launch`).then((res) => {
       return res.data.data.apy;
     });
@@ -135,5 +135,19 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
       return apy.toFixed(2);
     }
     return VaultInfoWrapper.DEFAULT_APY;
-  };
+  }
+
+  getHeaviestValidator(): types.ValidatorInfo {
+    const validatorEntries = this.vaultInfo.validators.entries;
+    const sortedValidatorEntries = validatorEntries.sort(({ entry: validatorA }, { entry: validatorB }) => {
+      const effectiveStakeBalanceValidatorA =
+        validatorA.stakeAccountsBalance.toNumber() - validatorA.unstakeAccountsBalance.toNumber();
+      const effectiveStakeBalanceValidatorB =
+        validatorB.stakeAccountsBalance.toNumber() - validatorB.unstakeAccountsBalance.toNumber();
+
+      return effectiveStakeBalanceValidatorB - effectiveStakeBalanceValidatorA;
+    });
+
+    return sortedValidatorEntries[0];
+  }
 }
