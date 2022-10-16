@@ -127,21 +127,79 @@ export const getTokenList = async () => {
   return tokenInfos;
 };
 
-export async function getMultipleAccounts(connection: Connection, publicKeys: PublicKey[], BATCH_SIZE: number = 99) {
-  let accounts: {
+// reference from @jup-ag/core
+export async function getMultipleAccounts(
+  connection: Connection,
+  publicKeys: PublicKey[],
+  batchChunkSize = 1000,
+  maxAccountsChunkSize = 100
+): Promise<
+  {
     pubkey: PublicKey;
     account: AccountInfo<Buffer> | null;
-  }[] = [];
-  for (let i = 0; i < publicKeys.length; i += BATCH_SIZE) {
-    let slices = publicKeys.slice(i, i + BATCH_SIZE);
-    let results = await connection.getMultipleAccountsInfo(slices);
-    let resultWithKeys = results.map((result, j) => {
-      return {
-        pubkey: slices[j],
-        account: result,
+  }[]
+> {
+  interface RPCResult {
+    jsonrpc: string;
+    result: {
+      context: {
+        apiVersion: string;
+        slot: number;
       };
-    });
-    accounts = accounts.concat(resultWithKeys);
+      value: AccountInfo<string>[];
+    };
+    id: string;
   }
-  return accounts;
+
+  const results = (
+    await Promise.all(
+      chunks(publicKeys, batchChunkSize).map(async (batchPubkeys) => {
+        const batch = chunks(batchPubkeys, maxAccountsChunkSize).map((pubkeys) => ({
+          methodName: "getMultipleAccounts",
+          args: connection._buildArgs([pubkeys], connection.commitment, "base64"),
+        }));
+        return (
+          connection
+            // @ts-ignore
+            ._rpcBatchRequest(batch)
+            .then((batchResults: RPCResult[]) => {
+              const accounts = batchResults.reduce((acc: AccountInfo<string>[], res) => {
+                acc.push(...res.result.value);
+                return acc;
+              }, []);
+
+              return accounts.map((item) => {
+                let account: AccountInfo<Buffer> | null = null;
+                if (item) {
+                  account = {
+                    executable: item.executable,
+                    owner: new PublicKey(item.owner),
+                    lamports: item.lamports,
+                    data: Buffer.from(item.data[0], item.data[1] as BufferEncoding),
+                    rentEpoch: item.rentEpoch,
+                  };
+                }
+                return account;
+              });
+            })
+            .catch((e: Error) => {
+              return batchPubkeys.map(() => null);
+            })
+        );
+      })
+    )
+  ).flat();
+
+  return results.map((res, index) => {
+    return {
+      pubkey: publicKeys[index],
+      account: res,
+    };
+  });
+}
+
+function chunks(array: PublicKey[], size: number) {
+  return Array.apply(0, new Array(Math.ceil(array.length / size))).map((_, index) =>
+    array.slice(index * size, (index + 1) * size)
+  );
 }
