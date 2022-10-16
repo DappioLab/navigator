@@ -54,6 +54,6 @@ describe("Lido", () => {
   it(" Can get APR", async () => {
     const vault = (await lido.infos.getVault(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
     const vaultWrapper = new lido.VaultInfoWrapper(vault);
-    console.log(await vaultWrapper.getApr());
+    console.log(await vaultWrapper.getApy());
   });
 });
