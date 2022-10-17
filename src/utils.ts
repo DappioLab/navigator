@@ -18,7 +18,7 @@ import {
 import { publicKey, struct, u64, u32 } from "@project-serum/borsh";
 import BN from "bn.js";
 import request from "graphql-request";
-import { IServicesTokenInfo } from "./types";
+import { IServicesTokenInfo, PageConfig } from "./types";
 
 export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection?: Connection, createAta?: boolean) {
   let tx = new Transaction();
@@ -202,4 +202,21 @@ export async function getMultipleAccounts(
       account: res,
     };
   });
+}
+
+export function paginate(
+  accounts: {
+    pubkey: PublicKey;
+    account: AccountInfo<Buffer> | null;
+  }[],
+  page?: PageConfig
+) {
+  accounts.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
+  if (page) {
+    let batchSize = accounts.length / page.pageSize;
+    let start = page.pageIndex * batchSize;
+    let end = start + batchSize;
+    return accounts.slice(start, end);
+  }
+  return accounts;
 }
