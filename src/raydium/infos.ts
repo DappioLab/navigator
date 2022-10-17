@@ -6,7 +6,7 @@ import {
   MemcmpFilter,
   PublicKey,
 } from "@solana/web3.js";
-import { getMultipleAccounts } from "../utils";
+import { getMultipleAccounts, paginate } from "../utils";
 import { POOL_PROGRAM_ID_V4, FARM_PROGRAM_ID_V3, FARM_PROGRAM_ID_V5 } from "./ids";
 import { POOL_LAYOUT_V4, FARMER_LAYOUT_V3_2, FARMER_LAYOUT_V5_2, FARM_LAYOUT_V3, FARM_LAYOUT_V5 } from "./layouts";
 import { MARKET_STATE_LAYOUT_V3, _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
@@ -33,27 +33,23 @@ infos = class InstanceRaydium {
     let mintAccountKeys: PublicKey[] = [];
     let openOrderKeys: PublicKey[] = [];
     let serumMarketKeys: PublicKey[] = [];
-    allV4AMMAccount.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
-    if (page) {
-      let batchSize = allV4AMMAccount.length / page.pageSize;
-      let start = page.pageIndex * batchSize;
-      let end = start + batchSize;
-      allV4AMMAccount = allV4AMMAccount.slice(start, end);
-    }
-    for (let { pubkey, account } of allV4AMMAccount) {
-      let poolInfo = this.parsePool(account.data, pubkey);
+    let pagedAccounts = paginate(allV4AMMAccount, page);
+    pagedAccounts
+      .filter((accountInfo) => accountInfo)
+      .forEach(({ pubkey, account }) => {
+        let poolInfo = this.parsePool(account!.data, pubkey);
 
-      if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
-        // Insert keys to be fetched
-        tokenAccountKeys.push(poolInfo.poolCoinTokenAccount);
-        tokenAccountKeys.push(poolInfo.poolPcTokenAccount);
-        mintAccountKeys.push(poolInfo.lpMint);
-        openOrderKeys.push(poolInfo.ammOpenOrders);
-        serumMarketKeys.push(poolInfo.serumMarket);
+        if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
+          // Insert keys to be fetched
+          tokenAccountKeys.push(poolInfo.poolCoinTokenAccount);
+          tokenAccountKeys.push(poolInfo.poolPcTokenAccount);
+          mintAccountKeys.push(poolInfo.lpMint);
+          openOrderKeys.push(poolInfo.ammOpenOrders);
+          serumMarketKeys.push(poolInfo.serumMarket);
 
-        pools.push(poolInfo);
-      }
-    }
+          pools.push(poolInfo);
+        }
+      });
 
     // Fetch accounts
     const tokenAccounts = await getMultipleAccounts(connection, tokenAccountKeys);

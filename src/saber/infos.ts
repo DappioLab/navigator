@@ -1,7 +1,7 @@
 import { Connection, MemcmpFilter, GetProgramAccountsConfig, DataSizeFilter, PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm, PageConfig } from "../types";
-import { getMultipleAccounts } from "../utils";
+import { getMultipleAccounts, paginate } from "../utils";
 import { computeD, normalizedTradeFee, N_COINS, ZERO } from "./utils";
 import { QURARRY_MINE_PROGRAM_ID, WRAP_PROGRAM_ID, POOL_PROGRAM_ID, QUARRY_REWARDER } from "./ids";
 import { POOL_LAYOUT, FARM_LAYOUT, FARMER_LAYOUT, WRAP_LAYOUT } from "./layouts";
@@ -24,14 +24,8 @@ infos = class InstanceSaber {
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
     let poolAccounts = await connection.getProgramAccounts(POOL_PROGRAM_ID, config);
-    poolAccounts.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
+    let pagedAccounts = paginate(poolAccounts, page);
 
-    if (page) {
-      let batchSize = poolAccounts.length / page.pageSize;
-      let start = page.pageIndex * batchSize;
-      let end = start + batchSize;
-      poolAccounts = poolAccounts.slice(start, end);
-    }
     let pools: PoolInfo[] = [];
     let wrapInfos = await this._getAllWraps(connection);
 
@@ -39,7 +33,7 @@ infos = class InstanceSaber {
     let mintAccountKeys: PublicKey[] = [];
 
     // Skip Dead Pools
-    for (let poolAccount of poolAccounts) {
+    for (let poolAccount of pagedAccounts) {
       const poolId = poolAccount.pubkey;
 
       if (
@@ -53,7 +47,7 @@ infos = class InstanceSaber {
       }
 
       const poolAuthority = this._getPoolAuthority(poolId);
-      let poolInfo = this.parsePool(poolAccount.account.data, poolId, poolAuthority);
+      let poolInfo = this.parsePool(poolAccount.account!.data, poolId, poolAuthority);
       if (poolInfo.isPaused) {
         continue;
       }

@@ -5,7 +5,7 @@ import { IInstancePool, IPoolInfoWrapper, IServicesTokenInfo, PageConfig } from 
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
 import * as types from ".";
-import { getMultipleAccounts, getTokenList } from "../utils";
+import { getMultipleAccounts, getTokenList, paginate } from "../utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
 const DIGIT = new BN(10000000000);
@@ -15,14 +15,9 @@ let infos: IInstancePool;
 infos = class InstanceLifinity {
   static async getAllPools(connection: Connection, page?: PageConfig): Promise<types.PoolInfo[]> {
     let lifinityAccounts = await getMultipleAccounts(connection, LIFINITY_ALL_AMM_ID);
-    lifinityAccounts.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
-    if (page) {
-      let batchSize = lifinityAccounts.length / page.pageSize;
-      let start = page.pageIndex * batchSize;
-      let end = start + batchSize;
-      lifinityAccounts = lifinityAccounts.slice(start, end);
-    }
-    const pools = lifinityAccounts
+    let pagedAccounts = paginate(lifinityAccounts, page);
+
+    const pools = pagedAccounts
       .filter((accountInfo) => accountInfo)
       .map((accountInfo) => {
         const pool = this.parsePool(accountInfo.account!.data, accountInfo.pubkey);

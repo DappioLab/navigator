@@ -12,7 +12,7 @@ import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import * as types from ".";
-import { getTokenList, getMultipleAccounts } from "../utils";
+import { getTokenList, getMultipleAccounts, paginate } from "../utils";
 import axios from "axios";
 
 let infos: IInstancePool & IInstanceFarm;
@@ -35,20 +35,17 @@ infos = class InstanceOrca {
     const config: GetProgramAccountsConfig = { filters: filters };
     let allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
-    allOrcaPool.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
-    if (page) {
-      let batchSize = allOrcaPool.length / page.pageSize;
-      let start = page.pageIndex * batchSize;
-      let end = start + batchSize;
-      allOrcaPool = allOrcaPool.slice(start, end);
-    }
-    for (const accountInfo of allOrcaPool) {
-      let poolData = this.parsePool(accountInfo.account.data, accountInfo.pubkey);
-      allPools.push(poolData);
-      pubKeys.push(poolData.tokenAccountA);
-      pubKeys.push(poolData.tokenAccountB);
-      pubKeys.push(poolData.lpMint);
-    }
+    let pagedAccounts = paginate(allOrcaPool, page);
+
+    pagedAccounts
+      .filter((accountInfo) => accountInfo)
+      .forEach((accountInfo) => {
+        let poolData = this.parsePool(accountInfo.account!.data, accountInfo.pubkey);
+        allPools.push(poolData);
+        pubKeys.push(poolData.tokenAccountA);
+        pubKeys.push(poolData.tokenAccountB);
+        pubKeys.push(poolData.lpMint);
+      });
 
     let amountInfos = await getMultipleAccounts(connection, pubKeys);
     for (let i = 0; i < amountInfos.length / 3; i++) {
