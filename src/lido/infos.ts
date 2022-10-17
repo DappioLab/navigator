@@ -126,7 +126,7 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   static DEFAULT_APY = "5.74";
   static SOL_API_HOST = "https://sol-api-pub.lido.fi";
 
-  async getApy(): Promise<string> {
+  static async getApy(): Promise<string> {
     const apy: number = await axios.get(`${VaultInfoWrapper.SOL_API_HOST}/v1/apy?since_launch`).then((res) => {
       return res.data.data.apy;
     });
