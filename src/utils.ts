@@ -139,6 +139,12 @@ export async function getMultipleAccounts(
     account: AccountInfo<Buffer> | null;
   }[]
 > {
+  const chunks = (array: PublicKey[], size: number) => {
+    return Array.apply(0, new Array(Math.ceil(array.length / size))).map((_, index) =>
+      array.slice(index * size, (index + 1) * size)
+    );
+  };
+
   interface RPCResult {
     jsonrpc: string;
     result: {
@@ -196,10 +202,4 @@ export async function getMultipleAccounts(
       account: res,
     };
   });
-}
-
-function chunks(array: PublicKey[], size: number) {
-  return Array.apply(0, new Array(Math.ceil(array.length / size))).map((_, index) =>
-    array.slice(index * size, (index + 1) * size)
-  );
 }
