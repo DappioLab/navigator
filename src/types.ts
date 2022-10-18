@@ -72,6 +72,11 @@ export interface IObligationInfo {
   reserveId?: PublicKey;
 }
 
+export interface PageConfig {
+  pageSize: number;
+  pageIndex: number;
+}
+
 export enum PoolDirection {
   Obverse,
   Reverse,
@@ -122,8 +127,8 @@ export interface IVaultInfoWrapper {
 }
 
 export interface IInstancePool {
-  getAllPools(connection: Connection): Promise<IPoolInfo[]>;
-  getAllPoolWrappers(connection: Connection): Promise<IPoolInfoWrapper[]>;
+  getAllPools(connection: Connection, page?: PageConfig): Promise<IPoolInfo[]>;
+  getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<IPoolInfoWrapper[]>;
   getPool(connection: Connection, poolId: PublicKey): Promise<IPoolInfo>;
   getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<IPoolInfoWrapper>;
   parsePool(data: Buffer, farmId: PublicKey): IPoolInfo;

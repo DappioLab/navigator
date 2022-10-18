@@ -1,11 +1,11 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import axios from "axios";
 import BN from "bn.js";
-import { IInstancePool, IPoolInfoWrapper, IServicesTokenInfo } from "../types";
+import { IInstancePool, IPoolInfoWrapper, IServicesTokenInfo, PageConfig } from "../types";
 import { CONFIG_LAYOUT, LIFINITY_AMM_LAYOUT } from "./layouts";
 import { LIFINITY_ALL_AMM_ID } from "./ids";
 import * as types from ".";
-import { getMultipleAccounts, getTokenList } from "../utils";
+import { getMultipleAccounts, getTokenList, paginate } from "../utils";
 import { AccountLayout, MintLayout } from "@solana/spl-token-v2";
 
 const DIGIT = new BN(10000000000);
@@ -13,10 +13,11 @@ const DIGIT = new BN(10000000000);
 let infos: IInstancePool;
 
 infos = class InstanceLifinity {
-  static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
-    const lifinityAccounts = await getMultipleAccounts(connection, LIFINITY_ALL_AMM_ID);
+  static async getAllPools(connection: Connection, page?: PageConfig): Promise<types.PoolInfo[]> {
+    let lifinityAccounts = await getMultipleAccounts(connection, LIFINITY_ALL_AMM_ID);
+    let pagedAccounts = paginate(lifinityAccounts, page);
 
-    const pools = lifinityAccounts
+    const pools = pagedAccounts
       .filter((accountInfo) => accountInfo)
       .map((accountInfo) => {
         const pool = this.parsePool(accountInfo.account!.data, accountInfo.pubkey);
@@ -87,8 +88,8 @@ infos = class InstanceLifinity {
     });
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
-    const pools = await this.getAllPools(connection);
+  static async getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<PoolInfoWrapper[]> {
+    const pools = await this.getAllPools(connection, page);
     return pools.map((pool) => new PoolInfoWrapper(pool));
   }
 
@@ -307,7 +308,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   }
 
   getLiquidityUpperCap() {
-    return this.poolInfo.poolConfig.depositCap;
+    return this.poolInfo.initializerAmount;
   }
 }
 
