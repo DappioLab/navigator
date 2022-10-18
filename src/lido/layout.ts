@@ -32,7 +32,7 @@ const VALIDATOR_LAYOUT_V1 = struct(
 );
 
 /**
- * Layout of a single validator in Solido V1
+ * Layout of a single validator in Solido V2
  */
 const VALIDATOR_LAYOUT_V2 = struct(
   [
@@ -100,3 +100,6 @@ export const MAINTAINER_LIST_ACCOUNT_LAYOUT = struct([
   u8("maxEntries"),
   vec(MAINTAINERS_ITEM_LAYOUT, "entries"),
 ]);
+
+// A Layout to check if the account being used is a Lido v1 account or a Lido v2 account
+export const LIDO_VERSION_CHECK_LAYOUT = struct([u8("maybeAccountType"), u8("maybeLidoVersion")]);

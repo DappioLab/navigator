@@ -1,19 +1,23 @@
 import { PublicKey, Connection } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token-v2";
+import axios from "axios";
+import BN from "bn.js";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
-import { LIDO_LAYOUT_V1 } from "./layout";
+import {
+  LIDO_LAYOUT_V1,
+  LIDO_LAYOUT_V2,
+  LIDO_VERSION_CHECK_LAYOUT,
+  MAINTAINER_LIST_ACCOUNT_LAYOUT,
+  VALIDATOR_LIST_ACCOUNT_LAYOUT,
+} from "./layout";
 import * as types from ".";
-import axios from "axios";
 
 let infos: IInstanceVault;
 
 infos = class InstanceLido {
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
-    const accountInfos = await connection.getAccountInfo(LIDO_ADDRESS);
-
-    if (!accountInfos) throw Error("Error: Could not get solido address");
-    const vault = this.parseVault(accountInfos.data, LIDO_ADDRESS);
+    const vault = await this.getVault(connection, LIDO_ADDRESS);
 
     return [vault];
   }
@@ -26,53 +30,106 @@ infos = class InstanceLido {
     if (!vaultId.equals(LIDO_ADDRESS)) throw Error(`Error: Lido vaultId must match ${LIDO_ADDRESS.toBase58()}`);
 
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
-    if (!vaultAccountInfo) throw Error("Error: Cannot get solido token account");
+    if (!vaultAccountInfo) throw Error("Error: Cannot get solido account");
 
-    const vault: types.VaultInfo = this.parseVault(vaultAccountInfo.data, vaultId);
+    let vault: types.VaultInfo = this.parseVault(vaultAccountInfo.data, vaultId);
+
+    // Fetch validators if using Solido v2
+    if (vault.validatorList) {
+      const validatorListAccount = await connection.getAccountInfo(vault.validatorList);
+      if (!validatorListAccount) throw Error("Error: Cannot get validator list account");
+
+      vault.validators = this._parseValidatorListAccount(validatorListAccount.data);
+    }
+
+    // Fetch maintainers if using Solido v2
+    if (vault.maintainerList) {
+      const maintainerListAccount = await connection.getAccountInfo(vault.maintainerList);
+      if (!maintainerListAccount) throw Error("Error: Cannot get maintainer list account");
+
+      vault.maintainers = this._parseMaintainerListAccount(maintainerListAccount.data);
+    }
 
     return vault;
   }
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
-    // Decode the Token data using AccountLayout
-    const decodeData = LIDO_LAYOUT_V1.decode(data);
-    const {
-      lidoVersion,
-      manager,
-      stSolMint,
-      exchangeRate,
-      solReserveAuthorityBumpSeed,
-      stakeAuthorityBumpSeed,
-      mintAuthorityBumpSeed,
-      rewardsWithdrawAuthorityBumpSeed,
-      rewardDistribution,
-      feeRecipients,
-      metrics,
-      validators,
-      maintainers,
-    } = decodeData;
+    let vault: types.VaultInfo;
+    if (this._checkLidoV2(data)) {
+      const decodeData = LIDO_LAYOUT_V2.decode(data);
+      const {
+        lidoVersion,
+        manager,
+        stSolMint,
+        exchangeRate,
+        solReserveAuthorityBumpSeed,
+        stakeAuthorityBumpSeed,
+        mintAuthorityBumpSeed,
+        rewardDistribution,
+        feeRecipients,
+        metrics,
+        validatorList,
+        maintainerList,
+        maxCommissionPercentage,
+      } = decodeData;
+
+      vault = {
+        vaultId,
+        lidoVersion,
+        manager,
+        shareMint: stSolMint,
+        exchangeRate,
+        solReserveAuthorityBumpSeed,
+        stakeAuthorityBumpSeed,
+        mintAuthorityBumpSeed,
+        rewardDistribution,
+        feeRecipients,
+        metrics,
+        validatorList,
+        maintainerList,
+        maxCommissionPercentage,
+      };
+    } else {
+      const decodeData = LIDO_LAYOUT_V1.decode(data);
+      const {
+        lidoVersion,
+        manager,
+        stSolMint,
+        exchangeRate,
+        solReserveAuthorityBumpSeed,
+        stakeAuthorityBumpSeed,
+        mintAuthorityBumpSeed,
+        rewardsWithdrawAuthorityBumpSeed,
+        rewardDistribution,
+        feeRecipients,
+        metrics,
+        validators,
+        maintainers,
+      } = decodeData;
+      vault = {
+        vaultId,
+        lidoVersion,
+        manager,
+        shareMint: stSolMint,
+        exchangeRate,
+        solReserveAuthorityBumpSeed,
+        stakeAuthorityBumpSeed,
+        mintAuthorityBumpSeed,
+        rewardsWithdrawAuthorityBumpSeed,
+        rewardDistribution,
+        feeRecipients,
+        metrics,
+        validators,
+        maintainers,
+      };
+    }
 
     // Ensure the mint matches
-    if (!this._isAllowed(stSolMint)) {
+    if (!this._isAllowed(vault.shareMint)) {
       throw Error("Error: Not a stSOL token account");
     }
 
-    return {
-      vaultId,
-      lidoVersion,
-      manager,
-      shareMint: stSolMint,
-      exchangeRate,
-      solReserveAuthorityBumpSeed,
-      stakeAuthorityBumpSeed,
-      mintAuthorityBumpSeed,
-      rewardsWithdrawAuthorityBumpSeed,
-      rewardDistribution,
-      feeRecipients,
-      metrics,
-      validators,
-      maintainers,
-    };
+    return vault;
   }
 
   static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
@@ -112,6 +169,67 @@ infos = class InstanceLido {
     };
   }
 
+  static _parseValidatorListAccount(data: Buffer): types.ValidatorAccountInfo {
+    const decodeData = VALIDATOR_LIST_ACCOUNT_LAYOUT.decode(data);
+    const { accountType, lidoVersion, maxEntries, entries } = decodeData;
+    if (accountType !== 2 || lidoVersion !== 1) throw Error("Error: Invalid Validator list account");
+
+    interface validatorEntry {
+      voteAccountAddress: PublicKey;
+      stakeSeeds: { begin: BN; end: BN };
+      unstakeSeeds: { begin: BN; end: BN };
+      stakeAccountsBalance: BN;
+      unstakeAccountsBalance: BN;
+      effectiveAccountsBalance: BN;
+      active: BN;
+    }
+
+    const validator_entries: types.ValidatorInfo[] = (entries as validatorEntry[]).map(
+      ({
+        voteAccountAddress,
+        stakeSeeds,
+        unstakeSeeds,
+        stakeAccountsBalance,
+        unstakeAccountsBalance,
+        effectiveAccountsBalance,
+        active,
+      }) => {
+        return {
+          pubkey: voteAccountAddress,
+          entry: {
+            stakeSeeds,
+            unstakeSeeds,
+            stakeAccountsBalance,
+            unstakeAccountsBalance,
+            effectiveAccountsBalance,
+            active,
+          },
+        };
+      }
+    );
+
+    return {
+      entries: validator_entries,
+      maximumEntries: maxEntries,
+    };
+  }
+
+  static _parseMaintainerListAccount(data: Buffer): types.MaintainerAccountInfo {
+    const decodeData = MAINTAINER_LIST_ACCOUNT_LAYOUT.decode(data);
+    const { accountType, lidoVersion, maxEntries, entries } = decodeData;
+    if (accountType !== 3 || lidoVersion !== 1) throw Error("Error: Invalid Maintainer list account");
+
+    return {
+      entries,
+      maximumEntries: maxEntries,
+    };
+  }
+
+  private static _checkLidoV2(data: Buffer): boolean {
+    const { maybeAccountType, maybeLidoVersion } = LIDO_VERSION_CHECK_LAYOUT.decode(data);
+    return maybeAccountType === 1 && maybeLidoVersion === 1;
+  }
+
   private static _isAllowed(mint: PublicKey): boolean {
     return mint.equals(ST_SOL_MINT_ADDRESS);
   }
@@ -126,6 +244,13 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   static DEFAULT_APY = "5.74";
   static SOL_API_HOST = "https://sol-api-pub.lido.fi";
 
+  getVersion(): number {
+    // I have no idea why this gets cast to a number from a BN, and I tried explicitly casting it to a BN
+    //@ts-ignore
+    const version = (this.vaultInfo.lidoVersion as BN) + 1;
+    return version;
+  }
+
   static async getApy(): Promise<string> {
     const apy: number = await axios.get(`${VaultInfoWrapper.SOL_API_HOST}/v1/apy?since_launch`).then((res) => {
       return res.data.data.apy;
@@ -138,7 +263,7 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   }
 
   getHeaviestValidator(): types.ValidatorInfo {
-    const validatorEntries = this.vaultInfo.validators.entries;
+    const validatorEntries = this.vaultInfo.validators!.entries;
     const sortedValidatorEntries = validatorEntries.sort(({ entry: validatorA }, { entry: validatorB }) => {
       const effectiveStakeBalanceValidatorA =
         validatorA.stakeAccountsBalance.toNumber() - validatorA.unstakeAccountsBalance.toNumber();
