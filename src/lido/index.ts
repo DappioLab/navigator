@@ -26,6 +26,18 @@ export interface ValidatorInfo {
   };
 }
 
+export interface ValidatorAccountInfo {
+  entries: ValidatorInfo[];
+  maximumEntries: BN;
+}
+
+export interface MaintainerAccountInfo {
+  entries: {
+    pubkey: PublicKey;
+  }[];
+  maximumEntries: BN;
+}
+
 export interface VaultInfo extends IVaultInfo {
   lidoVersion: BN;
   manager: PublicKey;
@@ -67,17 +79,9 @@ export interface VaultInfo extends IVaultInfo {
     };
   };
   validatorList?: PublicKey;
-  validators: {
-    entries: ValidatorInfo[];
-    maximumEntries: BN;
-  };
+  validators?: ValidatorAccountInfo;
   maintainerList?: PublicKey;
-  maintainers: {
-    entries: {
-      pubkey: PublicKey;
-    }[];
-    maximumEntries: BN;
-  };
+  maintainers?: MaintainerAccountInfo;
   maxCommissionPercentage?: BN;
 }
 

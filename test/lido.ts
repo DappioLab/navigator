@@ -10,6 +10,11 @@ describe("Lido", () => {
   //TODO: Modify these addresses
   const userKey = new PublicKey("Dkx85wVaUaDy9i9XWFdZvYrw5h2WMP1N8TqXPBdXY5Wh");
   const tokenKey = new PublicKey("F9kWLTs28mWKmmvKDhAvtHuVwYKx6L4yG7C3n4WyLVh6");
+  it(" Can get Version", async () => {
+    const vault = (await lido.infos.getVault!(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
+    const vaultInfoWrapper = new lido.VaultInfoWrapper(vault);
+    console.log(`- Solido Version: ${vaultInfoWrapper.getVersion()}`);
+  });
   it(" Can get all vaults", async () => {
     const vaults = (await lido.infos.getAllVaults(connection)) as lido.VaultInfo[];
 
@@ -39,14 +44,14 @@ describe("Lido", () => {
   });
   it(" Can get maintainers", async () => {
     const vault = (await lido.infos.getVault(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
-    vault.maintainers.entries.forEach((m, i) => {
+    vault.maintainers!.entries.forEach((m, i) => {
       console.log(`\n* Maintainer #${i + 1}`);
       console.log(`** Maintainer Pubkey: ${m.pubkey.toBase58()}`);
     });
   });
   it(" Can get validators", async () => {
     const vault = (await lido.infos.getVault(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
-    vault.validators.entries.forEach((v, i) => {
+    vault.validators!.entries.forEach((v, i) => {
       console.log(`\n* Validator #${i + 1}`);
       console.log(`** Validator Pubkey: ${v.pubkey.toBase58()}`);
     });
