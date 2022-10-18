@@ -7,10 +7,10 @@ import BN from "bn.js";
 import { IDepositorInfo, IVaultInfo } from "../types";
 
 export interface ValidatorInfo {
-  pubkey: PublicKey;
+  pubkey: PublicKey; // voteAccountAddress in v2
   entry: {
-    feeCredit: BN;
-    feeAddress: PublicKey;
+    feeCredit?: BN;
+    feeAddress?: PublicKey;
     stakeSeeds: {
       begin: BN;
       end: BN;
@@ -21,6 +21,7 @@ export interface ValidatorInfo {
     };
     stakeAccountsBalance: BN;
     unstakeAccountsBalance: BN;
+    effectiveStakeBalance?: BN;
     active: BN;
   };
 }
@@ -65,18 +66,19 @@ export interface VaultInfo extends IVaultInfo {
       count: BN;
     };
   };
-  validatorsAccount?: PublicKey;
+  validatorList?: PublicKey;
   validators: {
     entries: ValidatorInfo[];
     maximumEntries: BN;
   };
-  maintainersAccount?: PublicKey;
+  maintainerList?: PublicKey;
   maintainers: {
     entries: {
       pubkey: PublicKey;
     }[];
     maximumEntries: BN;
   };
+  maxCommissionPercentage?: BN;
 }
 
 export interface DepositorInfo extends IDepositorInfo {
