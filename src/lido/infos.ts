@@ -2,7 +2,7 @@ import { PublicKey, Connection } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token-v2";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
-import { LIDO_LAYOUT } from "./layout";
+import { LIDO_LAYOUT_V1 } from "./layout";
 import * as types from ".";
 import axios from "axios";
 
@@ -35,7 +35,7 @@ infos = class InstanceLido {
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     // Decode the Token data using AccountLayout
-    const decodeData = LIDO_LAYOUT.decode(data);
+    const decodeData = LIDO_LAYOUT_V1.decode(data);
     const {
       lidoVersion,
       manager,

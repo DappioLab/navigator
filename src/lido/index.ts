@@ -36,10 +36,10 @@ export interface VaultInfo extends IVaultInfo {
   solReserveAuthorityBumpSeed: BN;
   stakeAuthorityBumpSeed: BN;
   mintAuthorityBumpSeed: BN;
-  rewardsWithdrawAuthorityBumpSeed: BN;
+  rewardsWithdrawAuthorityBumpSeed?: BN;
   rewardDistribution: {
     treasuryFee: BN;
-    validationFee: BN;
+    validationFee?: BN;
     developerFee: BN;
     stSolAppreciation: BN;
   };
@@ -65,10 +65,12 @@ export interface VaultInfo extends IVaultInfo {
       count: BN;
     };
   };
+  validatorsAccount?: PublicKey;
   validators: {
     entries: ValidatorInfo[];
     maximumEntries: BN;
   };
+  maintainersAccount?: PublicKey;
   maintainers: {
     entries: {
       pubkey: PublicKey;
