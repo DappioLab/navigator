@@ -27,7 +27,10 @@ describe("Raydium", () => {
   });
 
   it("fetches pool data", async () => {
-    const pools = await raydium.infos.getAllPools(connection);
+    const pools = await raydium.infos.getAllPools(connection, { pageSize: 10, pageIndex: 0 });
+    console.log(pools[pools.length - 1].poolId.toString());
+    const pools2 = await raydium.infos.getAllPools(connection, { pageSize: 10, pageIndex: 9 });
+    console.log(pools2[0].poolId.toString());
     const poolId = pools[20].poolId;
 
     const pool0 = pools[20];

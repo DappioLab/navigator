@@ -18,7 +18,7 @@ import {
 import { publicKey, struct, u64, u32 } from "@project-serum/borsh";
 import BN from "bn.js";
 import request from "graphql-request";
-import { IServicesTokenInfo } from "./types";
+import { IServicesTokenInfo, PageConfig } from "./types";
 
 export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connection?: Connection, createAta?: boolean) {
   let tx = new Transaction();
@@ -127,21 +127,96 @@ export const getTokenList = async () => {
   return tokenInfos;
 };
 
-export async function getMultipleAccounts(connection: Connection, publicKeys: PublicKey[], BATCH_SIZE: number = 99) {
-  let accounts: {
+// reference from @jup-ag/core
+export async function getMultipleAccounts(
+  connection: Connection,
+  publicKeys: PublicKey[],
+  batchChunkSize = 1000,
+  maxAccountsChunkSize = 100
+): Promise<
+  {
     pubkey: PublicKey;
     account: AccountInfo<Buffer> | null;
-  }[] = [];
-  for (let i = 0; i < publicKeys.length; i += BATCH_SIZE) {
-    let slices = publicKeys.slice(i, i + BATCH_SIZE);
-    let results = await connection.getMultipleAccountsInfo(slices);
-    let resultWithKeys = results.map((result, j) => {
-      return {
-        pubkey: slices[j],
-        account: result,
+  }[]
+> {
+  const chunks = (array: PublicKey[], size: number) => {
+    return Array.apply(0, new Array(Math.ceil(array.length / size))).map((_, index) =>
+      array.slice(index * size, (index + 1) * size)
+    );
+  };
+
+  interface RPCResult {
+    jsonrpc: string;
+    result: {
+      context: {
+        apiVersion: string;
+        slot: number;
       };
-    });
-    accounts = accounts.concat(resultWithKeys);
+      value: AccountInfo<string>[];
+    };
+    id: string;
+  }
+
+  const results = (
+    await Promise.all(
+      chunks(publicKeys, batchChunkSize).map(async (batchPubkeys) => {
+        const batch = chunks(batchPubkeys, maxAccountsChunkSize).map((pubkeys) => ({
+          methodName: "getMultipleAccounts",
+          args: connection._buildArgs([pubkeys], connection.commitment, "base64"),
+        }));
+        return (
+          connection
+            // @ts-ignore
+            ._rpcBatchRequest(batch)
+            .then((batchResults: RPCResult[]) => {
+              const accounts = batchResults.reduce((acc: AccountInfo<string>[], res) => {
+                acc.push(...res.result.value);
+                return acc;
+              }, []);
+
+              return accounts.map((item) => {
+                let account: AccountInfo<Buffer> | null = null;
+                if (item) {
+                  account = {
+                    executable: item.executable,
+                    owner: new PublicKey(item.owner),
+                    lamports: item.lamports,
+                    data: Buffer.from(item.data[0], item.data[1] as BufferEncoding),
+                    rentEpoch: item.rentEpoch,
+                  };
+                }
+                return account;
+              });
+            })
+            .catch((e: Error) => {
+              return batchPubkeys.map(() => null);
+            })
+        );
+      })
+    )
+  ).flat();
+
+  return results.map((res, index) => {
+    return {
+      pubkey: publicKeys[index],
+      account: res,
+    };
+  });
+}
+
+export function paginate(
+  accounts: {
+    pubkey: PublicKey;
+    account: AccountInfo<Buffer> | null;
+  }[],
+  page?: PageConfig
+) {
+  accounts.sort((a, b) => a.pubkey.toBase58().localeCompare(b.pubkey.toBase58()));
+  if (page) {
+    let batchSize = accounts.length / page.pageSize;
+    let start = page.pageIndex * batchSize;
+    let end = start + batchSize;
+    return accounts.slice(start, end);
   }
   return accounts;
 }
