@@ -60,6 +60,6 @@ describe("Lido", () => {
     console.log(`- Heaviest Validator Balance: ${heaviestValidator.entry.stakeAccountsBalance.toString()}`);
   });
   it(" Can get APY", async () => {
-    console.log(await lido.VaultInfoWrapper.getApy());
+    console.log(`- APY: ${await lido.VaultInfoWrapper.getApy()}%`);
   });
 });
