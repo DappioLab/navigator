@@ -16,7 +16,7 @@ const METRICS_LAYOUT = struct(
 );
 
 /**
- * Layout of a single validator
+ * Layout of a single validator in Solido V1
  */
 const VALIDATOR_LAYOUT_V1 = struct(
   [
@@ -31,7 +31,23 @@ const VALIDATOR_LAYOUT_V1 = struct(
   "entry"
 );
 
-const VALIDATORS_ITEM_LAYOUT = struct([publicKey("pubkey"), VALIDATOR_LAYOUT_V1]);
+/**
+ * Layout of a single validator in Solido V1
+ */
+const VALIDATOR_LAYOUT_V2 = struct(
+  [
+    publicKey("voteAccountAddress"),
+    struct([u64("begin"), u64("end")], "stakeSeeds"),
+    struct([u64("begin"), u64("end")], "unstakeSeeds"),
+    u64("stakeAccountsBalance"),
+    u64("unstakeAccountsBalance"),
+    u64("effectiveAccountsBalance"),
+    u8("active"),
+  ],
+  "entry"
+);
+
+const VALIDATORS_ITEM_LAYOUT_V1 = struct([publicKey("pubkey"), VALIDATOR_LAYOUT_V1]);
 
 const MAINTAINERS_ITEM_LAYOUT = struct([publicKey("pubkey")]);
 
@@ -50,6 +66,37 @@ export const LIDO_LAYOUT_V1 = struct([
   ),
   struct([publicKey("treasuryAccount"), publicKey("developerAccount")], "feeRecipients"),
   METRICS_LAYOUT,
-  struct([vec(VALIDATORS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "validators"),
+  struct([vec(VALIDATORS_ITEM_LAYOUT_V1, "entries"), u32("maximumEntries")], "validators"),
   struct([vec(MAINTAINERS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "maintainers"),
+]);
+
+export const LIDO_LAYOUT_V2 = struct([
+  u8("accountType"),
+  u8("lidoVersion"),
+  publicKey("manager"),
+  publicKey("stSolMint"),
+  struct([u64("computedInEpoch"), u64("stSolSupply"), u64("solBalance")], "exchangeRate"),
+  u8("solReserveAuthorityBumpSeed"),
+  u8("stakeAuthorityBumpSeed"),
+  u8("mintAuthorityBumpSeed"),
+  struct([u32("treasuryFee"), u32("developerFee"), u32("stSolAppreciation")], "rewardDistribution"),
+  struct([publicKey("treasuryAccount"), publicKey("developerAccount")], "feeRecipients"),
+  METRICS_LAYOUT,
+  publicKey("validatorList"),
+  publicKey("maintainerList"),
+  u8("maxCommissionPercentage"),
+]);
+
+export const VALIDATOR_LIST_ACCOUNT_LAYOUT = struct([
+  u8("accountType"),
+  u8("lidoVersion"),
+  u8("maxEntries"),
+  vec(VALIDATOR_LAYOUT_V2, "entries"),
+]);
+
+export const MAINTAINER_LIST_ACCOUNT_LAYOUT = struct([
+  u8("accountType"),
+  u8("lidoVersion"),
+  u8("maxEntries"),
+  vec(MAINTAINERS_ITEM_LAYOUT, "entries"),
 ]);
