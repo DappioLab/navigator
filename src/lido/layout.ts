@@ -18,7 +18,7 @@ const METRICS_LAYOUT = struct(
 /**
  * Layout of a single validator
  */
-const VALIDATOR_LAYOUT = struct(
+const VALIDATOR_LAYOUT_V1 = struct(
   [
     u64("feeCredit"),
     publicKey("feeAddress"),
@@ -31,11 +31,11 @@ const VALIDATOR_LAYOUT = struct(
   "entry"
 );
 
-const VALIDATORS_ITEM_LAYOUT = struct([publicKey("pubkey"), VALIDATOR_LAYOUT]);
+const VALIDATORS_ITEM_LAYOUT = struct([publicKey("pubkey"), VALIDATOR_LAYOUT_V1]);
 
 const MAINTAINERS_ITEM_LAYOUT = struct([publicKey("pubkey")]);
 
-export const LIDO_LAYOUT = struct([
+export const LIDO_LAYOUT_V1 = struct([
   u8("lidoVersion"),
   publicKey("manager"),
   publicKey("stSolMint"),
