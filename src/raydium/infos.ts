@@ -6,12 +6,12 @@ import {
   MemcmpFilter,
   PublicKey,
 } from "@solana/web3.js";
-import { getMultipleAccounts } from "../utils";
+import { getMultipleAccounts, paginate } from "../utils";
 import { POOL_PROGRAM_ID_V4, FARM_PROGRAM_ID_V3, FARM_PROGRAM_ID_V5 } from "./ids";
 import { POOL_LAYOUT_V4, FARMER_LAYOUT_V3_2, FARMER_LAYOUT_V5_2, FARM_LAYOUT_V3, FARM_LAYOUT_V5 } from "./layouts";
 import { MARKET_STATE_LAYOUT_V3, _OPEN_ORDERS_LAYOUT_V2 } from "@project-serum/serum/lib/market";
 import BN from "bn.js";
-import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm, PoolDirection } from "../types";
+import { IPoolInfoWrapper, IFarmInfoWrapper, IInstancePool, IInstanceFarm, PoolDirection, PageConfig } from "../types";
 import { getBigNumber, getTokenAccount, TokenAmount } from "./utils";
 import { AccountLayout, MintLayout, RawAccount, RawMint } from "@solana/spl-token-v2";
 import { FarmerInfo, FarmInfo, PoolInfo } from ".";
@@ -19,7 +19,7 @@ import { FarmerInfo, FarmInfo, PoolInfo } from ".";
 let infos: IInstancePool & IInstanceFarm;
 
 infos = class InstanceRaydium {
-  static async getAllPools(connection: Connection): Promise<PoolInfo[]> {
+  static async getAllPools(connection: Connection, page?: PageConfig): Promise<PoolInfo[]> {
     let pools: PoolInfo[] = [];
     //V4 pools
     const v4SizeFilter: DataSizeFilter = {
@@ -27,27 +27,29 @@ infos = class InstanceRaydium {
     };
     const v4Filters = [v4SizeFilter];
     const v4config: GetProgramAccountsConfig = { filters: v4Filters };
-    const allV4AMMAccount = await connection.getProgramAccounts(POOL_PROGRAM_ID_V4, v4config);
+    let allV4AMMAccount = await connection.getProgramAccounts(POOL_PROGRAM_ID_V4, v4config);
 
     let tokenAccountKeys: PublicKey[] = [];
     let mintAccountKeys: PublicKey[] = [];
     let openOrderKeys: PublicKey[] = [];
     let serumMarketKeys: PublicKey[] = [];
+    let pagedAccounts = paginate(allV4AMMAccount, page);
+    pagedAccounts
+      .filter((accountInfo) => accountInfo)
+      .forEach(({ pubkey, account }) => {
+        let poolInfo = this.parsePool(account!.data, pubkey);
 
-    for (let { pubkey, account } of allV4AMMAccount) {
-      let poolInfo = this.parsePool(account.data, pubkey);
+        if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
+          // Insert keys to be fetched
+          tokenAccountKeys.push(poolInfo.poolCoinTokenAccount);
+          tokenAccountKeys.push(poolInfo.poolPcTokenAccount);
+          mintAccountKeys.push(poolInfo.lpMint);
+          openOrderKeys.push(poolInfo.ammOpenOrders);
+          serumMarketKeys.push(poolInfo.serumMarket);
 
-      if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
-        // Insert keys to be fetched
-        tokenAccountKeys.push(poolInfo.poolCoinTokenAccount);
-        tokenAccountKeys.push(poolInfo.poolPcTokenAccount);
-        mintAccountKeys.push(poolInfo.lpMint);
-        openOrderKeys.push(poolInfo.ammOpenOrders);
-        serumMarketKeys.push(poolInfo.serumMarket);
-
-        pools.push(poolInfo);
-      }
-    }
+          pools.push(poolInfo);
+        }
+      });
 
     // Fetch accounts
     const tokenAccounts = await getMultipleAccounts(connection, tokenAccountKeys);
@@ -109,8 +111,8 @@ infos = class InstanceRaydium {
     return pools;
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
-    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
+  static async getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<PoolInfoWrapper[]> {
+    return (await this.getAllPools(connection, page)).map((poolInfo) => new PoolInfoWrapper(poolInfo));
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<PoolInfo> {

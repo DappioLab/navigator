@@ -7,17 +7,17 @@ import {
   AccountInfo,
 } from "@solana/web3.js";
 import BN from "bn.js";
-import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper, PoolDirection } from "../types";
+import { IFarmInfoWrapper, IInstanceFarm, IInstancePool, IPoolInfoWrapper, PageConfig, PoolDirection } from "../types";
 import { ORCA_FARM_PROGRAM_ID, ORCA_POOL_PROGRAM_ID } from "./ids";
 import { FARMER_LAYOUT, FARM_LAYOUT, POOL_LAYOUT } from "./layouts";
 import { AccountLayout, MintLayout, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
 import * as types from ".";
-import { getTokenList, getMultipleAccounts } from "../utils";
+import { getTokenList, getMultipleAccounts, paginate } from "../utils";
 import axios from "axios";
 
 let infos: IInstancePool & IInstanceFarm;
 infos = class InstanceOrca {
-  static async getAllPools(connection: Connection): Promise<types.PoolInfo[]> {
+  static async getAllPools(connection: Connection, page?: PageConfig): Promise<types.PoolInfo[]> {
     let allPools: types.PoolInfo[] = [];
     let accounts: {
       tokenAAmount: bigint;
@@ -33,15 +33,19 @@ infos = class InstanceOrca {
 
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
+    let allOrcaPool = await connection.getProgramAccounts(ORCA_POOL_PROGRAM_ID, config);
 
-    for (const accountInfo of allOrcaPool) {
-      let poolData = this.parsePool(accountInfo.account.data, accountInfo.pubkey);
-      allPools.push(poolData);
-      pubKeys.push(poolData.tokenAccountA);
-      pubKeys.push(poolData.tokenAccountB);
-      pubKeys.push(poolData.lpMint);
-    }
+    let pagedAccounts = paginate(allOrcaPool, page);
+
+    pagedAccounts
+      .filter((accountInfo) => accountInfo)
+      .forEach((accountInfo) => {
+        let poolData = this.parsePool(accountInfo.account!.data, accountInfo.pubkey);
+        allPools.push(poolData);
+        pubKeys.push(poolData.tokenAccountA);
+        pubKeys.push(poolData.tokenAccountB);
+        pubKeys.push(poolData.lpMint);
+      });
 
     let amountInfos = await getMultipleAccounts(connection, pubKeys);
     for (let i = 0; i < amountInfos.length / 3; i++) {
@@ -76,9 +80,9 @@ infos = class InstanceOrca {
       .filter((item) => (item.lpSupply as bigint) > 0);
   }
 
-  static async getAllPoolWrappers(connection: Connection): Promise<PoolInfoWrapper[]> {
+  static async getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<PoolInfoWrapper[]> {
     const allAPIPools: { [key: string]: types.IOrcaAPI } = await (await axios.get("https://api.orca.so/allPools")).data;
-    return (await this.getAllPools(connection)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
+    return (await this.getAllPools(connection, page)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
   }
 
   static async getPool(connection: Connection, poolId: PublicKey): Promise<types.PoolInfo> {

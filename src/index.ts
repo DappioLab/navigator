@@ -1,3 +1,5 @@
+export * from "./types";
+export * as utils from "./utils";
 export * as raydium from "./raydium";
 export * as saber from "./saber";
 export * as solend from "./solend";
@@ -8,7 +10,6 @@ export * as francium from "./francium";
 export * as orca from "./orca";
 export * as tulip from "./tulip";
 export * as nftFinance from "./nftFinance";
-export * as utils from "./utils";
 export * as friktion from "./friktion";
 export * as marinade from "./marinade";
 export * from "./types";
