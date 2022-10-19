@@ -90,14 +90,14 @@ export const LIDO_LAYOUT_V2 = struct([
 export const VALIDATOR_LIST_ACCOUNT_LAYOUT = struct([
   u8("accountType"),
   u8("lidoVersion"),
-  u8("maxEntries"),
+  u32("maxEntries"),
   vec(VALIDATOR_LAYOUT_V2, "entries"),
 ]);
 
 export const MAINTAINER_LIST_ACCOUNT_LAYOUT = struct([
   u8("accountType"),
   u8("lidoVersion"),
-  u8("maxEntries"),
+  u32("maxEntries"),
   vec(MAINTAINERS_ITEM_LAYOUT, "entries"),
 ]);
 
