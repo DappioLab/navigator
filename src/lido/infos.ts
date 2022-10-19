@@ -165,7 +165,7 @@ infos = class InstanceLido {
     return {
       depositorId,
       userKey: owner,
-      rawAccount,
+      tokenAccount: rawAccount,
     };
   }
 

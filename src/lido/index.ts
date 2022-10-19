@@ -86,5 +86,5 @@ export interface VaultInfo extends IVaultInfo {
 }
 
 export interface DepositorInfo extends IDepositorInfo {
-  rawAccount: RawAccount;
+  tokenAccount: RawAccount;
 }
