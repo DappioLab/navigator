@@ -7,9 +7,17 @@ describe("Lido", () => {
     commitment: "confirmed",
     confirmTransactionInitialTimeout: 180 * 1000,
   });
+
+  // Use Testnet
+  // const connection = new Connection("https://api.testnet.solana.com", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
+
   //TODO: Modify these addresses
   const userKey = new PublicKey("Dkx85wVaUaDy9i9XWFdZvYrw5h2WMP1N8TqXPBdXY5Wh");
   const tokenKey = new PublicKey("F9kWLTs28mWKmmvKDhAvtHuVwYKx6L4yG7C3n4WyLVh6");
+
   it(" Can get Version", async () => {
     const vault = (await lido.infos.getVault!(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo;
     const vaultInfoWrapper = new lido.VaultInfoWrapper(vault);
