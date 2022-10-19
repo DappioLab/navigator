@@ -42,12 +42,12 @@ describe("Lido", () => {
     depositors.forEach((d, i) => {
       console.log(`\n* Depositor #${i + 1}`);
       console.log(`** DepositorId: ${d.depositorId}`);
-      console.log(`** Deposited Balance: ${d.rawAccount.amount}`);
+      console.log(`** Deposited Balance: ${d.tokenAccount.amount}`);
     });
   });
   it(" Can get depositor", async () => {
     const depositor = (await lido.infos.getDepositor(connection, tokenKey)) as lido.DepositorInfo;
-    console.log(`- Deposited Balance: ${depositor.rawAccount.amount}`);
+    console.log(`- Deposited Balance: ${depositor.tokenAccount.amount}`);
     console.log(`- Owner: ${depositor.userKey.toBase58()}`);
   });
   it(" Can get maintainers", async () => {
