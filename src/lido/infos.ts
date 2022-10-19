@@ -3,6 +3,7 @@ import { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID, AccountLayout } from "@s
 import axios from "axios";
 import BN from "bn.js";
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
+import { getMultipleAccounts } from "../utils";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
 import {
   LIDO_LAYOUT_V1,
@@ -34,20 +35,19 @@ infos = class InstanceLido {
 
     let vault: types.VaultInfo = this.parseVault(vaultAccountInfo.data, vaultId);
 
-    // Fetch validators if using Solido v2
-    if (vault.validatorList) {
-      const validatorListAccount = await connection.getAccountInfo(vault.validatorList);
-      if (!validatorListAccount) throw Error("Error: Cannot get validator list account");
+    // Fetch validators and maintainers if using Solido v2
+    // Both validatorList and maintainerList will always be present in Solido v2
+    if (vault.validatorList && vault.maintainerList) {
+      const [validator, maintainer] = await getMultipleAccounts(connection, [
+        vault.validatorList,
+        vault.maintainerList,
+      ]);
 
-      vault.validators = this._parseValidatorListAccount(validatorListAccount.data);
-    }
+      if (!validator.account) throw Error("Error: Cannot get validator list account");
+      vault.validators = this._parseValidatorListAccount(validator.account.data);
 
-    // Fetch maintainers if using Solido v2
-    if (vault.maintainerList) {
-      const maintainerListAccount = await connection.getAccountInfo(vault.maintainerList);
-      if (!maintainerListAccount) throw Error("Error: Cannot get maintainer list account");
-
-      vault.maintainers = this._parseMaintainerListAccount(maintainerListAccount.data);
+      if (!maintainer.account) throw Error("Error: Cannot get maintainer list account");
+      vault.maintainers = this._parseMaintainerListAccount(maintainer.account.data);
     }
 
     return vault;
@@ -245,9 +245,7 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   static SOL_API_HOST = "https://sol-api-pub.lido.fi";
 
   getVersion(): number {
-    // I have no idea why this gets cast to a number from a BN, and I tried explicitly casting it to a BN
-    //@ts-ignore
-    const version = (this.vaultInfo.lidoVersion as BN) + 1;
+    const version = Number(this.vaultInfo.lidoVersion) + 1;
     return version;
   }
 
