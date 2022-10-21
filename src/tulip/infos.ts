@@ -70,22 +70,22 @@ infos = class InstanceTulip {
     };
   }
 
-  static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
+  static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
     const sizeFilter: DataSizeFilter = {
       dataSize: RAYDIUM_VAULT_LAYOUT_SPAN,
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
 
-    const accountInfos = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
+    const accountInfos = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config), page);
     const vaults: types.VaultInfo[] = accountInfos
       .filter((info) => this._isAllowedId(info.pubkey))
-      .map((info) => this.parseVault(info.account.data, info.pubkey));
+      .map((info) => this.parseVault(info.account!.data, info.pubkey));
     return vaults;
   }
 
-  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
-    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  static async getAllVaultWrappers(connection: Connection, page?: PageConfig): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection, page)).map((vault) => new VaultInfoWrapper(vault));
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {

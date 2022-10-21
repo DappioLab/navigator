@@ -1,18 +1,19 @@
 import { Connection, GetProgramAccountsConfig, DataSizeFilter, PublicKey, MemcmpFilter } from "@solana/web3.js";
 import BN from "bn.js";
 import { utils } from "..";
-import { IInstanceVault, IVaultInfoWrapper } from "../types";
+import { IInstanceVault, IVaultInfoWrapper, PageConfig } from "../types";
 import { VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
 import { EXTRA_VOLT_DATA_LAYOUT, ROUND_LAYOUT, USER_PENDING_LAYOUT, VOLT_VAULT_LAYOUT } from "./layouts";
 
 import * as types from ".";
 import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
+import { paginate } from "../utils";
 
 let infos: IInstanceVault;
 
 export { infos };
 infos = class InstanceFriktion {
-  static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
+  static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
     let rounds = await this.getAllRoundSet(connection);
     let extraInfos = await this.getAllExtraDataSet(connection);
     const sizeFilter: DataSizeFilter = {
@@ -20,9 +21,9 @@ infos = class InstanceFriktion {
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const allVaultAccount = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
+    const allVaultAccount = paginate(await connection.getProgramAccounts(VOLT_PROGRAM_ID, config), page);
     return allVaultAccount.map((account) => {
-      const vault = this.parseVault(account.account.data, account.pubkey);
+      const vault = this.parseVault(account.account!.data, account.pubkey);
       const vaultWrapper = new VaultInfoWrapper(vault);
       for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
         let roundId = vaultWrapper.getRoundInfoAddress(new BN(round));
@@ -36,8 +37,8 @@ infos = class InstanceFriktion {
     });
   }
 
-  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
-    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  static async getAllVaultWrappers(connection: Connection, page?: PageConfig): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection, page)).map((vault) => new VaultInfoWrapper(vault));
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {

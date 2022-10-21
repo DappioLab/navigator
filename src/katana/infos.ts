@@ -18,13 +18,14 @@ import {
 } from "./layouts";
 import { ADMIN, IDENTIFIER, KATANA_COVER_PROGRAM_ID, KATANA_PUT_PROGRAM_ID, PSY_PROGRAM_ID } from "./ids";
 import { struct, u128 } from "@project-serum/borsh";
-import { IInstanceVault, IVaultInfoWrapper } from "../types";
+import { IInstanceVault, IVaultInfoWrapper, PageConfig } from "../types";
 import * as types from ".";
+import { paginate } from "../utils";
 
 let infos: IInstanceVault;
 
 infos = class InstanceKatana {
-  static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
+  static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
     const adminIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 8,
@@ -49,15 +50,18 @@ infos = class InstanceKatana {
 
     const coverFilters = [adminIdMemcmp, coverSizeFilter];
     const coverConfig: GetProgramAccountsConfig = { filters: coverFilters };
-    const allCoverVaultAccount = await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, coverConfig);
+    const allCoverVaultAccount = paginate(
+      await connection.getProgramAccounts(KATANA_COVER_PROGRAM_ID, coverConfig),
+      page
+    );
 
     const putFilters = [identifierMemcmp, putSizeFilter];
     const putConfig: GetProgramAccountsConfig = { filters: putFilters };
-    const allPutVaultAccount = await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, putConfig);
+    const allPutVaultAccount = paginate(await connection.getProgramAccounts(KATANA_PUT_PROGRAM_ID, putConfig));
 
     let coverVaultInfos = allCoverVaultAccount.map((accountInfo) => {
       return this.parseVault(
-        accountInfo.account.data,
+        accountInfo.account!.data,
         accountInfo.pubkey,
         types.VaultType.coverCall,
         coverOptionPrams.get(accountInfo.pubkey.toString())
@@ -65,7 +69,7 @@ infos = class InstanceKatana {
     });
     let putVaultInfos = allPutVaultAccount.map((accountInfo) => {
       return this.parseVault(
-        accountInfo.account.data,
+        accountInfo.account!.data,
         accountInfo.pubkey,
         types.VaultType.putSell,
         putOptionPrams.get(accountInfo.pubkey.toString())
@@ -74,8 +78,8 @@ infos = class InstanceKatana {
     return [...coverVaultInfos, ...putVaultInfos];
   }
 
-  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
-    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  static async getAllVaultWrappers(connection: Connection, page?: PageConfig): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection, page)).map((vault) => new VaultInfoWrapper(vault));
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
