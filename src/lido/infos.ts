@@ -169,7 +169,7 @@ infos = class InstanceLido {
     };
   }
 
-  static _parseValidatorListAccount(data: Buffer): types.ValidatorAccountInfo {
+  private static _parseValidatorListAccount(data: Buffer): types.ValidatorAccountInfo {
     const decodeData = VALIDATOR_LIST_ACCOUNT_LAYOUT.decode(data);
     const { accountType, lidoVersion, maxEntries, entries } = decodeData;
     if (accountType !== 2 || lidoVersion !== 1) throw Error("Error: Invalid Validator list account");
@@ -214,7 +214,7 @@ infos = class InstanceLido {
     };
   }
 
-  static _parseMaintainerListAccount(data: Buffer): types.MaintainerAccountInfo {
+  private static _parseMaintainerListAccount(data: Buffer): types.MaintainerAccountInfo {
     const decodeData = MAINTAINER_LIST_ACCOUNT_LAYOUT.decode(data);
     const { accountType, lidoVersion, maxEntries, entries } = decodeData;
     if (accountType !== 3 || lidoVersion !== 1) throw Error("Error: Invalid Maintainer list account");
