@@ -38,22 +38,8 @@ infos = class InstanceMarinade {
   }
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
-    // Decode the Token data using AccountLayout
-
-    // const testLayout = struct(
-    //   [
-    //     blob(8, "identifier"),
-    //     publicKey("msolMint"),
-    //     publicKey("adminAuthority"),
-    //     publicKey("operationalSolAccount"),
-    //     publicKey("treasuryMsolAccount"),
-    //     u8("reserveBumpSeed"),
-    //   ],
-    //   "State"
-    // );
-
     const decodeData = MARINADE_FINANCE_ACCOUNT_STATE.decode(data);
-    console.log({ decodeData });
+    console.log(decodeData);
     const {
       msolMint,
       adminAuthority,

@@ -7,41 +7,41 @@ import { IDepositorInfo, IVaultInfo } from "../types";
 import { PublicKey } from "@solana/web3.js";
 
 interface Fee {
-  basisPoints: BN;
+  basisPoints: number;
 }
 
 interface List {
   account: PublicKey;
-  itemSize: BN;
-  count: BN;
+  itemSize: number;
+  count: number;
   newAccount: PublicKey;
-  copiedCount: BN;
+  copiedCount: number;
 }
 
 interface StakeSystem {
   stakeList: List;
-  delayedUnstakeCoolingDown: BN;
-  stakeDepositBumpSeed: BN;
-  stakeWithdrawBumpSeed: BN;
-  slotsForStakeDelta: BN;
-  lastStakeDeltaEpoch: BN;
-  minStake: BN;
-  extraStakeDeltaRuns: BN;
+  delayedUnstakeCoolingDown: number;
+  stakeDepositBumpSeed: number;
+  stakeWithdrawBumpSeed: number;
+  slotsForStakeDelta: number;
+  lastStakeDeltaEpoch: number;
+  minStake: number;
+  extraStakeDeltaRuns: number;
 }
 
 interface ValidatorSystem {
   validatorList: List;
   managerAuthority: PublicKey;
-  totalValidatorScore: BN;
+  totalValidatorScore: number;
   totalActiveBalance: BN;
-  autoAddValidatorEnabled: BN;
+  autoAddValidatorEnabled: number;
 }
 
 interface LiqPool {
   lpMint: PublicKey;
-  lpMintAuthorityBumpSeed: BN;
-  solLegBumpSeed: BN;
-  msolLegAuthorityBumpSeed: BN;
+  lpMintAuthorityBumpSeed: number;
+  solLegBumpSeed: number;
+  msolLegAuthorityBumpSeed: number;
   msolLeg: PublicKey;
   lpLiquidityTarget: BN;
   lpMaxFee: Fee;
@@ -57,8 +57,8 @@ export interface VaultInfo extends IVaultInfo {
   adminAuthority: PublicKey;
   operationalSolAccount: PublicKey;
   treasuryMsolAccount: PublicKey;
-  reserveBumpSeed: BN;
-  msolMintAuthorityBumpSeed: BN;
+  reserveBumpSeed: number;
+  msolMintAuthorityBumpSeed: number;
   rentExemptForTokenAcc: BN;
 
   rewardFee: Fee;
