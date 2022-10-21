@@ -1,15 +1,20 @@
 import { getMint } from "@solana/spl-token-v2";
 import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
-import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper } from "../types";
+import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
 import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import { DEPOSITOR_LAYOUT, RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
 import * as types from ".";
+import { paginate } from "../utils";
 
 let infos: IInstanceMoneyMarket & IInstanceVault;
 
 infos = class InstanceTulip {
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<types.ReserveInfo[]> {
     const dataSizeFilters: DataSizeFilter = {
       dataSize: RESERVE_LAYOUT_SPAN,
     };
@@ -27,14 +32,18 @@ infos = class InstanceTulip {
     }
 
     const config: GetProgramAccountsConfig = { filters: filters };
-    const reserveAccounts = await connection.getProgramAccounts(TULIP_PROGRAM_ID, config);
+    const reserveAccounts = paginate(await connection.getProgramAccounts(TULIP_PROGRAM_ID, config), page);
 
-    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account!.data, account.pubkey));
     return reserves;
   }
 
-  static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<ReserveInfoWrapper[]> {
-    const reserves = await this.getAllReserves(connection, marketId);
+  static async getAllReserveWrappers(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<ReserveInfoWrapper[]> {
+    const reserves = await this.getAllReserves(connection, marketId, page);
     const reserveWrappers = reserves.map((reserve) => new ReserveInfoWrapper(reserve));
     return reserveWrappers;
   }
