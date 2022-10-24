@@ -92,7 +92,7 @@ export const defaultFarmer: FarmerInfo = {
   farmerId: PublicKey.default,
   farmId: PublicKey.default,
   userKey: PublicKey.default,
-  amount: new BN(0).toNumber(),
+  amount: Number(new BN(0)),
   bump: new BN(0),
   vault: PublicKey.default,
   rewardsEarned: new BN(0),

@@ -7,10 +7,10 @@ describe("Tulip", () => {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
   // });
-  // const connection = new Connection("https://solana-api.tt-prod.net", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  // });
+  const connection = new Connection("https://solana-api.tt-prod.net", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
+  });
   // const connection = new Connection("https:////api.mainnet-beta.solana.com", {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
@@ -20,10 +20,10 @@ describe("Tulip", () => {
   //   confirmTransactionInitialTimeout: 180 * 1000,
   //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   // });
-  const connection = new Connection("https://ssc-dao.genesysgo.net", {
-    commitment: "confirmed",
-    confirmTransactionInitialTimeout: 180 * 1000,
-  });
+  // const connection = new Connection("https://ssc-dao.genesysgo.net", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
 
   const solReserveId = new PublicKey("8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36");
   const userKey = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
@@ -72,7 +72,7 @@ describe("Tulip", () => {
     depositors.forEach((d, i) => {
       console.log(`\n* Depositor#${i + 1}`);
       console.log(`** DepositedId: ${d.vaultId}`);
-      console.log(`** Deposited Balance: ${d.depositedBalance.toNumber()}`);
+      console.log(`** Deposited Balance: ${Number(d.depositedBalance)}`);
       console.log(`** Corresponding vaultId: ${d.vaultId.toBase58()}`);
     });
   });
@@ -81,7 +81,7 @@ describe("Tulip", () => {
       connection,
       new PublicKey("4gKvh8AmET6U84KXAJdnq1eU53mtniPXGyfDTW2R3rQN")
     )) as tulip.DepositorInfo;
-    console.log(`- Deposited Balance: ${depositor.depositedBalance.toNumber()}`);
+    console.log(`- Deposited Balance: ${Number(depositor.depositedBalance)}`);
     console.log(`- Corresponding vault: ${depositor.vaultId.toBase58()}`);
   });
 });

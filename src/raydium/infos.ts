@@ -39,7 +39,7 @@ infos = class InstanceRaydium {
       .forEach(({ pubkey, account }) => {
         let poolInfo = this.parsePool(account!.data, pubkey);
 
-        if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
+        if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && Number(poolInfo.status) != 4) {
           // Insert keys to be fetched
           tokenAccountKeys.push(poolInfo.poolCoinTokenAccount);
           tokenAccountKeys.push(poolInfo.poolPcTokenAccount);
@@ -123,7 +123,7 @@ infos = class InstanceRaydium {
 
     let accountKeys: PublicKey[] = [];
 
-    if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && poolInfo.status.toNumber() != 4) {
+    if (!(poolInfo.totalPnlCoin.isZero() || poolInfo.totalPnlPc.isZero()) && Number(poolInfo.status) != 4) {
       accountKeys.push(poolInfo.poolCoinTokenAccount);
       accountKeys.push(poolInfo.poolPcTokenAccount);
       accountKeys.push(poolInfo.lpMint);
@@ -258,7 +258,7 @@ infos = class InstanceRaydium {
     const farmsV3Accounts = await connection.getProgramAccounts(FARM_PROGRAM_ID_V3, configV3);
     const farmsV3 = farmsV3Accounts
       .map(({ pubkey, account }) => this._parseFarmV3(account.data, pubkey))
-      .filter((farm) => farm.state.toNumber() === 1);
+      .filter((farm) => Number(farm.state) === 1);
 
     // V5
     const sizeFilterV5: DataSizeFilter = {
@@ -269,7 +269,7 @@ infos = class InstanceRaydium {
     const farmsV5Accounts = await connection.getProgramAccounts(FARM_PROGRAM_ID_V5, configV5);
     const farmsV5 = farmsV5Accounts
       .map(({ pubkey, account }) => this._parseFarmV5(account.data, pubkey))
-      .filter((farm) => farm.state.toNumber() === 1);
+      .filter((farm) => Number(farm.state) === 1);
 
     let allFarms = [...farmsV3, ...farmsV5];
 
@@ -442,7 +442,7 @@ infos = class InstanceRaydium {
     const parsedFarm = version == 3 ? this._parseFarmV3(data, farmId) : this._parseFarmV5(data, farmId);
 
     let farm = null as unknown as FarmInfo;
-    if (parsedFarm.state.toNumber() == 1) {
+    if (Number(parsedFarm.state) == 1) {
       farm = parsedFarm;
     }
 
@@ -520,10 +520,10 @@ infos = class InstanceRaydium {
         farmerId: farmer.pubkey,
         farmId,
         userKey: new PublicKey(decoded.owner),
-        amount: decoded.deposited.toNumber(),
+        amount: Number(decoded.deposited),
         farmVersion: isV3 ? 3 : 5,
         mints: relatedMints,
-        rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
+        rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => Number(rewardDebt)),
       };
     });
 
@@ -569,14 +569,14 @@ infos = class InstanceRaydium {
       farmerId,
       farmId,
       userKey: new PublicKey(decoded.owner),
-      amount: decoded.deposited.toNumber(),
+      amount: Number(decoded.deposited),
       farmVersion: isV3 ? 3 : 5,
       mints: {
         stakedTokenMint: tokenMints[0],
         rewardAMint: tokenMints[1],
         rewardBMint: isV3 ? undefined : tokenMints[2],
       },
-      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
+      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => Number(rewardDebt)),
     };
 
     return farmer;
@@ -655,28 +655,28 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       let x1 =
         (this.poolInfo.tokenAAmount as bigint) +
         (this.poolInfo.ammOrderBaseTokenTotal as bigint) -
-        BigInt(this.poolInfo.needTakePnlCoin.toNumber());
+        BigInt(Number(this.poolInfo.needTakePnlCoin));
       let y1 =
         (this.poolInfo.tokenBAmount as bigint) +
         (this.poolInfo.ammOrderQuoteTokenTotal as bigint) -
-        BigInt(this.poolInfo.needTakePnlPc.toNumber());
+        BigInt(Number(this.poolInfo.needTakePnlPc));
 
       let k = x1 * y1;
-      let x2 = x1 + BigInt(amountIn.toNumber());
+      let x2 = x1 + BigInt(Number(amountIn));
       let y2 = k / x2;
       amountOut = new BN(Number(y1 - y2));
     } else {
       let x1 =
         (this.poolInfo.tokenBAmount as bigint) +
         (this.poolInfo.ammOrderQuoteTokenTotal as bigint) -
-        BigInt(this.poolInfo.needTakePnlPc.toNumber());
+        BigInt(Number(this.poolInfo.needTakePnlPc));
       let y1 =
         (this.poolInfo.tokenAAmount as bigint) +
         (this.poolInfo.ammOrderBaseTokenTotal as bigint) -
-        BigInt(this.poolInfo.needTakePnlCoin.toNumber());
+        BigInt(Number(this.poolInfo.needTakePnlCoin));
 
       let k = x1 * y1;
-      let x2 = x1 + BigInt(amountIn.toNumber());
+      let x2 = x1 + BigInt(Number(amountIn));
       let y2 = k / x2;
       amountOut = new BN(Number(y1 - y2));
     }
@@ -688,8 +688,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const poolBalances = this._getPoolBalances();
     const tokenABalance = poolBalances.tokenA.balance;
     const tokenBBalance = poolBalances.tokenB.balance;
-    const tokenAAmount = tokenABalance.toWei().toNumber() * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
-    const tokenBAmount = tokenBBalance.toWei().toNumber() * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
+    const tokenAAmount = Number(tokenABalance.toWei()) * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
+    const tokenBAmount = Number(tokenBBalance.toWei()) * (lpAmount / Number(this.poolInfo.lpSupplyAmount));
 
     return {
       tokenAAmount,
@@ -710,7 +710,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const tokenBBalance = poolBalances.tokenB.balance;
 
     const balance = tokenMint.equals(this.poolInfo.tokenAMint) ? tokenABalance : tokenBBalance;
-    const sharePercent = tokenAmount / (balance.toWei().toNumber() + tokenAmount);
+    const sharePercent = tokenAmount / (Number(balance.toWei()) + tokenAmount);
 
     return sharePercent * Number(this.poolInfo.lpSupplyAmount);
   }
@@ -727,8 +727,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
     const lpPrice =
       lpSupply > 0
-        ? (tokenABalance.toEther().toNumber() * 10 ** lpDecimals * coinPrice +
-            tokenBBalance.toEther().toNumber() * 10 ** lpDecimals * pcPrice) /
+        ? (Number(tokenABalance.toEther()) * 10 ** lpDecimals * coinPrice +
+            Number(tokenBBalance.toEther()) * 10 ** lpDecimals * pcPrice) /
           lpSupply
         : 0;
 
@@ -755,16 +755,16 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
   getTokenAAmount(tokenBAmount: bigint): bigint {
     const poolBalances = this._getPoolBalances();
-    const coinBalance = BigInt(poolBalances.tokenA.balance.toWei().toNumber());
-    const pcBalance = BigInt(poolBalances.tokenB.balance.toWei().toNumber());
+    const coinBalance = BigInt(Number(poolBalances.tokenA.balance.toWei()));
+    const pcBalance = BigInt(Number(poolBalances.tokenB.balance.toWei()));
 
     return (tokenBAmount * coinBalance) / pcBalance;
   }
 
   getTokenBAmount(tokenAAmount: bigint): bigint {
     const poolBalances = this._getPoolBalances();
-    const coinBalance = BigInt(poolBalances.tokenA.balance.toWei().toNumber());
-    const pcBalance = BigInt(poolBalances.tokenB.balance.toWei().toNumber());
+    const coinBalance = BigInt(Number(poolBalances.tokenA.balance.toWei()));
+    const pcBalance = BigInt(Number(poolBalances.tokenB.balance.toWei()));
 
     return (tokenAAmount * pcBalance) / coinBalance;
   }
@@ -778,23 +778,23 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       Number(this.poolInfo.tokenAAmount) +
         Number(this.poolInfo.ammOrderBaseTokenTotal) -
         Number(this.poolInfo.needTakePnlCoin),
-      this.poolInfo.coinDecimals.toNumber()
+      Number(this.poolInfo.coinDecimals)
     );
     let tokenBBalance = new TokenAmount(
       Number(this.poolInfo.tokenBAmount) +
         Number(this.poolInfo.ammOrderQuoteTokenTotal) -
         Number(this.poolInfo.needTakePnlPc),
-      this.poolInfo.pcDecimals.toNumber()
+      Number(this.poolInfo.pcDecimals)
     );
 
     return {
       tokenA: {
         balance: tokenABalance,
-        decimals: this.poolInfo.coinDecimals.toNumber(),
+        decimals: Number(this.poolInfo.coinDecimals),
       },
       tokenB: {
         balance: tokenBBalance,
-        decimals: this.poolInfo.pcDecimals.toNumber(),
+        decimals: Number(this.poolInfo.pcDecimals),
       },
       fees: {
         numerator: swapFeeNumerator,

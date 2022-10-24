@@ -41,7 +41,7 @@ describe("Raydium", () => {
 
     const wrapper = new PoolInfoWrapper(pool0 as PoolInfo);
     const amountOut = await wrapper.getSwapOutAmount(PoolDirection.Reverse, new BN(100000000));
-    console.log(amountOut.toNumber());
+    console.log(Number(amountOut));
 
     const pool1 = await raydium.infos.getPool(connection, poolId);
     console.log(pool1);

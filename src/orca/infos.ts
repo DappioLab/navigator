@@ -346,7 +346,7 @@ infos = class InstanceOrca {
       farmerId: pubkey,
       farmId: globalFarm,
       userKey: owner,
-      amount: new BN(baseTokensConverted).toNumber(),
+      amount: Number(new BN(baseTokensConverted)),
       isInitialized: new BN(isInitialized),
       accountType: new BN(accountType),
       cumulativeEmissionsCheckpoint: new BN(cumulativeEmissionsCheckpoint, 10, "le"),
@@ -365,14 +365,14 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
       let x1 = this.poolInfo.tokenSupplyA as bigint;
       let y1 = this.poolInfo.tokenSupplyB as bigint;
       let k = x1 * y1;
-      let x2 = x1 + BigInt(amountIn.toNumber());
+      let x2 = x1 + BigInt(Number(amountIn));
       let y2 = k / x2;
       amountOut = new BN(Number(y1 - y2));
     } else {
       let x1 = this.poolInfo.tokenSupplyB as bigint;
       let y1 = this.poolInfo.tokenSupplyA as bigint;
       let k = x1 * y1;
-      let x2 = x1 + BigInt(amountIn.toNumber());
+      let x2 = x1 + BigInt(Number(amountIn));
       let y2 = k / x2;
       amountOut = new BN(Number(y1 - y2));
     }
@@ -423,8 +423,8 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
   getSingleSideRemoveLPAmount(toSide: PublicKey, amountIn: BN) {
     if (toSide.equals(this.poolInfo.tokenAMint)) {
       return (
-        (amountIn.toNumber() * new BN(this.poolInfo.tokenSupplyA!.toString()).toNumber()) /
-        new BN(this.poolInfo.lpSupply!.toString()).toNumber()
+        (Number(amountIn) * Number(new BN(this.poolInfo.tokenSupplyA!.toString()))) /
+        Number(new BN(this.poolInfo.lpSupply!.toString()))
       );
     }
   }

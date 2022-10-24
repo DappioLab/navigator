@@ -25,7 +25,7 @@ infos = class InstanceFriktion {
     return allVaultAccount.map((account) => {
       const vault = this.parseVault(account.account!.data, account.pubkey);
       const vaultWrapper = new VaultInfoWrapper(vault);
-      for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
+      for (let round = 1; round < Number(vault.roundNumber) + 1; round++) {
         let roundId = vaultWrapper.getRoundInfoAddress(new BN(round));
         let roundInfo = rounds.get(roundId.toString());
         if (roundInfo) {
@@ -50,7 +50,7 @@ infos = class InstanceFriktion {
     }
     const vault = this.parseVault(vaultAccount.data, vaultId);
     const vaultWrapper = new VaultInfoWrapper(vault);
-    for (let round = 1; round < vault.roundNumber.toNumber() + 1; round++) {
+    for (let round = 1; round < Number(vault.roundNumber) + 1; round++) {
       let roundId = vaultWrapper.getRoundInfoAddress(new BN(round));
       let roundInfo = rounds.get(roundId.toString());
       if (roundInfo) {

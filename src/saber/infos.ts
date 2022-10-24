@@ -330,7 +330,7 @@ infos = class InstanceSaber {
       farmerId: infoPubkey,
       farmId: farmKey,
       userKey: owner,
-      amount: new BN(balance).toNumber(),
+      amount: Number(new BN(balance)),
       bump: new BN(bump),
       vault,
       rewardsEarned: new BN(rewardsEarned),
