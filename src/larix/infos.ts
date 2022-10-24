@@ -405,11 +405,12 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
         if (!tokenInfo) return null;
         rewardValue = LDO_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
-          this.supplyAmount()
-            .mul(this.reserveInfo.liquidity.marketPrice)
-            .div(new BN(`1${"".padEnd(9, "0")}`))
-            .div(new BN(`1${"".padEnd(14, "0")}`))
-            .toNumber() /
+          Number(
+            this.supplyAmount()
+              .mul(this.reserveInfo.liquidity.marketPrice)
+              .div(new BN(`1${"".padEnd(9, "0")}`))
+              .div(new BN(`1${"".padEnd(14, "0")}`))
+          ) /
           10 ** 4;
         rewardApy = rewardValue / supplyValue;
         partnerReward = {
@@ -425,11 +426,12 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
         if (!tokenInfo) return null;
         rewardValue = MNDE_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
-          this.supplyAmount()
-            .mul(this.reserveInfo.liquidity.marketPrice)
-            .div(new BN(`1${"".padEnd(9, "0")}`))
-            .div(new BN(`1${"".padEnd(14, "0")}`))
-            .toNumber() /
+          Number(
+            this.supplyAmount()
+              .mul(this.reserveInfo.liquidity.marketPrice)
+              .div(new BN(`1${"".padEnd(9, "0")}`))
+              .div(new BN(`1${"".padEnd(14, "0")}`))
+          ) /
           10 ** 4;
         rewardApy = rewardValue / supplyValue;
         partnerReward = {
@@ -515,7 +517,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
   }
 
   miningApy(larix_price: number) {
-    let decimal = this.farmInfo.liquidityMintDecimals.toNumber();
+    let decimal = Number(this.farmInfo.liquidityMintDecimals);
     let poolTotalSupplyValue = this.supplyAmount()
       .mul(this.farmInfo.liquidityMarketPrice)
       .div(new BN(`1${"".padEnd(18, "0")}`))
@@ -523,12 +525,12 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     let miningRate = this.farmInfo.kinkUtilRate;
     let miningSpeed = this.farmInfo.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
+    let apy = Number(miningRate.mul(slotPerYear).mul(miningSpeed)) / Number(poolTotalSupplyValue) / 10 ** 7;
     return apy;
   }
 
   calculateBorrowMiningApy(larix_price: number) {
-    let decimal = this.farmInfo.liquidityMintDecimals.toNumber();
+    let decimal = Number(this.farmInfo.liquidityMintDecimals);
     let poolTotalSupplyValue = this.borrowedAmount()
       .mul(this.farmInfo.liquidityMarketPrice)
       .div(new BN(`1${"".padEnd(18, "0")}`))
@@ -536,7 +538,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     let miningRate = new BN(100).sub(this.farmInfo.kinkUtilRate);
     let miningSpeed = this.farmInfo.totalMiningSpeed;
     let slotPerYear = new BN(2 * 86400 * 365 * larix_price);
-    let apy = miningRate.mul(slotPerYear).mul(miningSpeed).toNumber() / poolTotalSupplyValue.toNumber() / 10 ** 7;
+    let apy = Number(miningRate.mul(slotPerYear).mul(miningSpeed)) / Number(poolTotalSupplyValue) / 10 ** 7;
     return apy;
   }
 }

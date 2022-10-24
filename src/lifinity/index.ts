@@ -57,7 +57,7 @@ export interface PoolConfig {
   coefficientUp: BN;
   coefficientDown: BN;
   oracleStatus: BN;
-  depositCap: BN;
+  configTemp1: BN;
   configTemp2: BN;
 }
 
@@ -98,6 +98,6 @@ export const defaultPoolConfig: PoolConfig = {
   coefficientUp: new BN(0),
   coefficientDown: new BN(0),
   oracleStatus: new BN(0),
-  depositCap: new BN(0),
+  configTemp1: new BN(0),
   configTemp2: new BN(0),
 };

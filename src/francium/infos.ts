@@ -132,14 +132,14 @@ infos = class InstanceFrancium {
       creditMintTotalSupply: new BN(creditMintTotalSupply),
       interestReverseRate: new BN(interestReverseRate),
       accumulatedInterestReverse: new BN(accumulated_interestReverse),
-      threshold1: new BN(threshold_1).toNumber(),
-      threshold2: new BN(threshold_2).toNumber(),
-      base1: new BN(base_1).toNumber(),
-      factor1: new BN(factor_1).toNumber(),
-      base2: new BN(base_2).toNumber(),
-      factor2: new BN(factor_2).toNumber(),
-      base3: new BN(base_3).toNumber(),
-      factor3: new BN(factor_3).toNumber(),
+      threshold1: Number(new BN(threshold_1)),
+      threshold2: Number(new BN(threshold_2)),
+      base1: Number(new BN(base_1)),
+      factor1: Number(new BN(factor_1)),
+      base2: Number(new BN(base_2)),
+      factor2: Number(new BN(factor_2)),
+      base3: Number(new BN(base_3)),
+      factor3: Number(new BN(factor_3)),
     };
   }
 
@@ -353,10 +353,11 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 
   calculateUtilizationRatio() {
     return (
-      this.borrowedAmount()
-        .muln(10 ** 6)
-        .div(this.supplyAmount())
-        .toNumber() /
+      Number(
+        this.borrowedAmount()
+          .muln(10 ** 6)
+          .div(this.supplyAmount())
+      ) /
       10 ** 6
     );
   }
@@ -375,9 +376,8 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
         if (!tokenInfo || !stsolPriceInfo) return null;
         rewardValue = LDO_PER_YEAR * tokenInfo.price * 100;
         supplyValue =
-          this.supplyAmount()
-            .div(new BN(`1${"".padEnd(this.supplyTokenDecimal().toNumber(), "0")}`))
-            .toNumber() * stsolPriceInfo.price;
+          Number(this.supplyAmount().div(new BN(`1${"".padEnd(Number(this.supplyTokenDecimal()), "0")}`))) *
+          stsolPriceInfo.price;
         rewardApy = rewardValue / supplyValue;
         partnerReward = {
           side: "supply",

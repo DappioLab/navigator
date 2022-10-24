@@ -27,7 +27,7 @@ export async function wrapNative(amount: BN, walletPublicKey: PublicKey, connect
   tx.add(createATA);
   let transferPram = {
     fromPubkey: walletPublicKey,
-    lamports: amount.toNumber(),
+    lamports: Number(amount),
     toPubkey: destinationAta,
   };
   let transferLamportIx = SystemProgram.transfer(transferPram);

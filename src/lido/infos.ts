@@ -264,9 +264,9 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
     const validatorEntries = this.vaultInfo.validators!.entries;
     const sortedValidatorEntries = validatorEntries.sort(({ entry: validatorA }, { entry: validatorB }) => {
       const effectiveStakeBalanceValidatorA =
-        validatorA.stakeAccountsBalance.toNumber() - validatorA.unstakeAccountsBalance.toNumber();
+        Number(validatorA.stakeAccountsBalance) - Number(validatorA.unstakeAccountsBalance);
       const effectiveStakeBalanceValidatorB =
-        validatorB.stakeAccountsBalance.toNumber() - validatorB.unstakeAccountsBalance.toNumber();
+        Number(validatorB.stakeAccountsBalance) - Number(validatorB.unstakeAccountsBalance);
 
       return effectiveStakeBalanceValidatorB - effectiveStakeBalanceValidatorA;
     });
