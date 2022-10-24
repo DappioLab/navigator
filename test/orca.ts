@@ -1,4 +1,4 @@
-import { Connection } from "@solana/web3.js";
+import { Connection, PublicKey } from "@solana/web3.js";
 import { orca, utils } from "../src";
 import { FarmInfo, FarmInfoWrapper, PoolInfo, PoolInfoWrapper } from "../src/orca";
 
@@ -7,10 +7,10 @@ describe("Orca", () => {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
   // });
-  // const connection = new Connection("https://solana-api.tt-prod.net", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  // });
+  const connection = new Connection("https://solana-api.tt-prod.net", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
+  });
   // const connection = new Connection("https://ssc-dao.genesysgo.net", {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
@@ -25,9 +25,10 @@ describe("Orca", () => {
   //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   // });
 
-  const connection = new Connection("https://ssc-dao.genesysgo.net", {
-    commitment: "confirmed",
-  });
+  // const connection = new Connection("https://ssc-dao.genesysgo.net", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
 
   // it("fetches pool data", async () => {
   //   const pools = await orca.infos.getAllPools(connection);
@@ -45,10 +46,16 @@ describe("Orca", () => {
   //   const farm = await orca.infos.getFarm(connection, farmId);
   // });
 
-  // it("fetches pool wrapper", async () => {
-  //   const pools = (await orca.infos.getAllPoolWrappers(connection)) as PoolInfoWrapper[];
-  //   // pools.map((item) => console.log(item.getApr()));
-  // });
+  it("fetch pool wrapper", async () => {
+    const poolId = new PublicKey("FyGeyg6HEjBwTEGXF9o78XgKyMkmxSncLe2VECu3FPgo");
+    const amount = 72;
+    const pools = (await orca.infos.getAllPoolWrappers(connection)) as PoolInfoWrapper[];
+    const pool = await orca.infos.getPoolWrapper(connection, poolId);
+    pools.map((item) => console.log(item.getApr()));
+
+    const tokenAmount = pool.getTokenAmounts(amount);
+    console.log(tokenAmount);
+  });
 
   it("fetches farm wrapper", async () => {
     const pools = (await orca.infos.getAllPools(connection)) as PoolInfo[];
