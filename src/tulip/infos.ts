@@ -1,15 +1,20 @@
 import { getMint } from "@solana/spl-token-v2";
 import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
-import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper } from "../types";
+import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
 import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import { DEPOSITOR_LAYOUT, RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
 import * as types from ".";
+import { paginate } from "../utils";
 
 let infos: IInstanceMoneyMarket & IInstanceVault;
 
 infos = class InstanceTulip {
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<types.ReserveInfo[]> {
     const dataSizeFilters: DataSizeFilter = {
       dataSize: RESERVE_LAYOUT_SPAN,
     };
@@ -27,14 +32,18 @@ infos = class InstanceTulip {
     }
 
     const config: GetProgramAccountsConfig = { filters: filters };
-    const reserveAccounts = await connection.getProgramAccounts(TULIP_PROGRAM_ID, config);
+    const reserveAccounts = paginate(await connection.getProgramAccounts(TULIP_PROGRAM_ID, config), page);
 
-    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account!.data, account.pubkey));
     return reserves;
   }
 
-  static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<ReserveInfoWrapper[]> {
-    const reserves = await this.getAllReserves(connection, marketId);
+  static async getAllReserveWrappers(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<ReserveInfoWrapper[]> {
+    const reserves = await this.getAllReserves(connection, marketId, page);
     const reserveWrappers = reserves.map((reserve) => new ReserveInfoWrapper(reserve));
     return reserveWrappers;
   }
@@ -61,22 +70,22 @@ infos = class InstanceTulip {
     };
   }
 
-  static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
+  static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
     const sizeFilter: DataSizeFilter = {
       dataSize: RAYDIUM_VAULT_LAYOUT_SPAN,
     };
     const filters = [sizeFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
 
-    const accountInfos = await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config);
+    const accountInfos = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config), page);
     const vaults: types.VaultInfo[] = accountInfos
       .filter((info) => this._isAllowedId(info.pubkey))
-      .map((info) => this.parseVault(info.account.data, info.pubkey));
+      .map((info) => this.parseVault(info.account!.data, info.pubkey));
     return vaults;
   }
 
-  static async getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]> {
-    return (await this.getAllVaults(connection)).map((vault) => new VaultInfoWrapper(vault));
+  static async getAllVaultWrappers(connection: Connection, page?: PageConfig): Promise<IVaultInfoWrapper[]> {
+    return (await this.getAllVaults(connection, page)).map((vault) => new VaultInfoWrapper(vault));
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {

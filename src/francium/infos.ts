@@ -33,15 +33,21 @@ import {
   IReserveInfoWrapper,
   IFarmInfoWrapper,
   IServicesTokenInfo,
+  PageConfig,
 } from "../types";
 import { utils } from "..";
 import * as types from ".";
 import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
+import { paginate } from "../utils";
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 
 infos = class InstanceFrancium {
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<types.ReserveInfo[]> {
     const programIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 10,
@@ -54,15 +60,16 @@ infos = class InstanceFrancium {
     const filters = [programIdMemcmp, dataSizeFilters];
     const config: GetProgramAccountsConfig = { filters };
 
-    const reserveAccounts = await connection.getProgramAccounts(FRANCIUM_LENDING_PROGRAM_ID, config);
-    return reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+    const reserveAccounts = paginate(await connection.getProgramAccounts(FRANCIUM_LENDING_PROGRAM_ID, config), page);
+    return reserveAccounts.map((account) => this.parseReserve(account.account!.data, account.pubkey));
   }
 
   static async getAllReserveWrappers(
     connection: Connection,
-    marketId?: PublicKey
+    marketId?: PublicKey,
+    page?: PageConfig
   ): Promise<types.ReserveInfoWrapper[]> {
-    let reserves = await this.getAllReserves(connection);
+    let reserves = await this.getAllReserves(connection, marketId, page);
     return reserves.map((reserveInfo) => new ReserveInfoWrapper(reserveInfo));
   }
 

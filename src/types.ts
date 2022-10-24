@@ -149,8 +149,12 @@ export interface IInstanceFarm {
 }
 
 export interface IInstanceMoneyMarket {
-  getAllReserves(connection: Connection, marketId?: PublicKey): Promise<IReserveInfo[]>;
-  getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<IReserveInfoWrapper[]>;
+  getAllReserves(connection: Connection, marketId?: PublicKey, page?: PageConfig): Promise<IReserveInfo[]>;
+  getAllReserveWrappers(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<IReserveInfoWrapper[]>;
   getReserve(connection: Connection, reserveId: PublicKey): Promise<IReserveInfo>;
   parseReserve(data: Buffer, reserveId: PublicKey): IReserveInfo;
 
@@ -196,9 +200,9 @@ export interface IInstanceNFTFarm {
 }
 
 export interface IInstanceVault {
-  getAllVaults(connection: Connection): Promise<IVaultInfo[]>;
+  getAllVaults(connection: Connection, page?: PageConfig): Promise<IVaultInfo[]>;
   // TODO: Add wrapper for VaultInfo
-  getAllVaultWrappers(connection: Connection): Promise<IVaultInfoWrapper[]>;
+  getAllVaultWrappers(connection: Connection, page?: PageConfig): Promise<IVaultInfoWrapper[]>;
   getVault(connection: Connection, vaultId: PublicKey): Promise<IVaultInfo>;
   parseVault(data: Buffer, vaultId: PublicKey): IVaultInfo;
   getAllDepositors(connection: Connection, userKey: PublicKey): Promise<IDepositorInfo[]>;

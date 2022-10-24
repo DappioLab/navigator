@@ -7,6 +7,7 @@ import {
   IInstanceMoneyMarket,
   IReserveInfoWrapper,
   IServicesTokenInfo,
+  PageConfig,
 } from "../types";
 import {
   LARIX_BRIDGE_PROGRAM_ID,
@@ -30,15 +31,20 @@ import {
 // @ts-ignore
 import { seq } from "buffer-layout";
 import { struct, u64, u8, bool } from "@project-serum/borsh";
+import { paginate } from "../utils";
 
 let infos: IInstanceMoneyMarket & IInstanceFarm;
 
 infos = class InstanceLarix {
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
+  static async getAllReserves(
+    connection: Connection,
+    marketId: PublicKey = LARIX_MARKET_ID_MAIN_POOL,
+    page?: PageConfig
+  ): Promise<types.ReserveInfo[]> {
     const programIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 10,
-        bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
+        bytes: marketId.toString(),
       },
     };
     const dataSizeFilters: DataSizeFilter = {
@@ -46,11 +52,11 @@ infos = class InstanceLarix {
     };
     const filters = [programIdMemcmp, dataSizeFilters];
     const config: GetProgramAccountsConfig = { filters: filters };
-    const reserveAccounts = await connection.getProgramAccounts(LARIX_PROGRAM_ID, config);
+    const reserveAccounts = paginate(await connection.getProgramAccounts(LARIX_PROGRAM_ID, config), page);
     const allBridgeInfo = await getAllOracleBridges(connection);
 
     return reserveAccounts.map((account) => {
-      let info = this.parseReserve(account.account.data, account.pubkey);
+      let info = this.parseReserve(account.account!.data, account.pubkey);
       info.oracleBridgeInfo = allBridgeInfo.get(info.liquidity.OraclePubkey.toString());
       return info;
     });
@@ -58,9 +64,10 @@ infos = class InstanceLarix {
 
   static async getAllReserveWrappers(
     connection: Connection,
-    marketId?: PublicKey
+    marketId?: PublicKey,
+    page?: PageConfig
   ): Promise<types.ReserveInfoWrapper[]> {
-    const allReserves = await this.getAllReserves(connection);
+    const allReserves = await this.getAllReserves(connection, marketId, page);
     return allReserves.map((reservesMeta) => new ReserveInfoWrapper(reservesMeta));
   }
 

@@ -1,6 +1,13 @@
 import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
-import { IInstanceMoneyMarket, IObligationInfo, IReserveInfo, IReserveInfoWrapper, IServicesTokenInfo } from "../types";
+import {
+  IInstanceMoneyMarket,
+  IObligationInfo,
+  IReserveInfo,
+  IReserveInfoWrapper,
+  IServicesTokenInfo,
+  PageConfig,
+} from "../types";
 import {
   SLND_PRICE_ORACLE,
   SOLEND_LENDING_MARKET_ID_ALL,
@@ -8,7 +15,7 @@ import {
   SOLEND_PROGRAM_ID,
 } from "./ids";
 import { COLLATERAL_LAYOUT, LOAN_LAYOUT, OBLIGATION_LAYOUT, RESERVE_LAYOUT } from "./layouts";
-import { getMultipleAccounts, getTokenList } from "../utils";
+import { getMultipleAccounts, getTokenList, paginate } from "../utils";
 // @ts-ignore
 import { seq } from "buffer-layout";
 import axios from "axios";
@@ -49,12 +56,20 @@ export function BORROWING_MULTIPLIER(reserve: PublicKey) {
 let infos: IInstanceMoneyMarket;
 
 infos = class InstanceSolend {
-  static async getAllReserveWrappers(connection: Connection, marketId?: PublicKey): Promise<ReserveInfoWrapper[]> {
-    const reserves = await this.getAllReserves(connection, marketId);
+  static async getAllReserveWrappers(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<ReserveInfoWrapper[]> {
+    const reserves = await this.getAllReserves(connection, marketId, page);
     return reserves.map((reserve) => new ReserveInfoWrapper(reserve));
   }
   // Returns ReserveInfos w/ partnerRewardData
-  static async getAllReserves(connection: Connection, marketId?: PublicKey): Promise<types.ReserveInfo[]> {
+  static async getAllReserves(
+    connection: Connection,
+    marketId?: PublicKey,
+    page?: PageConfig
+  ): Promise<types.ReserveInfo[]> {
     const dataSizeFilters: DataSizeFilter = {
       dataSize: RESERVE_LAYOUT_SPAN,
     };
@@ -72,9 +87,9 @@ infos = class InstanceSolend {
     }
 
     const config: GetProgramAccountsConfig = { filters: filters };
-    const reserveAccounts = await connection.getProgramAccounts(SOLEND_PROGRAM_ID, config);
+    const reserveAccounts = paginate(await connection.getProgramAccounts(SOLEND_PROGRAM_ID, config), page);
 
-    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account.data, account.pubkey));
+    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account!.data, account.pubkey));
 
     const allPartnersRewardData: types.ISolendAPIPartnerReward[] = (await axios.get(ApiEndpoints.partnerReward)).data;
     const tokenList = await getTokenList();

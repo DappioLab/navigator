@@ -35,8 +35,8 @@ describe("Larix", () => {
 
   it("fetches reserve", async () => {
     const reserves = (await larix.infos.getAllReserves(connection)) as ReserveInfo[];
-    const poolId = reserves[0].reserveId;
-    console.log(poolId.toString());
+    const poolId = reserves[reserves.length - 1].reserveId;
+    console.log("PoolID", poolId.toString());
 
     const pool = (await larix.infos.getReserve(connection, poolId)) as ReserveInfo;
     console.log(pool);
@@ -52,5 +52,17 @@ describe("Larix", () => {
   it("fetches farm wrapper", async () => {
     const farms = (await larix.infos.getAllFarmWrappers(connection)) as FarmInfoWrapper[];
     console.log(farms[0].farmInfo);
+  });
+  it("test pagination", async () => {
+    const page1 = await larix.infos.getAllReserves(connection, larix.LARIX_MARKET_ID_MAIN_POOL, {
+      pageIndex: 0,
+      pageSize: 4,
+    });
+    const lastReserve = await larix.infos.getAllReserves(connection, larix.LARIX_MARKET_ID_MAIN_POOL, {
+      pageIndex: 3,
+      pageSize: 4,
+    });
+    console.log(page1[page1.length - 1].reserveId.toString());
+    console.log(lastReserve[lastReserve.length - 1].reserveId.toString());
   });
 });
