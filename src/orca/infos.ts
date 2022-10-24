@@ -382,12 +382,12 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
 
   getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number } {
     let tokenAAmount = Number(
-      (new BN(lpAmount.toString()).toNumber() * new BN(this.poolInfo.tokenSupplyA!.toString()).toNumber()) /
-        new BN(this.poolInfo.lpSupply!.toString()).toNumber()
+      (Number(new BN(lpAmount.toString())) * Number(new BN(this.poolInfo.tokenSupplyA!.toString()))) /
+        Number(new BN(this.poolInfo.lpSupply!.toString()))
     );
     let tokenBAmount = Number(
-      (new BN(lpAmount.toString()).toNumber() * new BN(this.poolInfo.tokenSupplyB!.toString()).toNumber()) /
-        new BN(this.poolInfo.lpSupply!.toString()).toNumber()
+      (Number(new BN(lpAmount.toString())) * Number(new BN(this.poolInfo.tokenSupplyB!.toString()))) /
+        Number(new BN(this.poolInfo.lpSupply!.toString()))
     );
     return { tokenAAmount: tokenAAmount, tokenBAmount: tokenBAmount };
   }
