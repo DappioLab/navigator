@@ -226,7 +226,7 @@ infos = class InstanceLifinity {
       coefficientUp,
       coefficientDown,
       oracleStatus,
-      depositCap,
+      configTemp1,
       configTemp2,
     } = decodedData;
 
@@ -246,7 +246,7 @@ infos = class InstanceLifinity {
       coefficientUp: new BN(coefficientUp),
       coefficientDown: new BN(coefficientDown),
       oracleStatus: new BN(oracleStatus),
-      depositCap: new BN(depositCap),
+      configTemp1: new BN(configTemp1),
       configTemp2: new BN(configTemp2),
     };
   }
