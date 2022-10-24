@@ -268,7 +268,7 @@ infos = class InstanceRaydium {
     const configV5: GetProgramAccountsConfig = { filters: filtersV5 };
     const farmsV5Accounts = await connection.getProgramAccounts(FARM_PROGRAM_ID_V5, configV5);
     const farmsV5 = farmsV5Accounts
-      .map(({ pubkey, account }) => this._parseFarmV5(account.data, pubkey, 5))
+      .map(({ pubkey, account }) => this._parseFarmV5(account.data, pubkey))
       .filter((farm) => farm.state.toNumber() === 1);
 
     let allFarms = [...farmsV3, ...farmsV5];
@@ -439,7 +439,7 @@ infos = class InstanceRaydium {
     // v3 size = 200
     // v5 size = 224
     const version = data.length == 200 ? 3 : 5;
-    const parsedFarm = version == 3 ? this._parseFarmV3(data, farmId) : this._parseFarmV5(data, farmId, version);
+    const parsedFarm = version == 3 ? this._parseFarmV3(data, farmId) : this._parseFarmV5(data, farmId);
 
     let farm = null as unknown as FarmInfo;
     if (parsedFarm.state.toNumber() == 1) {
@@ -462,13 +462,72 @@ infos = class InstanceRaydium {
 
     let filters_v3_2 = [memcmpFilter, dataSizeFilter(FARMER_LAYOUT_V3_2.span)];
     let allFarmersInV3_2 = await connection.getProgramAccounts(FARM_PROGRAM_ID_V3, { filters: filters_v3_2 });
-    let farmerInfoV3_2 = await this._getFarmerInfos(connection, allFarmersInV3_2, FARMER_LAYOUT_V3_2, 3);
-
     let filters_v5_2 = [memcmpFilter, dataSizeFilter(FARMER_LAYOUT_V5_2.span)];
     let allFarmersInV5_2 = await connection.getProgramAccounts(FARM_PROGRAM_ID_V5, { filters: filters_v5_2 });
-    let farmerInfoV5_2 = await this._getFarmerInfos(connection, allFarmersInV5_2, FARMER_LAYOUT_V5_2, 5);
 
-    return [...farmerInfoV3_2, ...farmerInfoV5_2];
+    const allFarmers = [...allFarmersInV3_2, ...allFarmersInV5_2];
+    const farmIds = allFarmers.map((farmerAccount) => {
+      const isV3 = farmerAccount.account.data.length == FARMER_LAYOUT_V3_2.span ? true : false;
+      let decoded = isV3
+        ? FARMER_LAYOUT_V3_2.decode(farmerAccount.account.data)
+        : FARMER_LAYOUT_V5_2.decode(farmerAccount.account.data);
+      return new PublicKey(decoded.id.toBase58());
+    });
+    const farmInfo = (await getMultipleAccounts(connection, farmIds)).map((accountInfo) =>
+      accountInfo.account?.data.length == FARM_LAYOUT_V3.span
+        ? this._parseFarmV3(accountInfo.account?.data, accountInfo.pubkey)
+        : this._parseFarmV5(accountInfo.account?.data, accountInfo.pubkey)
+    );
+
+    let tokenAccountKeys: PublicKey[] = [];
+    farmInfo.forEach((farm) => {
+      tokenAccountKeys.push(farm.poolLpTokenAccountPubkey);
+      tokenAccountKeys.push(farm.poolRewardTokenAccountPubkey);
+      if (farm.version === 5) {
+        tokenAccountKeys.push(farm.poolRewardTokenAccountPubkeyB!);
+      }
+    });
+    const tokenAccountMap = new Map<string, string>();
+    const relatedMintsMap = new Map<
+      string,
+      {
+        stakedTokenMint: string;
+        rewardAMint: string;
+        rewardBMint: string | undefined;
+      }
+    >();
+    (await getMultipleAccounts(connection, tokenAccountKeys)).forEach((accountInfo) => {
+      const tokenAccount = AccountLayout.decode(accountInfo.account?.data!);
+      tokenAccountMap.set(accountInfo.pubkey.toBase58(), tokenAccount.mint.toBase58());
+    });
+    farmInfo.forEach((farm) => {
+      relatedMintsMap.set(farm.farmId.toBase58(), {
+        stakedTokenMint: tokenAccountMap.get(farm.poolLpTokenAccountPubkey.toBase58())!,
+        rewardAMint: tokenAccountMap.get(farm.poolRewardTokenAccountPubkey.toBase58())!,
+        rewardBMint:
+          farm.poolRewardTokenAccountPubkeyB && tokenAccountMap.get(farm.poolRewardTokenAccountPubkeyB.toBase58()),
+      });
+    });
+
+    const farmerInfo: FarmerInfo[] = allFarmers.map((farmer) => {
+      const isV3 = farmer.account.data.length == FARMER_LAYOUT_V3_2.span ? true : false;
+      let decoded = isV3
+        ? FARMER_LAYOUT_V3_2.decode(farmer.account.data)
+        : FARMER_LAYOUT_V5_2.decode(farmer.account.data);
+      const farmId = new PublicKey(decoded.id);
+      const relatedMints = relatedMintsMap.get(farmId.toBase58())!;
+      return {
+        farmerId: farmer.pubkey,
+        farmId,
+        userKey: new PublicKey(decoded.owner),
+        amount: decoded.deposited.toNumber(),
+        farmVersion: isV3 ? 3 : 5,
+        mints: relatedMints,
+        rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
+      };
+    });
+
+    return farmerInfo;
   }
 
   static async getFarmerId(farmInfo: FarmInfo, userKey: PublicKey, version: number): Promise<PublicKey> {
@@ -483,16 +542,44 @@ infos = class InstanceRaydium {
   }
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version: number): Promise<FarmerInfo> {
-    const farmerAccountInfo = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
-    const info =
-      farmerAccountInfo &&
-      (await this._getFarmer(
-        connection,
-        { pubkey: farmerId, account: farmerAccountInfo },
-        version === 3 ? FARMER_LAYOUT_V3_2 : FARMER_LAYOUT_V5_2,
-        version as 3 | 5
-      ));
-    return info;
+    const farmerAccountInfo = await connection.getAccountInfo(farmerId);
+    if (!farmerAccountInfo) throw "Error: Failed to get farmer.";
+    const isV3 = farmerAccountInfo.data.length == FARMER_LAYOUT_V3_2.span ? true : false;
+
+    const decoded = isV3
+      ? FARMER_LAYOUT_V3_2.decode(farmerAccountInfo.data)
+      : FARMER_LAYOUT_V5_2.decode(farmerAccountInfo.data);
+
+    const farmId = new PublicKey(decoded.id.toBase58());
+    const farmAccount = await connection.getAccountInfo(farmId);
+    const farmInfo = isV3 ? this._parseFarmV3(farmAccount?.data, farmId) : this._parseFarmV5(farmAccount?.data, farmId);
+
+    let tokenAccountKeys: PublicKey[] = [];
+    tokenAccountKeys.push(farmInfo.poolLpTokenAccountPubkey);
+    tokenAccountKeys.push(farmInfo.poolRewardTokenAccountPubkey);
+    if (!isV3) {
+      tokenAccountKeys.push(farmInfo.poolRewardTokenAccountPubkeyB!);
+    }
+    const tokenMints = (await getMultipleAccounts(connection, tokenAccountKeys)).map((accountInfo) => {
+      const tokenAccount = AccountLayout.decode(accountInfo.account?.data!);
+      return tokenAccount.mint.toBase58();
+    });
+
+    const farmer = {
+      farmerId,
+      farmId,
+      userKey: new PublicKey(decoded.owner),
+      amount: decoded.deposited.toNumber(),
+      farmVersion: isV3 ? 3 : 5,
+      mints: {
+        stakedTokenMint: tokenMints[0],
+        rewardAMint: tokenMints[1],
+        rewardBMint: isV3 ? undefined : tokenMints[2],
+      },
+      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
+    };
+
+    return farmer;
   }
 
   ////// Private methods
@@ -518,7 +605,7 @@ infos = class InstanceRaydium {
     };
   }
 
-  private static _parseFarmV5(data: any, farmId: PublicKey, version: number): FarmInfo {
+  private static _parseFarmV5(data: any, farmId: PublicKey): FarmInfo {
     let farmData = Buffer.from(data);
     let rawFarmData = FARM_LAYOUT_V5.decode(farmData);
     let {
@@ -539,7 +626,7 @@ infos = class InstanceRaydium {
 
     return {
       farmId,
-      version,
+      version: 5,
       state,
       nonce,
       poolLpTokenAccountPubkey: lpVault,
@@ -554,75 +641,6 @@ infos = class InstanceRaydium {
       perBlockB: perSlotRewardB,
       poolRewardTokenAccountPubkeyB: rewardVaultB,
     };
-  }
-
-  // Inner functions used by getFarmerInfos
-  private static async _getFarmRelatedMints(connection: Connection, decoded: any, farmVersion: 3 | 5) {
-    let farmIdPubkey = new PublicKey(decoded.id.toBase58());
-    let farmAccInfo = await connection.getAccountInfo(farmIdPubkey);
-    let farmInfo: FarmInfo =
-      farmVersion === 3
-        ? this._parseFarmV3(farmAccInfo?.data, farmIdPubkey)
-        : this._parseFarmV5(farmAccInfo?.data, farmIdPubkey, farmVersion);
-    let stakedTokenMint = (await getTokenAccount(connection, farmInfo.poolLpTokenAccountPubkey)).mint.toBase58();
-
-    let rewardAMint = (await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkey)).mint.toBase58();
-    let rewardBMint =
-      farmVersion !== 3
-        ? (await getTokenAccount(connection, farmInfo.poolRewardTokenAccountPubkeyB!)).mint.toBase58()
-        : undefined;
-    return { stakedTokenMint, rewardAMint, rewardBMint };
-  }
-
-  private static async _getFarmer(
-    connection: Connection,
-    farmer: {
-      pubkey: PublicKey;
-      account: AccountInfo<Buffer>;
-    },
-    layout: any,
-    farmVersion: 3 | 5
-  ): Promise<FarmerInfo> {
-    let decoded = layout.decode(farmer.account.data);
-    let relatedMints = await this._getFarmRelatedMints(connection, decoded, farmVersion);
-
-    return {
-      farmerId: farmer.pubkey,
-      farmId: new PublicKey(decoded.id),
-      userKey: new PublicKey(decoded.owner),
-      amount: decoded.deposited.toNumber(),
-      farmVersion: farmVersion,
-      mints: relatedMints,
-      rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
-    };
-  }
-
-  // Get all farmers for certain user wallet.
-  private static async _getFarmerInfos(
-    connection: Connection,
-    farmers: {
-      pubkey: PublicKey;
-      account: AccountInfo<Buffer>;
-    }[],
-    layout: any,
-    farmVersion: 3 | 5
-  ): Promise<FarmerInfo[]> {
-    return await Promise.all(
-      farmers.map(async (farmer) => {
-        let decoded = layout.decode(farmer.account.data);
-        let relatedMints = await this._getFarmRelatedMints(connection, decoded, farmVersion);
-
-        return {
-          farmerId: farmer.pubkey,
-          farmId: new PublicKey(decoded.id),
-          userKey: new PublicKey(decoded.owner),
-          amount: decoded.deposited.toNumber(),
-          farmVersion: farmVersion,
-          mints: relatedMints,
-          rewardDebts: decoded.rewardDebts.map((rewardDebt: any) => rewardDebt.toNumber()),
-        };
-      })
-    );
   }
 };
 
