@@ -54,8 +54,14 @@ describe("Larix", () => {
     console.log(farms[0].farmInfo);
   });
   it("test pagination", async () => {
-    const page1 = await larix.infos.getAllReserves(connection, undefined, { pageIndex: 0, pageSize: 4 });
-    const lastReserve = await larix.infos.getAllReserves(connection, undefined, { pageIndex: 3, pageSize: 4 });
+    const page1 = await larix.infos.getAllReserves(connection, larix.LARIX_MARKET_ID_MAIN_POOL, {
+      pageIndex: 0,
+      pageSize: 4,
+    });
+    const lastReserve = await larix.infos.getAllReserves(connection, larix.LARIX_MARKET_ID_MAIN_POOL, {
+      pageIndex: 3,
+      pageSize: 4,
+    });
     console.log(page1[page1.length - 1].reserveId.toString());
     console.log(lastReserve[lastReserve.length - 1].reserveId.toString());
   });

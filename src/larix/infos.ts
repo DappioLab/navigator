@@ -38,13 +38,13 @@ let infos: IInstanceMoneyMarket & IInstanceFarm;
 infos = class InstanceLarix {
   static async getAllReserves(
     connection: Connection,
-    marketId?: PublicKey,
+    marketId: PublicKey = LARIX_MARKET_ID_MAIN_POOL,
     page?: PageConfig
   ): Promise<types.ReserveInfo[]> {
     const programIdMemcmp: MemcmpFilter = {
       memcmp: {
         offset: 10,
-        bytes: LARIX_MARKET_ID_MAIN_POOL.toString(),
+        bytes: marketId.toString(),
       },
     };
     const dataSizeFilters: DataSizeFilter = {
