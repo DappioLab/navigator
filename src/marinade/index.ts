@@ -5,6 +5,7 @@ export * from "./layouts";
 import BN from "bn.js";
 import { IDepositorInfo, IVaultInfo } from "../types";
 import { PublicKey } from "@solana/web3.js";
+import { RawAccount } from "@solana/spl-token-v2";
 
 export const enum ProgramDerivedAddressSeed {
   LIQ_POOL_MINT_AUTHORITY = "liq_mint",
@@ -87,6 +88,5 @@ export interface VaultInfo extends IVaultInfo {
 }
 
 export interface DepositorInfo extends IDepositorInfo {
-  mint: PublicKey;
-  amount: BN;
+  tokenAccount: RawAccount;
 }

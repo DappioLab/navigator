@@ -1,12 +1,13 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-import { MARINADE_FINANCE_PROGRAM_ID, MARINADE_STATE_ADDRESS } from "./ids";
+import { MARINADE_FINANCE_PROGRAM_ID, MARINADE_STATE_ADDRESS, MSOL_MINT_ADDRESS } from "./ids";
 
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { MARINADE_FINANCE_ACCOUNT_STATE } from "./layouts";
 
 import * as types from ".";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import { AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
+import BN from "bn.js";
 
 let infos: IInstanceVault;
 
@@ -39,7 +40,6 @@ infos = class InstanceMarinade {
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     const decodeData = MARINADE_FINANCE_ACCOUNT_STATE.decode(data);
-    console.log(decodeData);
     const {
       msolMint,
       adminAuthority,
@@ -123,24 +123,22 @@ infos = class InstanceMarinade {
   }
 
   static parseDepositor(data: Buffer, depositorId: PublicKey): types.DepositorInfo {
-    const decodeData = MARINADE_FINANCE_ACCOUNT_STATE.decode(data);
-    const { mint, amount, owner } = decodeData;
+    const rawAccount = AccountLayout.decode(data);
 
     // Ensure the mint matches
-    if (!this._isAllowed(mint)) {
-      throw Error(`Error: Not a stSOL token account`);
-    }
+    // if (!this._isAllowed(mint)) {
+    //   throw Error(`Error: Not a mSOL token account`);
+    // }
 
     return {
       depositorId,
-      userKey: owner,
-      amount,
-      mint,
+      userKey: rawAccount.owner,
+      tokenAccount: rawAccount,
     };
   }
 
   private static _isAllowed(mint: PublicKey): boolean {
-    return mint.equals(MARINADE_STATE_ADDRESS);
+    return mint.equals(MSOL_MINT_ADDRESS);
   }
 };
 
@@ -148,8 +146,4 @@ export { infos };
 
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
-  getVersion(): number {
-    const version = Number(this.vaultInfo.vaultId.toString().slice(-1));
-    return version;
-  }
 }
