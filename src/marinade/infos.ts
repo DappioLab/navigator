@@ -1,6 +1,6 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 
-import { MARINADE_PROGRAM_ID, MSOL_MINT_ADDRESS, MSOL_VAULT_ADDRESS } from "./ids";
+import { MARINADE_FINANCE_PROGRAM_ID, MARINADE_STATE_ADDRESS } from "./ids";
 
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { MARINADE_FINANCE_ACCOUNT_STATE } from "./layouts";
@@ -12,10 +12,10 @@ let infos: IInstanceVault;
 
 infos = class InstanceMarinade {
   static async getAllVaults(connection: Connection): Promise<types.VaultInfo[]> {
-    const accountInfos = await connection.getAccountInfo(MSOL_VAULT_ADDRESS);
+    const accountInfos = await connection.getAccountInfo(MARINADE_STATE_ADDRESS);
 
     if (!accountInfos) throw Error("Error: Could not get solido address");
-    const vault = this.parseVault(accountInfos.data, MSOL_VAULT_ADDRESS);
+    const vault = this.parseVault(accountInfos.data, MARINADE_STATE_ADDRESS);
 
     return [vault];
   }
@@ -25,8 +25,8 @@ infos = class InstanceMarinade {
   }
 
   static async getVault(connection: Connection, vaultId: PublicKey): Promise<types.VaultInfo> {
-    if (!vaultId.equals(MSOL_VAULT_ADDRESS)) {
-      throw Error(`Error: Marinade vaultId must match ${MSOL_VAULT_ADDRESS.toBase58()}`);
+    if (!vaultId.equals(MARINADE_STATE_ADDRESS)) {
+      throw Error(`Error: Marinade vaultId must match ${MARINADE_STATE_ADDRESS.toBase58()}`);
     }
 
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
@@ -98,7 +98,7 @@ infos = class InstanceMarinade {
 
   static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
     const { value: accountInfos } = await connection.getTokenAccountsByOwner(userKey, {
-      mint: MSOL_MINT_ADDRESS,
+      mint: MARINADE_STATE_ADDRESS,
     });
     const depositors = accountInfos.map((depositor) => this.parseDepositor(depositor.account.data, depositor.pubkey));
     return depositors;
@@ -114,10 +114,10 @@ infos = class InstanceMarinade {
   static getDepositorId(
     _vaultId: PublicKey,
     userKey: PublicKey,
-    _programId: PublicKey = MARINADE_PROGRAM_ID
+    _programId: PublicKey = MARINADE_FINANCE_PROGRAM_ID
   ): PublicKey {
     return PublicKey.findProgramAddressSync(
-      [userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), MSOL_MINT_ADDRESS.toBuffer()],
+      [userKey.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), MARINADE_STATE_ADDRESS.toBuffer()],
       ASSOCIATED_TOKEN_PROGRAM_ID
     )[0];
   }
@@ -140,7 +140,7 @@ infos = class InstanceMarinade {
   }
 
   private static _isAllowed(mint: PublicKey): boolean {
-    return mint.equals(MSOL_MINT_ADDRESS);
+    return mint.equals(MARINADE_STATE_ADDRESS);
   }
 };
 
@@ -148,4 +148,8 @@ export { infos };
 
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
+  getVersion(): number {
+    const version = Number(this.vaultInfo.vaultId.toString().slice(-1));
+    return version;
+  }
 }

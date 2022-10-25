@@ -1,16 +1,26 @@
 export * from "./ids";
 export * from "./infos";
 export * from "./layouts";
-import BN from "bn.js";
 
+import BN from "bn.js";
 import { IDepositorInfo, IVaultInfo } from "../types";
 import { PublicKey } from "@solana/web3.js";
 
-interface Fee {
+export const enum ProgramDerivedAddressSeed {
+  LIQ_POOL_MINT_AUTHORITY = "liq_mint",
+  LIQ_POOL_MSOL_ACCOUNT = "liq_st_sol",
+  LIQ_POOL_MSOL_AUTHORITY = "liq_st_sol_authority",
+  LIQ_POOL_MSOL_MINT_AUTHORITY = "st_mint",
+  LIQ_POOL_SOL_ACCOUNT = "liq_sol",
+  RESERVE_ACCOUNT = "reserve",
+  UNIQUE_VALIDATOR = "unique_validator",
+}
+
+export interface Fee {
   basisPoints: number;
 }
 
-interface List {
+export interface AccountList {
   account: PublicKey;
   itemSize: number;
   count: number;
@@ -18,26 +28,26 @@ interface List {
   copiedCount: number;
 }
 
-interface StakeSystem {
-  stakeList: List;
-  delayedUnstakeCoolingDown: number;
+export interface StakeSystem {
+  stakeList: AccountList;
+  delayedUnstakeCoolingDown: BN;
   stakeDepositBumpSeed: number;
   stakeWithdrawBumpSeed: number;
-  slotsForStakeDelta: number;
-  lastStakeDeltaEpoch: number;
-  minStake: number;
+  slotsForStakeDelta: BN;
+  lastStakeDeltaEpoch: BN;
+  minStake: BN;
   extraStakeDeltaRuns: number;
 }
 
-interface ValidatorSystem {
-  validatorList: List;
+export interface ValidatorSystem {
+  validatorList: AccountList;
   managerAuthority: PublicKey;
   totalValidatorScore: number;
   totalActiveBalance: BN;
   autoAddValidatorEnabled: number;
 }
 
-interface LiqPool {
+export interface LiqPool {
   lpMint: PublicKey;
   lpMintAuthorityBumpSeed: number;
   solLegBumpSeed: number;
@@ -60,12 +70,10 @@ export interface VaultInfo extends IVaultInfo {
   reserveBumpSeed: number;
   msolMintAuthorityBumpSeed: number;
   rentExemptForTokenAcc: BN;
-
   rewardFee: Fee;
   stakeSystem: StakeSystem;
   validatorSystem: ValidatorSystem;
   liqPool: LiqPool;
-
   availableReserveBalance: BN;
   msolSupply: BN;
   msolPrice: BN;
@@ -76,13 +84,6 @@ export interface VaultInfo extends IVaultInfo {
   minWithdraw: BN;
   stakingSolCap: BN;
   emergencyCoolingDown: BN;
-}
-
-export interface TickerAccountData {
-  stateAddress: PublicKey;
-  beneficiary: PublicKey;
-  lamportsAmount: BN;
-  createdEpoch: BN;
 }
 
 export interface DepositorInfo extends IDepositorInfo {
