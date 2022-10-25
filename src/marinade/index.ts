@@ -1,4 +1,5 @@
 export * from "./ids";
+export * from "./infos";
 export * from "./layouts";
 import BN from "bn.js";
 
