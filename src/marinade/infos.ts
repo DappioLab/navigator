@@ -100,7 +100,6 @@ infos = class InstanceMarinade {
       mint: MSOL_MINT_ADDRESS,
     });
     console.log(data);
-    // const depositors = accountInfos.map((depositor) => this.parseDepositor(depositor.account.data, depositor.pubkey));
     return [] as any;
   }
 
