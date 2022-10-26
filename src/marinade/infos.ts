@@ -7,7 +7,6 @@ import { MARINADE_FINANCE_ACCOUNT_STATE } from "./layouts";
 
 import * as types from ".";
 import { AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
-import BN from "bn.js";
 
 let infos: IInstanceVault;
 
@@ -97,11 +96,12 @@ infos = class InstanceMarinade {
   }
 
   static async getAllDepositors(connection: Connection, userKey: PublicKey): Promise<types.DepositorInfo[]> {
-    const { value: accountInfos } = await connection.getTokenAccountsByOwner(userKey, {
-      mint: MARINADE_STATE_ADDRESS,
+    const data = await connection.getTokenAccountsByOwner(userKey, {
+      mint: MSOL_MINT_ADDRESS,
     });
-    const depositors = accountInfos.map((depositor) => this.parseDepositor(depositor.account.data, depositor.pubkey));
-    return depositors;
+    console.log(data);
+    // const depositors = accountInfos.map((depositor) => this.parseDepositor(depositor.account.data, depositor.pubkey));
+    return [] as any;
   }
 
   static async getDepositor(connection: Connection, depositorId: PublicKey): Promise<types.DepositorInfo> {
