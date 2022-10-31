@@ -61,7 +61,9 @@ infos = class InstanceLifinity {
         mintB = tokenList.find((t) => t.symbol === symbolB);
         tokenMap.set(symbolB, mintB!);
       }
-      poolMap.set(mintA!.mint.concat(mintB!.mint), data);
+      if (mintA && mintB) {
+        poolMap.set(mintA!.mint.concat(mintB!.mint), data);
+      }
     });
 
     return pools.map((pool, index) => {
