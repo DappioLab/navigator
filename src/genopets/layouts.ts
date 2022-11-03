@@ -51,3 +51,20 @@ export const FARMER_LAYOUT = struct([
   u64("totalRewards"),
   u32("currentDepositIndex"),
 ]);
+
+// Deposit
+export const DEPOSIT_LAYOUT = struct([
+  u64("discriminator"),
+  publicKey("user"),
+  u64("amount"),
+  publicKey("poolToken"),
+  u64("rewardWeight"),
+  u64("depositTimestamp"),
+  f64("depositMultiplier"),
+  u64("lockFrom"),
+  u64("lockUntil"),
+  bool("isYield"),
+  u8("tokenDecimals"),
+  bool("active"),
+  bool("governanceEligible"),
+]);

@@ -1,7 +1,14 @@
-import { Connection, PublicKey, AccountInfo } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  AccountInfo,
+  DataSizeFilter,
+  MemcmpFilter,
+  GetProgramAccountsConfig,
+} from "@solana/web3.js";
 import { IFarmInfoWrapper, IInstanceFarm } from "../types";
 import { GENOPETS_FARM_PROGRAM_ID } from "./ids";
-import { FARMER_LAYOUT, FARM_LAYOUT } from "./layouts";
+import { DEPOSIT_LAYOUT, FARMER_LAYOUT, FARM_LAYOUT } from "./layouts";
 import * as types from ".";
 import { BN } from "bn.js";
 
@@ -95,6 +102,20 @@ infos = class InstanceGenopets {
     )[0];
     const farmerAccountInfo = await connection.getAccountInfo(farmerId);
     let farmer = this.parseFarmer(farmerAccountInfo?.data!, farmerId);
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 244,
+    };
+    const ownerIdFilter: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: farmer.userKey.toString(),
+      },
+    };
+    const filters = [sizeFilter, ownerIdFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const depositAccounts = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
+    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data));
+
     return [farmer];
   }
 
@@ -109,7 +130,22 @@ infos = class InstanceGenopets {
 
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
     let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
-    return this.parseFarmer(data.data, farmerId);
+    let farmer = this.parseFarmer(data.data, farmerId);
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 244,
+    };
+    const ownerIdFilter: MemcmpFilter = {
+      memcmp: {
+        offset: 8,
+        bytes: farmer.userKey.toString(),
+      },
+    };
+    const filters = [sizeFilter, ownerIdFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const depositAccounts = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
+    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data));
+
+    return farmer;
   }
 
   static parseFarmer(data: Buffer, farmerId: PublicKey): types.FarmerInfo {
@@ -124,6 +160,40 @@ infos = class InstanceGenopets {
       activeDeposits,
       totalRewards,
       currentDepositIndex,
+      userDeposit: [],
+    };
+  }
+
+  private static _parseDeposit(data: Buffer): types.Deposit {
+    let decodedData = DEPOSIT_LAYOUT.decode(data);
+    let {
+      user,
+      amount,
+      poolToken,
+      rewardWeight,
+      depositTimestamp,
+      depositMultiplier,
+      lockFrom,
+      lockUntil,
+      isYield,
+      tokenDecimals,
+      active,
+      governanceEligible,
+    } = decodedData;
+
+    return {
+      user,
+      amount,
+      poolToken,
+      rewardWeight,
+      depositTimestamp,
+      depositMultiplier,
+      lockFrom,
+      lockUntil,
+      isYield,
+      tokenDecimals,
+      active,
+      governanceEligible,
     };
   }
 };

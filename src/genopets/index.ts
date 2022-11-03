@@ -36,4 +36,20 @@ export interface FarmerInfo extends IFarmerInfo {
   activeDeposits: BN;
   totalRewards: BN;
   currentDepositIndex: BN;
+  userDeposit: Deposit[];
+}
+
+export interface Deposit {
+  user: PublicKey;
+  amount: BN;
+  poolToken: PublicKey;
+  rewardWeight: BN;
+  depositTimestamp: BN;
+  depositMultiplier: BN;
+  lockFrom: BN;
+  lockUntil: BN;
+  isYield: boolean;
+  tokenDecimals: BN;
+  active: boolean;
+  governanceEligible: boolean;
 }
