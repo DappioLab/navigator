@@ -114,7 +114,7 @@ infos = class InstanceGenopets {
     const filters = [sizeFilter, ownerIdFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
     const depositAccounts = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
-    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data));
+    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data, deposit.pubkey));
 
     return [farmer];
   }
@@ -143,7 +143,7 @@ infos = class InstanceGenopets {
     const filters = [sizeFilter, ownerIdFilter];
     const config: GetProgramAccountsConfig = { filters: filters };
     const depositAccounts = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
-    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data));
+    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data, deposit.pubkey));
 
     return farmer;
   }
@@ -164,7 +164,7 @@ infos = class InstanceGenopets {
     };
   }
 
-  private static _parseDeposit(data: Buffer): types.Deposit {
+  private static _parseDeposit(data: Buffer, depositId: PublicKey): types.Deposit {
     let decodedData = DEPOSIT_LAYOUT.decode(data);
     let {
       user,
@@ -182,6 +182,7 @@ infos = class InstanceGenopets {
     } = decodedData;
 
     return {
+      depositId,
       user,
       amount,
       poolToken,
