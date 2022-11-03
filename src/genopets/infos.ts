@@ -94,7 +94,7 @@ infos = class InstanceGenopets {
     let farmer = this.parseFarmer(farmerAccountInfo?.data!, farmerId);
     const depositKeys: PublicKey[] = [];
     for (let i = 0; i < Number(farmer.currentDepositIndex); i++) {
-      depositKeys.push(calcDeposit(farmer.userKey, i));
+      depositKeys.push(getFarmerDepositKey(farmer.userKey, i));
     }
     const depositAccounts = await getMultipleAccounts(connection, depositKeys);
     farmer.userDeposit = depositAccounts.map((deposit) => {
@@ -118,7 +118,7 @@ infos = class InstanceGenopets {
     let farmer = this.parseFarmer(data.data, farmerId);
     const depositKeys: PublicKey[] = [];
     for (let i = 0; i < Number(farmer.currentDepositIndex); i++) {
-      depositKeys.push(calcDeposit(farmer.userKey, i));
+      depositKeys.push(getFarmerDepositKey(farmer.userKey, i));
     }
     const depositAccounts = await getMultipleAccounts(connection, depositKeys);
     farmer.userDeposit = depositAccounts.map((deposit) => {
@@ -206,15 +206,15 @@ export class FarmerInfoWrapper {
   constructor(public farmerInfo: types.FarmerInfo) {}
 
   getUserDeposit() {
-    return calcDeposit(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex));
+    return getFarmerDepositKey(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex));
   }
 
   getUserReDeposit() {
-    return calcDeposit(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex) + 1);
+    return getFarmerDepositKey(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex) + 1);
   }
 }
 
-export function calcDeposit(userKey: PublicKey, nonce: number) {
+export function getFarmerDepositKey(userKey: PublicKey, nonce: number) {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("staking-deposit"), userKey.toBuffer(), new BN(nonce).toArrayLike(Buffer, `le`, 4)],
     GENOPETS_FARM_PROGRAM_ID

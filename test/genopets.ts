@@ -36,7 +36,7 @@ describe("Genopets", () => {
     console.log("farm mintSgene:", farm.mintSgene.toBase58());
 
     const farmerWrapper = new genopets.FarmInfoWrapper(farm);
-    const userDeposit = genopets.calcDeposit(userKey, 0);
+    const userDeposit = genopets.getFarmerDepositKey(userKey, 0);
     console.log("userDeposit:", userDeposit.toBase58());
   });
 
@@ -45,7 +45,14 @@ describe("Genopets", () => {
     console.log("farmer:", farmer);
     farmer[0].userDeposit.forEach((farmer, index) => {
       if (farmer?.user.equals(userKey))
-        console.log(`# ${index}:`, farmer?.depositId.toBase58(), ", is_yield:", farmer.isYield);
+        console.log(
+          `# ${index}:`,
+          farmer?.depositId.toBase58(),
+          ", is_yield:",
+          farmer.isYield,
+          ", timestamp:",
+          Number(farmer.lockUntil)
+        );
     });
   });
 });
