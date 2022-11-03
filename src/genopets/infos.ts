@@ -21,12 +21,8 @@ infos = class InstanceGenopets {
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
-    const expectedFarmId = PublicKey.findProgramAddressSync(
-      [Buffer.from("stake-master-seed")],
-      GENOPETS_FARM_PROGRAM_ID
-    )[0];
-    if (!farmId.equals(expectedFarmId)) throw "Error: Wrong farmId.";
     let account = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
+    if (!account) throw "Error: Failed to get farm";
     return this.parseFarm(account.data, farmId);
   }
 
