@@ -39,7 +39,7 @@ export interface FarmerInfo extends IFarmerInfo {
   activeDeposits: BN;
   totalRewards: BN;
   currentDepositIndex: BN;
-  userDeposit: (Deposit | null)[];
+  userDeposit: Deposit[];
 }
 
 export interface Deposit {
