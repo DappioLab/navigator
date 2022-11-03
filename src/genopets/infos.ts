@@ -11,6 +11,7 @@ import { GENOPETS_FARM_PROGRAM_ID } from "./ids";
 import { DEPOSIT_LAYOUT, FARMER_LAYOUT, FARM_LAYOUT } from "./layouts";
 import * as types from ".";
 import { BN } from "bn.js";
+import { getMultipleAccounts } from "../utils";
 
 let infos: IInstanceFarm;
 infos = class InstanceGenopets {
@@ -102,19 +103,14 @@ infos = class InstanceGenopets {
     )[0];
     const farmerAccountInfo = await connection.getAccountInfo(farmerId);
     let farmer = this.parseFarmer(farmerAccountInfo?.data!, farmerId);
-    const sizeFilter: DataSizeFilter = {
-      dataSize: 244,
-    };
-    const ownerIdFilter: MemcmpFilter = {
-      memcmp: {
-        offset: 8,
-        bytes: farmer.userKey.toString(),
-      },
-    };
-    const filters = [sizeFilter, ownerIdFilter];
-    const config: GetProgramAccountsConfig = { filters: filters };
-    const depositAccounts = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
-    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data, deposit.pubkey));
+    const depositKeys: PublicKey[] = [];
+    for (let i = 0; i < Number(farmer.currentDepositIndex); i++) {
+      depositKeys.push(calcDeposit(farmer.userKey, i));
+    }
+    const depositAccounts = await getMultipleAccounts(connection, depositKeys);
+    farmer.userDeposit = depositAccounts.map((deposit) => {
+      return deposit.account?.data ? this._parseDeposit(deposit.account?.data, deposit.pubkey) : null;
+    });
 
     return [farmer];
   }
@@ -131,19 +127,14 @@ infos = class InstanceGenopets {
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
     let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
     let farmer = this.parseFarmer(data.data, farmerId);
-    const sizeFilter: DataSizeFilter = {
-      dataSize: 244,
-    };
-    const ownerIdFilter: MemcmpFilter = {
-      memcmp: {
-        offset: 8,
-        bytes: farmer.userKey.toString(),
-      },
-    };
-    const filters = [sizeFilter, ownerIdFilter];
-    const config: GetProgramAccountsConfig = { filters: filters };
-    const depositAccounts = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
-    farmer.userDeposit = depositAccounts.map((deposit) => this._parseDeposit(deposit.account.data, deposit.pubkey));
+    const depositKeys: PublicKey[] = [];
+    for (let i = 0; i < Number(farmer.currentDepositIndex); i++) {
+      depositKeys.push(calcDeposit(farmer.userKey, i));
+    }
+    const depositAccounts = await getMultipleAccounts(connection, depositKeys);
+    farmer.userDeposit = depositAccounts.map((deposit) => {
+      return deposit.account?.data ? this._parseDeposit(deposit.account?.data, deposit.pubkey) : null;
+    });
 
     return farmer;
   }
@@ -220,44 +211,23 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       GENOPETS_FARM_PROGRAM_ID
     )[0];
   }
-
-  calcUserDeposit(userKey: PublicKey) {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("staking-deposit"), userKey.toBuffer(), new BN(0).toArrayLike(Buffer, `le`, 4)],
-      GENOPETS_FARM_PROGRAM_ID
-    )[0];
-  }
-
-  calcUserReDeposit(userKey: PublicKey) {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("staking-deposit"), userKey.toBuffer(), new BN(1).toArrayLike(Buffer, `le`, 4)],
-      GENOPETS_FARM_PROGRAM_ID
-    )[0];
-  }
 }
 
 export class FarmerInfoWrapper {
   constructor(public farmerInfo: types.FarmerInfo) {}
 
   getUserDeposit() {
-    return PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("staking-deposit"),
-        this.farmerInfo.userKey.toBuffer(),
-        new BN(this.farmerInfo.currentDepositIndex).toArrayLike(Buffer, `le`, 4),
-      ],
-      GENOPETS_FARM_PROGRAM_ID
-    )[0];
+    return calcDeposit(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex));
   }
 
   getUserReDeposit() {
-    return PublicKey.findProgramAddressSync(
-      [
-        Buffer.from("staking-deposit"),
-        this.farmerInfo.userKey.toBuffer(),
-        new BN(this.farmerInfo.currentDepositIndex).add(new BN(1)).toArrayLike(Buffer, `le`, 4),
-      ],
-      GENOPETS_FARM_PROGRAM_ID
-    )[0];
+    return calcDeposit(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex) + 1);
   }
+}
+
+export function calcDeposit(userKey: PublicKey, nonce: number) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("staking-deposit"), userKey.toBuffer(), new BN(nonce).toArrayLike(Buffer, `le`, 4)],
+    GENOPETS_FARM_PROGRAM_ID
+  )[0];
 }
