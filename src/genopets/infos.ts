@@ -90,16 +90,7 @@ infos = class InstanceGenopets {
       [Buffer.from("staker-seed"), userKey.toBuffer()],
       GENOPETS_FARM_PROGRAM_ID
     )[0];
-    const farmerAccountInfo = await connection.getAccountInfo(farmerId);
-    let farmer = this.parseFarmer(farmerAccountInfo?.data!, farmerId);
-    const depositKeys: PublicKey[] = [];
-    for (let i = 0; i < Number(farmer.currentDepositIndex); i++) {
-      depositKeys.push(getFarmerDepositKey(farmer.userKey, i));
-    }
-    const depositAccounts = await getMultipleAccounts(connection, depositKeys);
-    farmer.userDeposit = depositAccounts.map((deposit) => {
-      return deposit.account?.data ? this._parseDeposit(deposit.account?.data, deposit.pubkey) : null;
-    });
+    const farmer = await this.getFarmer(connection, farmerId);
 
     return [farmer];
   }
@@ -121,9 +112,11 @@ infos = class InstanceGenopets {
       depositKeys.push(getFarmerDepositKey(farmer.userKey, i));
     }
     const depositAccounts = await getMultipleAccounts(connection, depositKeys);
-    farmer.userDeposit = depositAccounts.map((deposit) => {
-      return deposit.account?.data ? this._parseDeposit(deposit.account?.data, deposit.pubkey) : null;
-    });
+    farmer.userDeposit = depositAccounts
+      .map((deposit) => {
+        return deposit.account?.data ? this._parseDeposit(deposit.account?.data, deposit.pubkey) : null;
+      })
+      .filter((deposit) => Boolean(deposit)) as types.Deposit[];
 
     return farmer;
   }
