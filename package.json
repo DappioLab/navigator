@@ -1,6 +1,6 @@
 {
   "name": "@dappio-wonderland/navigator",
-  "version": "0.2.14",
+  "version": "0.2.14-test.2",
   "description": "Dappio Navigator: The Universal Typescript Client for Instantiating DeFi Protocols",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,8 @@
     "testFriktion": "mocha --require ts-node/register --timeout 10000000 ./test/friktion.ts",
     "testNftFinance": "mocha --require ts-node/register --timeout 10000000 ./test/nftFinance.ts",
     "testLido": "mocha --require ts-node/register --timeout 10000000 ./test/lido.ts",
-    "testMarinade": "mocha --require ts-node/register --timeout 10000000 ./test/marinade.ts"
+    "testMarinade": "mocha --require ts-node/register --timeout 10000000 ./test/marinade.ts",
+    "testGenopets": "mocha --require ts-node/register --timeout 10000000 ./test/genopets.ts"
   },
   "keywords": [],
   "author": "",
