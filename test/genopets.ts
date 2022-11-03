@@ -36,13 +36,13 @@ describe("Genopets", () => {
     console.log("farm mintSgene:", farm.mintSgene.toBase58());
 
     const farmerWrapper = new genopets.FarmInfoWrapper(farm);
-    const userDeposit = farmerWrapper.calcUserDeposit(userKey);
+    const userDeposit = genopets.calcDeposit(userKey, 0);
     console.log("userDeposit:", userDeposit.toBase58());
   });
 
   it("Fetch all farmers", async () => {
     const farmer = (await genopets.infos.getAllFarmers(connection, userKey)) as genopets.FarmerInfo[];
     console.log("farmer:", farmer);
-    farmer[0].userDeposit.forEach((farmer, index) => console.log(`# ${index}:`, farmer));
+    farmer[0].userDeposit.forEach((farmer, index) => console.log(`# ${index}:`, farmer?.depositId.toBase58()));
   });
 });
