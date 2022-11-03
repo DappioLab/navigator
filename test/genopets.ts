@@ -43,6 +43,9 @@ describe("Genopets", () => {
   it("Fetch all farmers", async () => {
     const farmer = (await genopets.infos.getAllFarmers(connection, userKey)) as genopets.FarmerInfo[];
     console.log("farmer:", farmer);
-    farmer[0].userDeposit.forEach((farmer, index) => console.log(`# ${index}:`, farmer?.depositId.toBase58()));
+    farmer[0].userDeposit.forEach((farmer, index) => {
+      if (farmer?.user.equals(userKey))
+        console.log(`# ${index}:`, farmer?.depositId.toBase58(), ", is_yield:", farmer.isYield);
+    });
   });
 });

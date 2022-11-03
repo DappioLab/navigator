@@ -1,4 +1,4 @@
-import { publicKey, struct, u64, u128, u8, bool, u16, i64, u32, f64 } from "@project-serum/borsh";
+import { publicKey, struct, u64, u128, u8, bool, u16, i64, u32, f64, str } from "@project-serum/borsh";
 // @ts-ignore
 import { blob } from "buffer-layout";
 
@@ -32,7 +32,7 @@ export const FARM_LAYOUT = struct([
   u64("epochTime"),
   f64("decayFactorPerEpoch"),
   u64("initialGenesPerEpoch"),
-  u32("stakeParams"),
+  struct([u8("minStakeDuration"), u8("maxStakeDuration")], "stakeParams"),
   bool("pausedState"),
   u64("totalRewardWeight"),
   u64("accumulatedYieldRewardsPerWeight"),

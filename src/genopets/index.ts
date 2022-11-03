@@ -21,7 +21,10 @@ export interface FarmInfo extends IFarmInfo {
   epochTime: BN;
   decayFactorPerEpoch: BN;
   initialGenesPerEpoch: BN;
-  stakeParams: BN;
+  stakeParams: {
+    minStakeDuration: BN;
+    maxStakeDuration: BN;
+  };
   pausedState: BN;
   totalRewardWeight: BN;
   accumulatedYieldRewardsPerWeight: BN;
