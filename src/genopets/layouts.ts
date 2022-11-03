@@ -3,7 +3,7 @@ import { publicKey, struct, u64, u128, u8, bool, u16, i64, u32, f64, str } from 
 import { blob } from "buffer-layout";
 
 // StakingPool
-export const POOL_LAYOUT = struct([
+export const FARM_INSTANCE_LAYOUT = struct([
   u64("discriminator"),
   publicKey("poolToken"),
   u8("tokenDecimals"),
@@ -53,7 +53,7 @@ export const FARMER_LAYOUT = struct([
 ]);
 
 // Deposit
-export const DEPOSIT_LAYOUT = struct([
+export const FARMER_DEPOSIT_LAYOUT = struct([
   u64("discriminator"),
   publicKey("user"),
   u64("amount"),

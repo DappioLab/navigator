@@ -1,14 +1,7 @@
-import {
-  Connection,
-  PublicKey,
-  AccountInfo,
-  DataSizeFilter,
-  MemcmpFilter,
-  GetProgramAccountsConfig,
-} from "@solana/web3.js";
+import { Connection, PublicKey, AccountInfo } from "@solana/web3.js";
 import { IFarmInfoWrapper, IInstanceFarm } from "../types";
 import { GENOPETS_FARM_PROGRAM_ID } from "./ids";
-import { DEPOSIT_LAYOUT, FARMER_LAYOUT, FARM_LAYOUT } from "./layouts";
+import { FARMER_DEPOSIT_LAYOUT, FARMER_LAYOUT, FARM_LAYOUT } from "./layouts";
 import * as types from ".";
 import { BN } from "bn.js";
 import { getMultipleAccounts } from "../utils";
@@ -156,7 +149,7 @@ infos = class InstanceGenopets {
   }
 
   private static _parseDeposit(data: Buffer, depositId: PublicKey): types.Deposit {
-    let decodedData = DEPOSIT_LAYOUT.decode(data);
+    let decodedData = FARMER_DEPOSIT_LAYOUT.decode(data);
     let {
       user,
       amount,
