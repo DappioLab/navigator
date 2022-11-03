@@ -187,7 +187,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return [];
   }
 
-  getStakingPool(mint: PublicKey) {
+  getFarmInstance(mint: PublicKey) {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("stake-pool-seed"), mint.toBuffer()],
       GENOPETS_FARM_PROGRAM_ID
