@@ -12,3 +12,4 @@ export * as tulip from "./tulip";
 export * as nftFinance from "./nftFinance";
 export * as friktion from "./friktion";
 export * as lido from "./lido";
+export * as genopets from "./genopets";
