@@ -57,7 +57,7 @@ export interface FarmerInfo extends IFarmerInfo {
 }
 
 export interface FarmerInstance {
-  depositId: PublicKey;
+  id: PublicKey;
   user: PublicKey;
   amount: BN;
   poolToken: PublicKey;

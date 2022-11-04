@@ -49,7 +49,7 @@ describe("Genopets", () => {
       if (farmer?.user.equals(userKey))
         console.log(
           `# ${index}:`,
-          farmer?.depositId.toBase58(),
+          farmer?.id.toBase58(),
           ", is_yield:",
           farmer.isYield,
           ", timestamp:",

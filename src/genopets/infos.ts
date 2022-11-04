@@ -200,7 +200,7 @@ infos = class InstanceGenopets {
     } = decodedData;
 
     return {
-      depositId,
+      id: depositId,
       user,
       amount,
       poolToken,
