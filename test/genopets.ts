@@ -31,19 +31,21 @@ describe("Genopets", () => {
     const farm0 = farms[0];
     const farm = (await genopets.infos.getFarm(connection, farm0.farmId)) as genopets.FarmInfo;
     console.log("farm:", farm);
-    console.log("farm authority:", farm.authority.toBase58());
-    console.log("farm geneMint:", farm.geneMint.toBase58());
-    console.log("farm mintSgene:", farm.mintSgene.toBase58());
+    console.log("farm pool token:", farm.poolToken.toBase58());
+    console.log("farm master authority:", farm.master.authority.toBase58());
+    console.log("farm master geneMint:", farm.master.geneMint.toBase58());
+    console.log("farm master mintSgene:", farm.master.mintSgene.toBase58());
 
     const farmerWrapper = new genopets.FarmInfoWrapper(farm);
-    const userDeposit = genopets.getFarmerDepositKey(userKey, 0);
+    const userDeposit = genopets.getFarmerInstanceKey(userKey, 0);
     console.log("userDeposit:", userDeposit.toBase58());
   });
 
   it("Fetch all farmers", async () => {
     const farmer = (await genopets.infos.getAllFarmers(connection, userKey)) as genopets.FarmerInfo[];
     console.log("farmer:", farmer);
-    farmer[0].userDeposit.forEach((farmer, index) => {
+    console.log("farmer:", farmer[0].farmerId.toBase58());
+    farmer[0].instance.forEach((farmer, index) => {
       if (farmer?.user.equals(userKey))
         console.log(
           `# ${index}:`,

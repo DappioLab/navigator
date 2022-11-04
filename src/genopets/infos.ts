@@ -1,19 +1,30 @@
-import { Connection, PublicKey, AccountInfo } from "@solana/web3.js";
+import { Connection, PublicKey, AccountInfo, DataSizeFilter, GetProgramAccountsConfig } from "@solana/web3.js";
 import { IFarmInfoWrapper, IInstanceFarm } from "../types";
-import { GENOPETS_FARM_PROGRAM_ID } from "./ids";
-import { FARMER_DEPOSIT_LAYOUT, FARMER_LAYOUT, FARM_LAYOUT } from "./layouts";
+import { FARM_MASTER_ID, GENOPETS_FARM_PROGRAM_ID } from "./ids";
+import { FARMER_INSTANCE_LAYOUT, FARMER_LAYOUT, FARM_MASTER_LAYOUT, FARM_LAYOUT } from "./layouts";
 import * as types from ".";
-import { BN } from "bn.js";
 import { getMultipleAccounts } from "../utils";
+import { getFarmerInstanceKey } from "./utils";
 
 let infos: IInstanceFarm;
 infos = class InstanceGenopets {
   static async getAllFarms(connection: Connection): Promise<types.FarmInfo[]> {
-    const farmId = PublicKey.findProgramAddressSync([Buffer.from("stake-master-seed")], GENOPETS_FARM_PROGRAM_ID)[0];
-    const farmAccountInfo = await connection.getAccountInfo(farmId);
-    const farm = this.parseFarm(farmAccountInfo?.data!, farmId);
+    const farmMasterAccount = await connection.getAccountInfo(FARM_MASTER_ID);
+    const farmMaster = this._parseFarmMaster(farmMasterAccount?.data!, FARM_MASTER_ID);
 
-    return [farm];
+    const sizeFilter: DataSizeFilter = {
+      dataSize: 250,
+    };
+    const filters = [sizeFilter];
+    const config: GetProgramAccountsConfig = { filters: filters };
+    const allFarms = await connection.getProgramAccounts(GENOPETS_FARM_PROGRAM_ID, config);
+    const farms = allFarms.map((account) => {
+      let farm = this.parseFarm(account.account.data, account.pubkey);
+      farm.master = farmMaster;
+      return farm;
+    });
+
+    return farms;
   }
 
   static async getAllFarmWrappers(connection: Connection): Promise<types.FarmInfoWrapper[]> {
@@ -21,9 +32,13 @@ infos = class InstanceGenopets {
   }
 
   static async getFarm(connection: Connection, farmId: PublicKey): Promise<types.FarmInfo> {
-    let account = (await connection.getAccountInfo(farmId)) as AccountInfo<Buffer>;
-    if (!account) throw "Error: Failed to get farm";
-    return this.parseFarm(account.data, farmId);
+    const [farmMasterAccount, farmAccount] = await getMultipleAccounts(connection, [FARM_MASTER_ID, farmId]);
+    if (!farmMasterAccount || !farmAccount) throw "Error: Failed to get farm";
+    const farmMaster = this._parseFarmMaster(farmMasterAccount.account?.data!, FARM_MASTER_ID);
+    let farm = this.parseFarm(farmAccount.account?.data!, farmId);
+    farm.master = farmMaster;
+
+    return farm;
   }
 
   static async getFarmWrapper(connection: Connection, farmId: PublicKey): Promise<FarmInfoWrapper> {
@@ -34,6 +49,34 @@ infos = class InstanceGenopets {
 
   static parseFarm(data: Buffer, farmId: PublicKey): types.FarmInfo {
     const decodedData = FARM_LAYOUT.decode(data);
+
+    let {
+      poolToken,
+      tokenDecimals,
+      weight,
+      earliestUnlockDate,
+      usersLockingWeight,
+      poolTokenReserve,
+      weightPerToken,
+      governanceEligible,
+    } = decodedData;
+
+    return {
+      farmId,
+      master: types.defaultFarmerMaster,
+      poolToken,
+      tokenDecimals,
+      weight,
+      earliestUnlockDate,
+      usersLockingWeight,
+      poolTokenReserve,
+      weightPerToken,
+      governanceEligible,
+    };
+  }
+
+  private static _parseFarmMaster(data: Buffer, id: PublicKey): types.FarmMaster {
+    const decodedData = FARM_MASTER_LAYOUT.decode(data);
 
     let {
       authority,
@@ -60,7 +103,7 @@ infos = class InstanceGenopets {
     } = decodedData;
 
     return {
-      farmId,
+      id,
       authority,
       sgeneMinter,
       mintSgene,
@@ -107,16 +150,18 @@ infos = class InstanceGenopets {
   static async getFarmer(connection: Connection, farmerId: PublicKey, version?: number): Promise<types.FarmerInfo> {
     let data = (await connection.getAccountInfo(farmerId)) as AccountInfo<Buffer>;
     let farmer = this.parseFarmer(data.data, farmerId);
-    const depositKeys: PublicKey[] = [];
+    const farmerInstanceKeys: PublicKey[] = [];
     for (let i = 0; i < Number(farmer.currentDepositIndex); i++) {
-      depositKeys.push(getFarmerDepositKey(farmer.userKey, i));
+      farmerInstanceKeys.push(getFarmerInstanceKey(farmer.userKey, i));
     }
-    const depositAccounts = await getMultipleAccounts(connection, depositKeys);
-    farmer.userDeposit = depositAccounts
-      .map((deposit) => {
-        return deposit.account?.data ? this._parseDeposit(deposit.account?.data, deposit.pubkey) : null;
+    const farmerInstanceAccounts = await getMultipleAccounts(connection, farmerInstanceKeys);
+    farmer.instance = farmerInstanceAccounts
+      .map((farmerInstance) => {
+        return farmerInstance.account?.data
+          ? this._parseFarmerInstance(farmerInstance.account?.data, farmerInstance.pubkey)
+          : null;
       })
-      .filter((deposit) => Boolean(deposit)) as types.Deposit[];
+      .filter((farmerInstance) => Boolean(farmerInstance)) as types.FarmerInstance[];
 
     return farmer;
   }
@@ -133,12 +178,12 @@ infos = class InstanceGenopets {
       activeDeposits,
       totalRewards,
       currentDepositIndex,
-      userDeposit: [],
+      instance: [],
     };
   }
 
-  private static _parseDeposit(data: Buffer, depositId: PublicKey): types.Deposit {
-    let decodedData = FARMER_DEPOSIT_LAYOUT.decode(data);
+  private static _parseFarmerInstance(data: Buffer, depositId: PublicKey): types.FarmerInstance {
+    let decodedData = FARMER_INSTANCE_LAYOUT.decode(data);
     let {
       user,
       amount,
@@ -186,30 +231,16 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     // TODO
     return [];
   }
-
-  getFarmInstance(mint: PublicKey) {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("stake-pool-seed"), mint.toBuffer()],
-      GENOPETS_FARM_PROGRAM_ID
-    )[0];
-  }
 }
 
 export class FarmerInfoWrapper {
   constructor(public farmerInfo: types.FarmerInfo) {}
 
-  getUserDeposit() {
-    return getFarmerDepositKey(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex));
+  getFarmerInstance() {
+    return getFarmerInstanceKey(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex));
   }
 
-  getUserReDeposit() {
-    return getFarmerDepositKey(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex) + 1);
+  getLatestFarmerInstance() {
+    return getFarmerInstanceKey(this.farmerInfo.userKey, Number(this.farmerInfo.currentDepositIndex) + 1);
   }
-}
-
-export function getFarmerDepositKey(userKey: PublicKey, nonce: number) {
-  return PublicKey.findProgramAddressSync(
-    [Buffer.from("staking-deposit"), userKey.toBuffer(), new BN(nonce).toArrayLike(Buffer, `le`, 4)],
-    GENOPETS_FARM_PROGRAM_ID
-  )[0];
 }
