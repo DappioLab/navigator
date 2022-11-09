@@ -5,22 +5,6 @@ import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IDepositorInfo, IReserveInfo, IVaultInfo } from "../types";
 
-export interface Fees {
-  feeMultiplier: BN;
-  controllerFee: BN;
-  platformFee: BN;
-  withdrawFee: BN;
-  depositFee: BN;
-  feeWallet: PublicKey;
-  totalCollectedA: BN;
-  totalCollectedB: BN;
-}
-
-export interface RealizedYield {
-  gainPerSecond: BN;
-  apr: BN;
-}
-
 export interface Base {
   nonce: BN;
   tag: BN[];
@@ -46,17 +30,32 @@ export interface Base {
   compoundInterval: BN;
   slippageTolerance: BN;
   slipAlignment: BN[];
-  fees: Fees;
+  fees: {
+    feeMultiplier: BN;
+    controllerFee: BN;
+    platformFee: BN;
+    withdrawFee: BN;
+    depositFee: BN;
+    feeWallet: PublicKey;
+    totalCollectedA: BN;
+    totalCollectedB: BN;
+  };
   farm: BN[];
   configured: BN;
   configuredAlignment: BN[];
   pendingFees: BN;
   totalDepositedBalanceCap: BN;
-  realizedYield: RealizedYield;
+  realizedYield: {
+    gainPerSecond: BN;
+    apr: BN;
+  };
+}
+
+export interface VaultInfo extends IVaultInfo {
+  base: Base;
 }
 
 export interface RaydiumVaultInfo extends VaultInfo {
-  base: Base;
   lpMint: PublicKey;
   ammId: PublicKey;
   ammAuthority: PublicKey;
@@ -85,62 +84,48 @@ export interface RaydiumVaultInfo extends VaultInfo {
   serumMarket: PublicKey;
 }
 
-export interface ReserveConfig {
-  optimalUtilizationRate: BN;
-  degenUtilizationRate: BN;
-  loanToValueRatio: BN;
-  liquidationBonus: BN;
-  liquidationThreshold: BN;
-  minBorrowRate: BN;
-  optimalBorrowRate: BN;
-  degenBorrowRate: BN;
-  maxBorrowRate: BN;
-  fees: ReserveFees;
-}
-
-export interface ReserveFees {
-  borrowFeeWad: BN;
-  flashLoanFeeWad: BN;
-  hostFeePercentage: BN;
-}
-
-export interface ReserveCollateral {
-  reserveTokenMint: PublicKey;
-  mintTotalSupply: BN;
-  supplyPubkey: PublicKey;
-}
-
-export interface ReserveLiquidity {
-  mintPubkey: PublicKey;
-  mintDecimals: BN;
-  supplyPubkey: PublicKey;
-  feeReceiver: PublicKey;
-  oraclePubkey: PublicKey;
-  availableAmount: BN;
-  borrowedAmount: BN;
-  cumulativeBorrowRate: BN;
-  marketPrice: BN;
-  platformAmountWads: BN;
-  platformFee: BN;
-}
-
-export interface LastUpdate {
-  lastUpdatedSlot: BN;
-  stale: boolean;
-}
-
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
-  lastUpdate: LastUpdate;
+  lastUpdate: {
+    lastUpdatedSlot: BN;
+    stale: boolean;
+  };
   lendingMarket: PublicKey;
   borrowAuthorizer: PublicKey;
-  liquidity: ReserveLiquidity;
-  collateral: ReserveCollateral;
-  config: ReserveConfig;
-}
-
-export interface VaultInfo extends IVaultInfo {
-  base: Base;
+  liquidity: {
+    mintPubkey: PublicKey;
+    mintDecimals: BN;
+    supplyPubkey: PublicKey;
+    feeReceiver: PublicKey;
+    oraclePubkey: PublicKey;
+    availableAmount: BN;
+    borrowedAmount: BN;
+    cumulativeBorrowRate: BN;
+    marketPrice: BN;
+    platformAmountWads: BN;
+    platformFee: BN;
+  };
+  collateral: {
+    reserveTokenMint: PublicKey;
+    mintTotalSupply: BN;
+    supplyPubkey: PublicKey;
+  };
+  config: {
+    optimalUtilizationRate: BN;
+    degenUtilizationRate: BN;
+    loanToValueRatio: BN;
+    liquidationBonus: BN;
+    liquidationThreshold: BN;
+    minBorrowRate: BN;
+    optimalBorrowRate: BN;
+    degenBorrowRate: BN;
+    maxBorrowRate: BN;
+    fees: {
+      borrowFeeWad: BN;
+      flashLoanFeeWad: BN;
+      hostFeePercentage: BN;
+    };
+  };
 }
 
 export interface DepositorInfo extends IDepositorInfo {
