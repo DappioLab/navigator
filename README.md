@@ -44,6 +44,8 @@ const farm = await raydium.infos.getFarm(connection, farmId);
 | Francium | MoneyMarket        |
 | Tulip    | MoneyMarket        |
 | Katana   | Vault              |
+| Lido     | Vault              |
+| Marinade | Vault              |
 
 ## Test
 
