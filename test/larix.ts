@@ -15,16 +15,19 @@ describe("Larix", () => {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
   // });
-  // const connection = new Connection("https:////api.mainnet-beta.solana.com", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  // });
-  const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
+  const connection2 = new Connection("https://api.mainnet-beta.solana.com", {
     commitment: "confirmed",
     confirmTransactionInitialTimeout: 180 * 1000,
-    wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   });
-
+  // const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
+  // });
+  const connection = new Connection("https://cache-rpc.dappio.xyz", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
+  });
   // const options = anchor.AnchorProvider.defaultOptions();
   // const wallet = NodeWallet.local();
   // const provider = new anchor.AnchorProvider(connection, wallet, options);
@@ -32,7 +35,18 @@ describe("Larix", () => {
   // anchor.setProvider(provider);
 
   // const supplyAmount = 20000;
-
+  const userKey = new PublicKey("Weiod39tkAinXHyUszoRtnXxMx1DXUCNWAWdGQxTK2X");
+  it("fetches obligation", async () => {
+    const reserveWrappers = (await larix.infos.getAllReserveWrappers(connection)) as ReserveInfoWrapper[];
+    const farms = (await larix.infos.getAllFarmWrappers(connection)) as FarmInfoWrapper[];
+    let obligations = (await larix.infos.getAllObligations!(connection2, userKey)) as larix.ObligationInfo[];
+    obligations.forEach((o) => {
+      let wrapper = new larix.ObligationInfoWrapper(o);
+      console.log(wrapper.obligationInfo.unclaimedMine.toString());
+      wrapper.update({ reserve: reserveWrappers, farm: farms });
+      console.log(wrapper.obligationInfo.unclaimedMine.toString());
+    });
+  });
   it("fetches reserve", async () => {
     const reserves = (await larix.infos.getAllReserves(connection)) as ReserveInfo[];
     const poolId = reserves[reserves.length - 1].reserveId;

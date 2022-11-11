@@ -546,19 +546,20 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
 export class ObligationInfoWrapper {
   constructor(public obligationInfo: types.ObligationInfo) {}
 
-  update(
-    reserveAndFarmInfo: {
-      reserve: ReserveInfoWrapper;
-      farm: FarmInfoWrapper;
-    }[]
-  ) {
+  update(reserveAndFarmInfo: { reserve: ReserveInfoWrapper[]; farm: FarmInfoWrapper[] }) {
     let unhealthyBorrowValue = new BN(0);
     let borrowedValue = new BN(0);
     let depositedValue = new BN(0);
     let reserveMap: Map<string, { reserve: ReserveInfoWrapper; farm: FarmInfoWrapper }> = new Map();
-
-    for (let reserveInfoWrapper of reserveAndFarmInfo) {
-      reserveMap.set(reserveInfoWrapper.reserve.reserveInfo.reserveId.toString(), reserveInfoWrapper);
+    let farmMap: Map<string, FarmInfoWrapper> = new Map();
+    for (let farmInfoWrapper of reserveAndFarmInfo.farm) {
+      farmMap.set(farmInfoWrapper.farmInfo.farmId.toString(), farmInfoWrapper);
+    }
+    for (let reserveInfoWrapper of reserveAndFarmInfo.reserve) {
+      reserveMap.set(reserveInfoWrapper.reserveInfo.reserveId.toString(), {
+        reserve: reserveInfoWrapper,
+        farm: farmMap.get(reserveInfoWrapper.reserveInfo.reserveId.toString())!,
+      });
     }
     let unclaimedAmount = this.obligationInfo.unclaimedMine;
 
@@ -579,7 +580,7 @@ export class ObligationInfoWrapper {
           .div(new BN(`1${"".padEnd(2, "0")}`));
         unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
         let indexSub = infoWrapper.farm.farmInfo.lTokenMiningIndex.sub(depositedReserve.index);
-        let reward = indexSub.mul(depositedReserve.depositedAmount);
+        let reward = indexSub.div(depositedReserve.depositedAmount);
         unclaimedAmount = unclaimedAmount.add(reward);
       }
     }
@@ -594,7 +595,7 @@ export class ObligationInfoWrapper {
           .div(new BN(`1${"".padEnd(decimal, "0")}`));
         borrowedValue = borrowedValue.add(thisborrowedValue);
         let indexSub = infoWrapper.farm.farmInfo.borrowMiningIndex.sub(borrowedReserve.index);
-        let reward = indexSub.mul(borrowedReserve.borrowedAmount);
+        let reward = indexSub.div(borrowedReserve.borrowedAmount);
         unclaimedAmount = unclaimedAmount.add(reward);
       }
     }
