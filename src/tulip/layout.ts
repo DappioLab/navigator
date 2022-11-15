@@ -42,7 +42,7 @@ export const RESERVE_LAYOUT = struct([
 ]);
 
 // Vault Layout
-const VAULT_BASE_LAYOUT = struct(
+export const VAULT_BASE_LAYOUT = struct(
   [
     u8("nonce"),
     array(u8(), 32, "tag"),
@@ -121,6 +121,49 @@ export const RAYDIUM_VAULT_LAYOUT = struct([
   publicKey("pcMint"),
   publicKey("serumMarket"),
   blob(407, "padding"),
+]);
+
+export const ORCA_FARM_DATA = [
+  publicKey("userFarmAddr"),
+  u8("userFarmNonce"),
+  publicKey("vaultSwapTokenA"),
+  publicKey("vaultSwapTokenB"),
+  publicKey("poolSwapTokenA"),
+  publicKey("poolSwapTokenB"),
+  publicKey("poolSwapAccount"),
+  publicKey("vaultRewardTokenAccount"),
+  publicKey("vaultFarmTokenAccount"),
+  publicKey("vaultSwapTokenAccount"),
+  publicKey("globalBaseTokenVault"),
+  publicKey("globalRewardTokenVault"),
+  publicKey("globalFarm"),
+  publicKey("farmTokenMint"),
+  publicKey("rewardTokenMint"),
+  publicKey("swapPoolMint"),
+  publicKey("tokenAMint"),
+  publicKey("tokenBMint"),
+  array(publicKey(), 3, "swapMarkets"),
+  blob(32, "padding"),
+];
+
+export const ORCA_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  struct(ORCA_FARM_DATA, "farmData"),
+  blob(135, "padding"),
+]);
+
+export const ORCA_DD_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  struct(ORCA_FARM_DATA, "farmData"),
+  struct(ORCA_FARM_DATA, "ddFarmData"),
+  publicKey("ddCompoundQueue"),
+  u8("ddCompoundQueueNonce"),
+  u8("ddConfigured"),
+  publicKey("ddWithdrawQueue"),
+  u8("ddWithdrawQueueNonce"),
+  blob(35, "padding"),
 ]);
 
 export const DEPOSITOR_LAYOUT = struct([
