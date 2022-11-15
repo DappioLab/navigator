@@ -3,7 +3,13 @@ import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSize
 import BN from "bn.js";
 import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
 import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
-import { DEPOSITOR_LAYOUT, RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
+import {
+  DEPOSITOR_LAYOUT,
+  ORCA_DD_VAULT_LAYOUT,
+  ORCA_VAULT_LAYOUT,
+  RAYDIUM_VAULT_LAYOUT,
+  RESERVE_LAYOUT,
+} from "./layout";
 import * as types from ".";
 import { paginate } from "../utils";
 
@@ -93,16 +99,33 @@ infos = class InstanceTulip {
   }
 
   static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
-    const sizeFilter: DataSizeFilter = {
+    const raydiumSizeFilter: DataSizeFilter = {
       dataSize: RAYDIUM_VAULT_LAYOUT_SPAN,
     };
-    const filters = [sizeFilter];
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const raydiumFilters = [raydiumSizeFilter];
+    const raydiumConfig: GetProgramAccountsConfig = { filters: raydiumFilters };
 
-    const accountInfos = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config), page);
-    const vaults: types.VaultInfo[] = accountInfos
+    const orcaSizeFilter: DataSizeFilter = {
+      dataSize: ORCA_VAULT_LAYOUT_SPAN,
+    };
+    const orcaFilters = [orcaSizeFilter];
+    const orcaConfig: GetProgramAccountsConfig = { filters: orcaFilters };
+
+    const orcaDDSizeFilter: DataSizeFilter = {
+      dataSize: ORCA_DD_VAULT_LAYOUT_SPAN,
+    };
+    const orcaDDFilters = [orcaDDSizeFilter];
+    const orcaDDConfig: GetProgramAccountsConfig = { filters: orcaDDFilters };
+
+    const raydiumVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, raydiumConfig), page);
+    const orcaVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, orcaConfig), page);
+    const orcaDDVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, orcaDDConfig), page);
+    const vaultAccountInfos = [...raydiumVaults, ...orcaVaults, ...orcaDDVaults];
+
+    const vaults: types.VaultInfo[] = vaultAccountInfos
       .filter((info) => this._isAllowedId(info.pubkey))
       .map((info) => this.parseVault(info.account!.data, info.pubkey));
+
     return vaults;
   }
 
@@ -124,6 +147,14 @@ infos = class InstanceTulip {
     switch (data.length) {
       case RAYDIUM_VAULT_LAYOUT_SPAN:
         parseVault = this._parseRaydiumVault;
+        break;
+      case ORCA_VAULT_LAYOUT_SPAN:
+        console.log("orca vault");
+        parseVault = this._parseOrcaVault;
+        break;
+      case ORCA_DD_VAULT_LAYOUT_SPAN:
+        console.log("orca dd vault");
+        parseVault = this._parseOrcaDDVault;
         break;
       default:
         throw Error("Error: data structure does not exist or not supported yet (tulip.parseVault");
@@ -280,6 +311,48 @@ infos = class InstanceTulip {
       serumMarket,
     };
   }
+  private static _parseOrcaVault(data: any, vaultId: PublicKey): types.OrcaVault {
+    const decodeData = ORCA_VAULT_LAYOUT.decode(data);
+    const { base, farmData } = decodeData;
+
+    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
+
+    return {
+      vaultId,
+      shareMint: base.sharesMint,
+      base,
+      farmData,
+    };
+  }
+
+  private static _parseOrcaDDVault(data: any, vaultId: PublicKey): types.OrcaDDVault {
+    const decodeData = ORCA_DD_VAULT_LAYOUT.decode(data);
+    const {
+      base,
+      farmData,
+      ddFarmData,
+      ddCompoundQueue,
+      ddCompoundQueueNonce,
+      ddConfigured,
+      ddWithdrawQueue,
+      ddWithdrawQueueNonce,
+    } = decodeData;
+
+    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
+
+    return {
+      vaultId,
+      shareMint: base.sharesMint,
+      base,
+      farmData,
+      ddFarmData,
+      ddCompoundQueue,
+      ddCompoundQueueNonce,
+      ddConfigured,
+      ddWithdrawQueue,
+      ddWithdrawQueueNonce,
+    };
+  }
   private static _isAllowedId(id: PublicKey) {
     return !!vaultV2Config.vaults.accounts.find(
       (account) =>
@@ -297,6 +370,8 @@ export { infos };
 
 const RESERVE_LAYOUT_SPAN = 622;
 const RAYDIUM_VAULT_LAYOUT_SPAN = 1712;
+const ORCA_VAULT_LAYOUT_SPAN = 1376;
+const ORCA_DD_VAULT_LAYOUT_SPAN = 2016;
 const DEPOSITOR_LAYOUT_SPAN = 440;
 const WAD = new BN(10).pow(new BN(18));
 

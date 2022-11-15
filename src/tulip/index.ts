@@ -84,6 +84,79 @@ export interface RaydiumVaultInfo extends VaultInfo {
   serumMarket: PublicKey;
 }
 
+export interface OrcaVault extends VaultInfo {
+  farmData: {
+    userFarmAddr: PublicKey;
+    userFarmNonce: BN;
+    vaultSwapTokenA: PublicKey;
+    vaultSwapTokenB: PublicKey;
+    poolSwapTokenA: PublicKey;
+    poolSwapTokenB: PublicKey;
+    poolSwapAccount: PublicKey;
+    vaultRewardTokenAccount: PublicKey;
+    vaultFarmTokenAccount: PublicKey;
+    vaultSwapTokenAccount: PublicKey;
+    globalBaseTokenVault: PublicKey;
+    globalRewardTokenVault: PublicKey;
+    globalFarm: PublicKey;
+    farmTokenMint: PublicKey;
+    rewardTokenMint: PublicKey;
+    swapPoolMint: PublicKey;
+    tokenAMint: PublicKey;
+    tokenBMint: PublicKey;
+    swapMarkets: PublicKey[];
+  };
+}
+export interface OrcaDDVault extends VaultInfo {
+  farmData: {
+    userFarmAddr: PublicKey;
+    userFarmNonce: BN;
+    vaultSwapTokenA: PublicKey;
+    vaultSwapTokenB: PublicKey;
+    poolSwapTokenA: PublicKey;
+    poolSwapTokenB: PublicKey;
+    poolSwapAccount: PublicKey;
+    vaultRewardTokenAccount: PublicKey;
+    vaultFarmTokenAccount: PublicKey;
+    vaultSwapTokenAccount: PublicKey;
+    globalBaseTokenVault: PublicKey;
+    globalRewardTokenVault: PublicKey;
+    globalFarm: PublicKey;
+    farmTokenMint: PublicKey;
+    rewardTokenMint: PublicKey;
+    swapPoolMint: PublicKey;
+    tokenAMint: PublicKey;
+    tokenBMint: PublicKey;
+    swapMarkets: PublicKey[];
+  };
+  ddFarmData: {
+    userFarmAddr: PublicKey;
+    userFarmNonce: BN;
+    vaultSwapTokenA: PublicKey;
+    vaultSwapTokenB: PublicKey;
+    poolSwapTokenA: PublicKey;
+    poolSwapTokenB: PublicKey;
+    poolSwapAccount: PublicKey;
+    vaultRewardTokenAccount: PublicKey;
+    vaultFarmTokenAccount: PublicKey;
+    vaultSwapTokenAccount: PublicKey;
+    globalBaseTokenVault: PublicKey;
+    globalRewardTokenVault: PublicKey;
+    globalFarm: PublicKey;
+    farmTokenMint: PublicKey;
+    rewardTokenMint: PublicKey;
+    swapPoolMint: PublicKey;
+    tokenAMint: PublicKey;
+    tokenBMint: PublicKey;
+    swapMarkets: PublicKey[];
+  };
+  ddCompoundQueue: PublicKey;
+  ddCompoundQueueNonce: BN;
+  ddConfigured: BN;
+  ddWithdrawQueue: PublicKey;
+  ddWithdrawQueueNonce: BN;
+}
+
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: {
