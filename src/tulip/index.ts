@@ -157,6 +157,50 @@ export interface OrcaDDVault extends VaultInfo {
   ddWithdrawQueueNonce: BN;
 }
 
+export interface SaberVaultInfo extends VaultInfo {
+  miner: PublicKey;
+  minerTokenAccount: PublicKey;
+  mintWrapper: PublicKey;
+  minter: PublicKey;
+  quarry: PublicKey;
+  rewarder: PublicKey;
+  rewardTokenAccount: PublicKey;
+  swapMarkets: PublicKey[];
+  variant: QuarryVariant;
+  configData: PublicKey;
+  configDataInitialized: BN;
+  extraDataAccount: PublicKey;
+}
+
+export interface AtrixVaultInfo extends VaultInfo {
+  atrixFarmAccount: PublicKey;
+  vaultStakerAccount: PublicKey;
+  vaultHarvesterAccount: PublicKey;
+  dualCrop: BN;
+}
+
+export interface LendingOptimizerVaultInfo extends VaultInfo {
+  currentFarmProgram: PublicKey;
+  currentPlatformInformation: PublicKey;
+  currentPlatformCount: PublicKey;
+  lastRebaseSlot: BN;
+}
+
+export interface MultiDepositOptimizerVaultInfo extends VaultInfo {
+  lastRebaseSlot: BN;
+  standaloneVaults: {
+    vaultAddress: PublicKey;
+    depositedBalance: BN;
+    programType: BN;
+    programAddress: PublicKey;
+    sharesMint: PublicKey;
+    sharesAccount: PublicKey;
+  }[];
+  targetVault: PublicKey;
+  stateTransitionAccount: PublicKey;
+  minimumRebalanceAmount: BN;
+}
+
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: {
@@ -213,5 +257,12 @@ export interface DepositorInfo extends IDepositorInfo {
   totalWithdrawnUnderlying: BN;
   lastPendingReward: BN;
   rewardPerSharePaid: BN;
-  extra_data_account: PublicKey;
+  extraDataAccount: PublicKey;
+}
+
+export enum QuarryVariant {
+  Vanilla,
+  Saber,
+  Sunny,
+  UNKNOWN,
 }
