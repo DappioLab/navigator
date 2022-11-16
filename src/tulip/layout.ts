@@ -166,6 +166,66 @@ export const ORCA_DD_VAULT_LAYOUT = struct([
   blob(35, "padding"),
 ]);
 
+export const QUARRY_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  publicKey("miner"),
+  publicKey("minerTokenAccount"),
+  publicKey("mintWrapper"),
+  publicKey("minter"),
+  publicKey("quarry"),
+  publicKey("rewarder"),
+  publicKey("rewardTokenMint"),
+  publicKey("rewardTokenAccount"),
+  array(publicKey(), 3, "swapMarkets"),
+  u64("variant"),
+  publicKey("configData"),
+  u8("configDataInitialized"),
+  publicKey("extraDataAccount"),
+  blob(263, "padding"),
+]);
+
+export const ATRIX_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  publicKey("atrixFarmAccount"),
+  publicKey("vaultStakerAccount"),
+  publicKey("vaultHarvesterAccount"),
+  u8("dualCrop"),
+  blob(519, "padding"),
+]);
+
+export const LENDING_OPTIMIZER_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  publicKey("currentFarmProgram"),
+  publicKey("currentPlatformInformation"),
+  publicKey("currentPlatformCount"),
+  u64("lastRebaseSlot"),
+  blob(1000, "padding"),
+]);
+
+const STANDALONE_VAULT_CACHE = struct([
+  publicKey("vaultAddress"),
+  u64("depositedBalance"),
+  u8("programType"),
+  publicKey("programAddress"),
+  publicKey("sharesMint"),
+  publicKey("sharesAccount"),
+  blob(55, "padding"),
+]);
+
+export const MULTI_DEPOSIT_OPTIMIZER_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  u64("lastRebaseSlot"),
+  array(STANDALONE_VAULT_CACHE, 6, "standaloneVaults"),
+  publicKey("targetVault"),
+  publicKey("stateTransitionAccount"),
+  u64("minimumRebalanceAmount"),
+  blob(272, "padding"),
+]);
+
 export const DEPOSITOR_LAYOUT = struct([
   u64("discriminator"),
   publicKey("owner"),
@@ -181,6 +241,6 @@ export const DEPOSITOR_LAYOUT = struct([
   u64("totalWithdrawnUnderlying"),
   u64("lastPendingReward"),
   u128("rewardPerSharePaid"),
-  publicKey("extra_data_account"),
+  publicKey("extraDataAccount"),
   blob(407, "padding"),
 ]);
