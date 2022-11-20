@@ -561,8 +561,8 @@ export class ObligationInfoWrapper {
         farm: farmMap.get(reserveInfoWrapper.reserveInfo.reserveId.toString())!,
       });
     }
-    let unclaimedAmount = this.obligationInfo.unclaimedMine;
-
+    
+    let newReward = new BN(0);
     for (let depositedReserve of this.obligationInfo.obligationCollaterals) {
       let infoWrapper = reserveMap.get(depositedReserve.reserveId.toString());
       if (infoWrapper) {
@@ -580,11 +580,12 @@ export class ObligationInfoWrapper {
           .div(new BN(`1${"".padEnd(2, "0")}`));
         unhealthyBorrowValue = unhealthyBorrowValue.add(thisUnhealthyBorrowValue);
         let indexSub = infoWrapper.farm.farmInfo.lTokenMiningIndex.sub(depositedReserve.index);
-        let reward = indexSub.div(depositedReserve.depositedAmount);
-        unclaimedAmount = unclaimedAmount.add(reward);
+
+        let reward = indexSub.mul(depositedReserve.depositedAmount);
+        
+        newReward = newReward.add(reward);
       }
     }
-
     for (let borrowedReserve of this.obligationInfo.obligationLoans) {
       let infoWrapper = reserveMap.get(borrowedReserve.reserveId.toString());
       if (infoWrapper) {
@@ -595,15 +596,15 @@ export class ObligationInfoWrapper {
           .div(new BN(`1${"".padEnd(decimal, "0")}`));
         borrowedValue = borrowedValue.add(thisborrowedValue);
         let indexSub = infoWrapper.farm.farmInfo.borrowMiningIndex.sub(borrowedReserve.index);
-        let reward = indexSub.div(borrowedReserve.borrowedAmount);
-        unclaimedAmount = unclaimedAmount.add(reward);
+        let reward = indexSub.mul(borrowedReserve.borrowedAmount.div(new BN(`1${"".padEnd(18, "0")}`)));
+        newReward = newReward.add(reward);
       }
     }
 
     this.obligationInfo.borrowedValue = borrowedValue;
     this.obligationInfo.depositedValue = depositedValue;
     this.obligationInfo.unhealthyBorrowValue = unhealthyBorrowValue;
-    this.obligationInfo.unclaimedMine = unclaimedAmount;
+    this.obligationInfo.unclaimedMine = this.obligationInfo.unclaimedMine.add(newReward);
   }
 
   getRefreshedBorrowLimit(reserves: ReserveInfoWrapper[], tokenList: IServicesTokenInfo[]) {
