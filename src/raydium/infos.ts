@@ -65,19 +65,19 @@ infos = class InstanceRaydium {
       quoteTokenTotal?: bigint;
       marketEventQueue?: PublicKey;
     }
-    let accountSet = new Map<PublicKey, AdditionalInfoWrapper>();
+    let accountSet = new Map<string, AdditionalInfoWrapper>();
 
     // CAUTION: The order of 3 loops are dependent
     tokenAccounts.forEach((account) => {
       const parsedAccount = AccountLayout.decode(account.account!.data);
-      accountSet.set(account.pubkey, {
+      accountSet.set(account.pubkey.toBase58(), {
         tokenAmount: parsedAccount.amount,
       });
     });
 
     mintAccounts.forEach((account) => {
       const parsedAccount = MintLayout.decode(account.account!.data);
-      accountSet.set(account.pubkey, {
+      accountSet.set(account.pubkey.toBase58(), {
         lpDecimal: BigInt(parsedAccount.decimals),
         lpSupplyAmount: parsedAccount.supply,
       });
@@ -85,7 +85,7 @@ infos = class InstanceRaydium {
 
     openOrderAccounts.forEach((account) => {
       const parsedAccount = _OPEN_ORDERS_LAYOUT_V2.decode(account.account!.data);
-      accountSet.set(account.pubkey, {
+      accountSet.set(account.pubkey.toBase58(), {
         baseTokenTotal: BigInt(parsedAccount.baseTokenTotal),
         quoteTokenTotal: BigInt(parsedAccount.quoteTokenTotal),
       });
@@ -93,19 +93,19 @@ infos = class InstanceRaydium {
 
     serumMarketAccounts.forEach((account) => {
       const parsedAccount = MARKET_STATE_LAYOUT_V3.decode(account.account!.data);
-      accountSet.set(account.pubkey, {
+      accountSet.set(account.pubkey.toBase58(), {
         marketEventQueue: parsedAccount.eventQueue,
       });
     });
 
     pools.forEach((pool) => {
-      pool.tokenAAmount = accountSet.get(pool.poolCoinTokenAccount)?.tokenAmount;
-      pool.tokenBAmount = accountSet.get(pool.poolPcTokenAccount)?.tokenAmount;
-      pool.lpSupplyAmount = accountSet.get(pool.lpMint)?.lpSupplyAmount;
-      pool.lpDecimals = accountSet.get(pool.lpMint)?.lpDecimal;
-      pool.ammOrderBaseTokenTotal = accountSet.get(pool.ammOpenOrders)?.baseTokenTotal;
-      pool.ammOrderQuoteTokenTotal = accountSet.get(pool.ammOpenOrders)?.quoteTokenTotal;
-      pool.marketEventQueue = accountSet.get(pool.serumMarket)?.marketEventQueue;
+      pool.tokenAAmount = accountSet.get(pool.poolCoinTokenAccount.toBase58())?.tokenAmount;
+      pool.tokenBAmount = accountSet.get(pool.poolPcTokenAccount.toBase58())?.tokenAmount;
+      pool.lpSupplyAmount = accountSet.get(pool.lpMint.toBase58())?.lpSupplyAmount;
+      pool.lpDecimals = accountSet.get(pool.lpMint.toBase58())?.lpDecimal;
+      pool.ammOrderBaseTokenTotal = accountSet.get(pool.ammOpenOrders.toBase58())?.baseTokenTotal;
+      pool.ammOrderQuoteTokenTotal = accountSet.get(pool.ammOpenOrders.toBase58())?.quoteTokenTotal;
+      pool.marketEventQueue = accountSet.get(pool.serumMarket.toBase58())?.marketEventQueue;
     });
 
     return pools;
@@ -276,7 +276,7 @@ infos = class InstanceRaydium {
     let tokenAccountKeys: PublicKey[] = [];
     let mintAccountKeys: PublicKey[] = [];
     let accountSet = new Map<
-      PublicKey,
+      string,
       {
         token?: RawAccount;
         mint?: RawMint;
@@ -295,7 +295,7 @@ infos = class InstanceRaydium {
       const key = account.pubkey;
       const token = AccountLayout.decode(account.account!.data);
 
-      accountSet.set(key, { token });
+      accountSet.set(key.toBase58(), { token });
 
       // Store mint
       mintAccountKeys.push(token.mint);
@@ -307,7 +307,7 @@ infos = class InstanceRaydium {
       const key = account.pubkey;
       const mint = MintLayout.decode(account.account!.data);
 
-      accountSet.set(key, { mint });
+      accountSet.set(key.toBase58(), { mint });
     });
 
     // Assign:
@@ -318,7 +318,7 @@ infos = class InstanceRaydium {
     // - poolRewardADecimals
     // - poolRewardBDecimals
     allFarms.forEach((farm) => {
-      const lpAccount = accountSet.get(farm.poolLpTokenAccountPubkey)?.token as RawAccount;
+      const lpAccount = accountSet.get(farm.poolLpTokenAccountPubkey.toBase58())?.token as RawAccount;
       farm.poolLpTokenAccount = {
         key: farm.poolLpTokenAccountPubkey,
         owner: lpAccount.owner as PublicKey,
@@ -326,10 +326,10 @@ infos = class InstanceRaydium {
         amount: lpAccount.amount,
       };
 
-      const lpMint = accountSet.get(farm.poolLpTokenAccount.mint)?.mint as RawMint;
+      const lpMint = accountSet.get(farm.poolLpTokenAccount.mint.toBase58())?.mint as RawMint;
       farm.poolLpDecimals = BigInt(lpMint.decimals);
 
-      const rewardAAccount = accountSet.get(farm.poolRewardTokenAccountPubkey)?.token as RawAccount;
+      const rewardAAccount = accountSet.get(farm.poolRewardTokenAccountPubkey.toBase58())?.token as RawAccount;
       farm.poolRewardTokenAccount = {
         key: farm.poolRewardTokenAccountPubkey,
         owner: rewardAAccount.owner as PublicKey,
@@ -337,18 +337,18 @@ infos = class InstanceRaydium {
         amount: rewardAAccount.amount,
       };
 
-      const rewardAMint = accountSet.get(farm.poolRewardTokenAccount.mint)?.mint as RawMint;
+      const rewardAMint = accountSet.get(farm.poolRewardTokenAccount.mint.toBase58())?.mint as RawMint;
       farm.poolRewardADecimals = BigInt(rewardAMint.decimals);
 
       if (farm.poolRewardTokenAccountPubkeyB) {
-        const rewardBAccount = accountSet.get(farm.poolRewardTokenAccountPubkeyB)?.token as RawAccount;
+        const rewardBAccount = accountSet.get(farm.poolRewardTokenAccountPubkeyB.toBase58())?.token as RawAccount;
         farm.poolRewardTokenAccountB = {
           key: farm.poolRewardTokenAccountPubkeyB,
           owner: rewardBAccount.owner as PublicKey,
           mint: rewardBAccount.mint as PublicKey,
           amount: rewardBAccount.amount,
         };
-        const rewardBMint = accountSet.get(farm.poolRewardTokenAccountB.mint)?.mint as RawMint;
+        const rewardBMint = accountSet.get(farm.poolRewardTokenAccountB.mint.toBase58())?.mint as RawMint;
         farm.poolRewardBDecimals = BigInt(rewardBMint.decimals);
       }
     });

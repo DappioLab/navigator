@@ -75,29 +75,29 @@ infos = class InstanceSaber {
       lpSupplyAmount?: BN;
       lpDecimal?: number;
     }
-    let accountSet = new Map<PublicKey, AdditionalInfoWrapper>();
+    let accountSet = new Map<string, AdditionalInfoWrapper>();
 
     // CAUTION: The order of 2 loops are dependent
     tokenAccounts.forEach((account) => {
       const parsedAccount = AccountLayout.decode(account.account!.data);
-      accountSet.set(account.pubkey, {
+      accountSet.set(account.pubkey.toBase58(), {
         tokenAmount: new BN(Number(parsedAccount.amount)),
       });
     });
 
     mintAccounts.forEach((account) => {
       const parsedAccount = MintLayout.decode(account.account!.data);
-      accountSet.set(account.pubkey, {
+      accountSet.set(account.pubkey.toBase58(), {
         lpDecimal: parsedAccount.decimals,
         lpSupplyAmount: new BN(Number(parsedAccount.supply)),
       });
     });
 
     pools.forEach((pool) => {
-      pool.AtokenAccountAmount = accountSet.get(pool.tokenAccountA)?.tokenAmount;
-      pool.BtokenAccountAmount = accountSet.get(pool.tokenAccountB)?.tokenAmount;
-      pool.lpSupply = accountSet.get(pool.lpMint)?.lpSupplyAmount;
-      pool.lpDecimals = accountSet.get(pool.lpMint)?.lpDecimal;
+      pool.AtokenAccountAmount = accountSet.get(pool.tokenAccountA.toBase58())?.tokenAmount;
+      pool.BtokenAccountAmount = accountSet.get(pool.tokenAccountB.toBase58())?.tokenAmount;
+      pool.lpSupply = accountSet.get(pool.lpMint.toBase58())?.lpSupplyAmount;
+      pool.lpDecimals = accountSet.get(pool.lpMint.toBase58())?.lpDecimal;
     });
 
     return pools;
