@@ -1,4 +1,5 @@
 import { PublicKey, Connection } from "@solana/web3.js";
+import { IServicesTokenInfo } from "../src";
 import * as tulip from "../src/tulip";
 import { getTokenList } from "../src/utils";
 
@@ -7,10 +8,10 @@ describe("Tulip", () => {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
   // });
-  const connection = new Connection("https://solana-api.tt-prod.net", {
-    commitment: "confirmed",
-    confirmTransactionInitialTimeout: 180 * 1000,
-  });
+  // const connection = new Connection("https://solana-api.tt-prod.net", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
   // const connection = new Connection("https:////api.mainnet-beta.solana.com", {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
@@ -20,10 +21,10 @@ describe("Tulip", () => {
   //   confirmTransactionInitialTimeout: 180 * 1000,
   //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   // });
-  // const connection = new Connection("https://ssc-dao.genesysgo.net", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  // });
+  const connection = new Connection("https://cache-rpc.dappio.xyz/", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
+  });
 
   const solReserveId = new PublicKey("8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36");
   const userKey = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
@@ -35,11 +36,29 @@ describe("Tulip", () => {
   it(" Can get all reserveWrappers", async () => {
     const tokenList = await getTokenList();
     const wrappers = (await tulip.infos.getAllReserveWrappers(connection)) as tulip.ReserveInfoWrapper[];
-    const mints = await Promise.all(wrappers.map(async (w) => await w.reserveInfo.liquidity.mintPubkey.toBase58()));
-    console.log(`Fetched ${wrappers.length} reserveInfoWrapper`);
-    console.log(
-      `All pools' symbol:\n ${mints.map((m) => tokenList.find((t) => t.mint === m)?.symbol).filter((s) => s)}`
-    );
+    const mintMap = new Map<string, tulip.ReserveInfoWrapper>();
+    const symbolMap = new Map<string, IServicesTokenInfo>();
+    wrappers.forEach((r, i) => {
+      const mint = r.reserveInfo.liquidity.mintPubkey.toBase58();
+      const found = mintMap.get(mint);
+      if (!found) {
+        mintMap.set(mint, r);
+        const token = tokenList.find((t) => t.mint === mint);
+        if (token) {
+          symbolMap.set(mint, token);
+          console.log(`\n#${i + 1} ${token.symbol}\nreserveId: ${r.reserveInfo.reserveId.toBase58()}`);
+          console.log("total supply:", Number(r.totalSupply()) / 10 ** token.decimals);
+          console.log("supplyAPY:", r.supplyApy());
+        }
+      } else {
+        console.log(
+          "filter out:",
+          found.reserveInfo.liquidity.availableAmount.lt(r.reserveInfo.liquidity.availableAmount)
+            ? found.reserveInfo.reserveId.toBase58()
+            : r.reserveInfo.reserveId.toBase58()
+        );
+      }
+    });
   });
   it(" Can get reserve", async () => {
     const reserve = (await tulip.infos.getReserve(connection, solReserveId)) as tulip.ReserveInfo;
