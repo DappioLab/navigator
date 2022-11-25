@@ -38,6 +38,17 @@ infos = class InstanceTulip {
       "Hp1koDBynZqZ8b2BQc7uNSMfHprkSwrEVqbJhkrRzWkQ", // deprecated SOL
       "EffQjqa2vWm5JMPyCrRJSDGYGEHTuQWmEz8VJSYGRCBL", // deprecated ETH
       "bB1n11FnWo7kNYFJog6CJwMCgsg7zUZeNvH9cZgfu9D", // deprecated sRLY
+      "HpYGGceBPSWhemfsUtdAXjDJpTiWa6MppMr8LaCfkwyX", // STEP
+      "HJDm6bso3CXHjUZRLRnV3VLupgeNbeYD4SGXEiaqrDEh", // STARS
+      "FEDEBKAtZzod5oXv1UkSzEeDZGsFe3DK9Wq23o6B4QVN", // SUSHI
+      "F9pwMLPQy1MJv14EE3XWdncUaJbPZdaqgfuHmfwxcWzc", // ZBC
+      "F3y6c19hcn91RRkqZc6BN6d2B5F9etkNks9BzUxvqc2M", // UNI
+      "BAkQnFTVBHE9XGo7rEidRMEhrFyXXxKPchW2KXtkPKzG", // ROPE
+      "9wFUsWXt9vc69mU1jcjgPziLSYy6dLu7Dy9idNjo33vy", // MER
+      "6sJRzk3tfgn8Ud41YhJaDNyaDe9WwuhNrEm3SVZUJQq3", // HAWK
+      "2vzY9tJNqutsGnUwPmka3LmAEjDXJ2qKeV9fAztD7Sbo", // DYDX
+      "5BZgs8KZ79e12GPse8qDarUvN5bS1R4krRqAGqpbdcFd", // SLC
+      "9nsisj22Kw8bQaAv1wAVm6AgH4rmRc1zAeCQVHAuz5GZ", // wUST_v1
     ];
     const deprecatedMap = new Map<string, boolean>();
     deprecatedReserveId.forEach((id) => deprecatedMap.set(id, true));
@@ -332,6 +343,57 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
     const authority = PublicKey.findProgramAddressSync([marketId.toBuffer()], TULIP_PROGRAM_ID)[0];
 
     return authority;
+  }
+
+  supplyApy(): number {
+    const WAD = new BN(10).pow(new BN(18));
+    const availableAmount = this.reserveInfo.liquidity.availableAmount;
+    const platformAmount = this.reserveInfo.liquidity.platformAmountWads.div(WAD);
+    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmount.div(WAD);
+    const totalSupply = availableAmount.add(borrowedAmount).sub(platformAmount);
+    if (borrowedAmount.gt(totalSupply)) {
+      borrowedAmount = totalSupply;
+    }
+
+    const utilizationRatio = Number(borrowedAmount) / Number(totalSupply);
+    const optimalUtilization = Number(this.reserveInfo.config.optimalUtilizationRate) / 100;
+    const degenUtilization = Number(this.reserveInfo.config.degenUtilizationRate) / 100;
+    const minBorrowRate = Number(this.reserveInfo.config.minBorrowRate) / 100;
+    const optimalBorrowRate = Number(this.reserveInfo.config.optimalBorrowRate) / 100;
+    const degenBorrowRate = Number(this.reserveInfo.config.degenBorrowRate) / 100;
+    const maxBorrowRate = Number(this.reserveInfo.config.maxBorrowRate) / 100;
+
+    let borrowAPR = 0;
+    if (utilizationRatio <= optimalUtilization) {
+      const normalizedFactor = utilizationRatio / optimalUtilization;
+      borrowAPR = normalizedFactor * (optimalBorrowRate - minBorrowRate) + minBorrowRate;
+    } else if (utilizationRatio > optimalUtilization && utilizationRatio <= degenUtilization) {
+      const normalizedFactor = (utilizationRatio - optimalUtilization) / (degenUtilization - optimalUtilization);
+
+      borrowAPR = normalizedFactor * (degenBorrowRate - optimalBorrowRate) + optimalBorrowRate;
+    } else if (utilizationRatio > degenUtilization) {
+      const normalizedFactor = (utilizationRatio - degenUtilization) / (1 - degenUtilization);
+
+      borrowAPR = normalizedFactor * (maxBorrowRate - degenBorrowRate) + degenBorrowRate;
+    }
+
+    const dailyBorrowAPR = borrowAPR / 365;
+    const dailyLendAPR = dailyBorrowAPR * utilizationRatio * 100;
+    const DAILY_COMPOUNDING_CYCLES = (24 * 60) / 10;
+    const YEARLY_COMPOUNDING_CYCLES = DAILY_COMPOUNDING_CYCLES * 365;
+    const periodicRate = dailyLendAPR / DAILY_COMPOUNDING_CYCLES;
+
+    const supplyAPY = 100 * (Math.pow(1 + periodicRate / 100, YEARLY_COMPOUNDING_CYCLES) - 1);
+
+    return supplyAPY;
+  }
+
+  totalSupply(): BN {
+    const WAD = new BN(10).pow(new BN(18));
+    const availableAmount = this.reserveInfo.liquidity.availableAmount;
+    const platformAmount = this.reserveInfo.liquidity.platformAmountWads.div(WAD);
+    let borrowedAmount = this.reserveInfo.liquidity.borrowedAmount.div(WAD);
+    return availableAmount.add(borrowedAmount).sub(platformAmount);
   }
 }
 
