@@ -7,10 +7,10 @@ describe("Tulip", () => {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
   // });
-  const connection = new Connection("https://solana-api.tt-prod.net", {
-    commitment: "confirmed",
-    confirmTransactionInitialTimeout: 180 * 1000,
-  });
+  // const connection = new Connection("https://solana-api.tt-prod.net", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
   // const connection = new Connection("https:////api.mainnet-beta.solana.com", {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
@@ -20,10 +20,10 @@ describe("Tulip", () => {
   //   confirmTransactionInitialTimeout: 180 * 1000,
   //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   // });
-  // const connection = new Connection("https://ssc-dao.genesysgo.net", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  // });
+  const connection = new Connection("https://cache-rpc.dappio.xyz/", {
+    commitment: "confirmed",
+    confirmTransactionInitialTimeout: 180 * 1000,
+  });
 
   const solReserveId = new PublicKey("8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36");
   const userKey = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
@@ -35,11 +35,27 @@ describe("Tulip", () => {
   it(" Can get all reserveWrappers", async () => {
     const tokenList = await getTokenList();
     const wrappers = (await tulip.infos.getAllReserveWrappers(connection)) as tulip.ReserveInfoWrapper[];
+    const mintMap = new Map<string, tulip.ReserveInfoWrapper>();
+    wrappers.forEach((r) => {
+      const found = mintMap.get(r.reserveInfo.liquidity.mintPubkey.toBase58());
+      if (!found) {
+        mintMap.set(r.reserveInfo.liquidity.mintPubkey.toBase58(), r);
+      } else {
+        console.log("mint:", r.reserveInfo.liquidity.mintPubkey.toBase58());
+        console.log(found);
+        console.log(r);
+        console.log(
+          "filter out:",
+          found.reserveInfo.liquidity.availableAmount.lt(r.reserveInfo.liquidity.availableAmount)
+            ? found.reserveInfo.reserveId.toBase58()
+            : r.reserveInfo.reserveId.toBase58()
+        );
+      }
+    });
     const mints = await Promise.all(wrappers.map(async (w) => await w.reserveInfo.liquidity.mintPubkey.toBase58()));
     console.log(`Fetched ${wrappers.length} reserveInfoWrapper`);
-    console.log(
-      `All pools' symbol:\n ${mints.map((m) => tokenList.find((t) => t.mint === m)?.symbol).filter((s) => s)}`
-    );
+    const reserves = mints.map((m) => tokenList.find((t) => t.mint === m)?.symbol).filter((s) => s);
+    console.log(`${reserves.length} reserves are valid.\nAll reserves' symbol:\n ${reserves}`);
   });
   it(" Can get reserve", async () => {
     const reserve = (await tulip.infos.getReserve(connection, solReserveId)) as tulip.ReserveInfo;
