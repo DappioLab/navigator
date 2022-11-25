@@ -1,4 +1,5 @@
 import { PublicKey, Connection } from "@solana/web3.js";
+import { IServicesTokenInfo } from "../src";
 import * as tulip from "../src/tulip";
 import { getTokenList } from "../src/utils";
 
@@ -36,14 +37,20 @@ describe("Tulip", () => {
     const tokenList = await getTokenList();
     const wrappers = (await tulip.infos.getAllReserveWrappers(connection)) as tulip.ReserveInfoWrapper[];
     const mintMap = new Map<string, tulip.ReserveInfoWrapper>();
-    wrappers.forEach((r) => {
-      const found = mintMap.get(r.reserveInfo.liquidity.mintPubkey.toBase58());
+    const symbolMap = new Map<string, IServicesTokenInfo>();
+    wrappers.forEach((r, i) => {
+      const mint = r.reserveInfo.liquidity.mintPubkey.toBase58();
+      const found = mintMap.get(mint);
       if (!found) {
-        mintMap.set(r.reserveInfo.liquidity.mintPubkey.toBase58(), r);
+        mintMap.set(mint, r);
+        const token = tokenList.find((t) => t.mint === mint);
+        if (token) {
+          symbolMap.set(mint, token);
+          console.log(`\n#${i + 1} ${token.symbol}\nreserveId: ${r.reserveInfo.reserveId.toBase58()}`);
+          console.log("total supply:", Number(r.totalSupply()) / 10 ** token.decimals);
+          console.log("supplyAPY:", r.supplyApy());
+        }
       } else {
-        console.log("mint:", r.reserveInfo.liquidity.mintPubkey.toBase58());
-        console.log(found);
-        console.log(r);
         console.log(
           "filter out:",
           found.reserveInfo.liquidity.availableAmount.lt(r.reserveInfo.liquidity.availableAmount)
@@ -52,10 +59,6 @@ describe("Tulip", () => {
         );
       }
     });
-    const mints = await Promise.all(wrappers.map(async (w) => await w.reserveInfo.liquidity.mintPubkey.toBase58()));
-    console.log(`Fetched ${wrappers.length} reserveInfoWrapper`);
-    const reserves = mints.map((m) => tokenList.find((t) => t.mint === m)?.symbol).filter((s) => s);
-    console.log(`${reserves.length} reserves are valid.\nAll reserves' symbol:\n ${reserves}`);
   });
   it(" Can get reserve", async () => {
     const reserve = (await tulip.infos.getReserve(connection, solReserveId)) as tulip.ReserveInfo;
