@@ -34,7 +34,18 @@ infos = class InstanceTulip {
     const config: GetProgramAccountsConfig = { filters: filters };
     const reserveAccounts = paginate(await connection.getProgramAccounts(TULIP_PROGRAM_ID, config), page);
 
-    const reserves = reserveAccounts.map((account) => this.parseReserve(account.account!.data, account.pubkey));
+    const deprecatedReserveId = [
+      "Hp1koDBynZqZ8b2BQc7uNSMfHprkSwrEVqbJhkrRzWkQ", // deprecated SOL
+      "EffQjqa2vWm5JMPyCrRJSDGYGEHTuQWmEz8VJSYGRCBL", // deprecated ETH
+      "bB1n11FnWo7kNYFJog6CJwMCgsg7zUZeNvH9cZgfu9D", // deprecated sRLY
+    ];
+    const deprecatedMap = new Map<string, boolean>();
+    deprecatedReserveId.forEach((id) => deprecatedMap.set(id, true));
+
+    const reserves = reserveAccounts
+      .map((account) => this.parseReserve(account.account!.data, account.pubkey))
+      .filter((r) => Number(r.version) === 1 && !deprecatedMap.get(r.reserveId.toBase58()));
+
     return reserves;
   }
 
