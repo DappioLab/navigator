@@ -195,11 +195,9 @@ infos = class InstanceTulip {
         parseVault = this._parseRaydiumVault;
         break;
       case ORCA_VAULT_LAYOUT_SPAN:
-        console.log("orca vault");
         parseVault = this._parseOrcaVault;
         break;
       case ORCA_DD_VAULT_LAYOUT_SPAN:
-        console.log("orca dd vault");
         parseVault = this._parseOrcaDDVault;
         break;
       case QUARRY_VAULT_LAYOUT_SPAN:
@@ -370,7 +368,7 @@ infos = class InstanceTulip {
     };
   }
 
-  private static _parseOrcaVault(data: any, vaultId: PublicKey): types.OrcaVault {
+  private static _parseOrcaVault(data: any, vaultId: PublicKey): types.OrcaVaultInfo {
     const decodeData = ORCA_VAULT_LAYOUT.decode(data);
     const { base, farmData } = decodeData;
 
@@ -384,7 +382,7 @@ infos = class InstanceTulip {
     };
   }
 
-  private static _parseOrcaDDVault(data: any, vaultId: PublicKey): types.OrcaDDVault {
+  private static _parseOrcaDDVault(data: any, vaultId: PublicKey): types.OrcaDDVaultInfo {
     const decodeData = ORCA_DD_VAULT_LAYOUT.decode(data);
     const {
       base,
