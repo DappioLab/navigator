@@ -84,7 +84,7 @@ export interface RaydiumVaultInfo extends VaultInfo {
   serumMarket: PublicKey;
 }
 
-export interface OrcaVault extends VaultInfo {
+export interface OrcaVaultInfo extends VaultInfo {
   farmData: {
     userFarmAddr: PublicKey;
     userFarmNonce: BN;
@@ -107,7 +107,7 @@ export interface OrcaVault extends VaultInfo {
     swapMarkets: PublicKey[];
   };
 }
-export interface OrcaDDVault extends VaultInfo {
+export interface OrcaDDVaultInfo extends VaultInfo {
   farmData: {
     userFarmAddr: PublicKey;
     userFarmNonce: BN;
