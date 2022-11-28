@@ -379,6 +379,7 @@ infos = class InstanceTulip {
       shareMint: base.sharesMint,
       base,
       farmData,
+      feeCollectorTokenAccount: new PublicKey(vaultAccount?.orca?.farm_data.fee_collector_token_account!),
     };
   }
 
@@ -408,6 +409,10 @@ infos = class InstanceTulip {
       ddConfigured,
       ddWithdrawQueue,
       ddWithdrawQueueNonce,
+      farmFeeCollectorTokenAccount: new PublicKey(vaultAccount?.orca?.farm_data.fee_collector_token_account!),
+      ddFeeCollectorTokenAccount: new PublicKey(
+        vaultAccount?.orca?.dd_farm_data?.config_data.fee_collector_token_account!
+      ),
     };
   }
 
@@ -447,6 +452,7 @@ infos = class InstanceTulip {
       configData,
       configDataInitialized,
       extraDataAccount,
+      feeDestination: new PublicKey(vaultAccount?.quarry?.sunny_config.withdraw_fee_destination!),
     };
   }
 
@@ -454,7 +460,6 @@ infos = class InstanceTulip {
     const decodeData = ATRIX_VAULT_LAYOUT.decode(data);
     const { base, atrixFarmAccount, vaultStakerAccount, vaultHarvesterAccount, dualCrop } = decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
     return {
       vaultId,
       shareMint: base.sharesMint,
@@ -470,7 +475,6 @@ infos = class InstanceTulip {
     const decodeData = LENDING_OPTIMIZER_VAULT_LAYOUT.decode(data);
     const { base, currentFarmProgram, currentPlatformInformation, currentPlatformCount, lastRebaseSlot } = decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
     return {
       vaultId,
       shareMint: base.sharesMint,
@@ -487,7 +491,6 @@ infos = class InstanceTulip {
     const { base, lastRebaseSlot, standaloneVaults, targetVault, stateTransitionAccount, minimumRebalanceAmount } =
       decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
     return {
       vaultId,
       shareMint: base.sharesMint,

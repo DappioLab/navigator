@@ -106,6 +106,7 @@ export interface OrcaVaultInfo extends VaultInfo {
     tokenBMint: PublicKey;
     swapMarkets: PublicKey[];
   };
+  feeCollectorTokenAccount: PublicKey;
 }
 export interface OrcaDDVaultInfo extends VaultInfo {
   farmData: {
@@ -155,6 +156,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
   ddConfigured: BN;
   ddWithdrawQueue: PublicKey;
   ddWithdrawQueueNonce: BN;
+  farmFeeCollectorTokenAccount: PublicKey;
+  ddFeeCollectorTokenAccount: PublicKey;
 }
 
 export interface SaberVaultInfo extends VaultInfo {
@@ -170,6 +173,7 @@ export interface SaberVaultInfo extends VaultInfo {
   configData: PublicKey;
   configDataInitialized: BN;
   extraDataAccount: PublicKey;
+  feeDestination: PublicKey;
 }
 
 export interface AtrixVaultInfo extends VaultInfo {
