@@ -2,7 +2,7 @@ import { getMint } from "@solana/spl-token-v2";
 import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
 import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
-import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
+import { configV2, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import {
   ATRIX_VAULT_LAYOUT,
   DEPOSITOR_LAYOUT,
@@ -331,9 +331,7 @@ infos = class InstanceTulip {
       serumMarket,
     } = decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find(
-      (account) => account.raydium?.account == vaultId.toString()
-    );
+    const config = configV2.vaults.accounts.find((account) => account.raydium?.account == vaultId.toString());
 
     return {
       vaultId,
@@ -355,8 +353,8 @@ infos = class InstanceTulip {
       poolAuthority: raydiumPoolAuthority,
       poolRewardATokenAccount: raydiumPoolRewardATokenAccount,
       poolRewardBTokenAccount: raydiumPoolRewardBTokenAccount,
-      feeCollectorRewardATokenAccount: new PublicKey(vaultAccount?.raydium?.fee_collector_reward_a_token_account!),
-      feeCollectorRewardBTokenAccount: new PublicKey(vaultAccount?.raydium?.fee_collector_reward_b_token_account!),
+      feeCollectorRewardATokenAccount: new PublicKey(config?.raydium?.fee_collector_reward_a_token_account!),
+      feeCollectorRewardBTokenAccount: new PublicKey(config?.raydium?.fee_collector_reward_b_token_account!),
       dualRewards,
       vaultRewardATokenAccount,
       vaultRewardBTokenAccount,
@@ -372,14 +370,14 @@ infos = class InstanceTulip {
     const decodeData = ORCA_VAULT_LAYOUT.decode(data);
     const { base, farmData } = decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
+    const config = configV2.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
 
     return {
       vaultId,
       shareMint: base.sharesMint,
       base,
       farmData,
-      feeCollectorTokenAccount: new PublicKey(vaultAccount?.orca?.farm_data.fee_collector_token_account!),
+      feeCollectorTokenAccount: new PublicKey(config?.orca?.farm_data.fee_collector_token_account!),
     };
   }
 
@@ -396,7 +394,7 @@ infos = class InstanceTulip {
       ddWithdrawQueueNonce,
     } = decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
+    const config = configV2.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
 
     return {
       vaultId,
@@ -409,10 +407,8 @@ infos = class InstanceTulip {
       ddConfigured,
       ddWithdrawQueue,
       ddWithdrawQueueNonce,
-      farmFeeCollectorTokenAccount: new PublicKey(vaultAccount?.orca?.farm_data.fee_collector_token_account!),
-      ddFeeCollectorTokenAccount: new PublicKey(
-        vaultAccount?.orca?.dd_farm_data?.config_data.fee_collector_token_account!
-      ),
+      farmFeeCollectorTokenAccount: new PublicKey(config?.orca?.farm_data.fee_collector_token_account!),
+      ddFeeCollectorTokenAccount: new PublicKey(config?.orca?.dd_farm_data?.config_data.fee_collector_token_account!),
     };
   }
 
@@ -435,7 +431,7 @@ infos = class InstanceTulip {
     } = decodeData;
 
     const quarryVariant = Number(variant) < 3 ? Number(variant) : types.QuarryVariant.UNKNOWN;
-    const vaultAccount = vaultV2Config.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
+    const config = configV2.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
     return {
       vaultId,
       shareMint: base.sharesMint,
@@ -452,7 +448,7 @@ infos = class InstanceTulip {
       configData,
       configDataInitialized,
       extraDataAccount,
-      feeDestination: new PublicKey(vaultAccount?.quarry?.sunny_config.withdraw_fee_destination!),
+      feeDestination: new PublicKey(config?.quarry?.sunny_config.withdraw_fee_destination!),
     };
   }
 
@@ -504,7 +500,7 @@ infos = class InstanceTulip {
   }
 
   private static _isAllowedId(id: PublicKey) {
-    return !!vaultV2Config.vaults.accounts.find(
+    return !!configV2.vaults.accounts.find(
       (account) =>
         account.multi_deposit_optimizer?.account == id.toString() ||
         account.lending_optimizer?.account == id.toString() ||

@@ -1,2 +1,2 @@
 export * from "./program";
-export * from "./vault";
+export * from "./config";

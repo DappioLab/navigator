@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 
-export const vaultV2Config = {
+export const configV2 = {
   analytics: {
     api_endpoint: "",
     interest_rates: {
