@@ -45,9 +45,9 @@ export interface Base {
   configuredAlignment: BN[];
   pendingFees: BN;
   totalDepositedBalanceCap: BN;
-  realizedYield: {
-    gainPerSecond: BN;
-    apr: BN;
+  testData: {
+    a: BN;
+    b: BN;
   };
 }
 
