@@ -87,7 +87,7 @@ export const VAULT_BASE_LAYOUT = struct(
     array(u8(), 7, "configuredAlignment"),
     u64("pendingFees"),
     u64("totalDepositedBalanceCap"),
-    struct([u128("gainPerSecond"), u128("apr"), blob(32, "buffer")], "realizedYield"),
+    struct([u128("a"), u128("b"), blob(32, "buffer")], "testData"),
     array(u64(), 4, "buffer"),
   ],
   "base"
