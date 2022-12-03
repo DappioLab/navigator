@@ -160,29 +160,6 @@ export interface OrcaDDVaultInfo extends VaultInfo {
   ddFeeCollectorTokenAccount: PublicKey;
 }
 
-export interface SaberVaultInfo extends VaultInfo {
-  miner: PublicKey;
-  minerTokenAccount: PublicKey;
-  mintWrapper: PublicKey;
-  minter: PublicKey;
-  quarry: PublicKey;
-  rewarder: PublicKey;
-  rewardTokenAccount: PublicKey;
-  swapMarkets: PublicKey[];
-  variant: QuarryVariant;
-  configData: PublicKey;
-  configDataInitialized: BN;
-  extraDataAccount: PublicKey;
-  feeDestination: PublicKey;
-}
-
-export interface AtrixVaultInfo extends VaultInfo {
-  atrixFarmAccount: PublicKey;
-  vaultStakerAccount: PublicKey;
-  vaultHarvesterAccount: PublicKey;
-  dualCrop: BN;
-}
-
 export interface LendingOptimizerVaultInfo extends VaultInfo {
   currentFarmProgram: PublicKey;
   currentPlatformInformation: PublicKey;

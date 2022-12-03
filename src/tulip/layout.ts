@@ -166,35 +166,6 @@ export const ORCA_DD_VAULT_LAYOUT = struct([
   blob(35, "padding"),
 ]);
 
-export const QUARRY_VAULT_LAYOUT = struct([
-  u64("discriminator"),
-  VAULT_BASE_LAYOUT,
-  publicKey("miner"),
-  publicKey("minerTokenAccount"),
-  publicKey("mintWrapper"),
-  publicKey("minter"),
-  publicKey("quarry"),
-  publicKey("rewarder"),
-  publicKey("rewardTokenMint"),
-  publicKey("rewardTokenAccount"),
-  array(publicKey(), 3, "swapMarkets"),
-  u64("variant"),
-  publicKey("configData"),
-  u8("configDataInitialized"),
-  publicKey("extraDataAccount"),
-  blob(263, "padding"),
-]);
-
-export const ATRIX_VAULT_LAYOUT = struct([
-  u64("discriminator"),
-  VAULT_BASE_LAYOUT,
-  publicKey("atrixFarmAccount"),
-  publicKey("vaultStakerAccount"),
-  publicKey("vaultHarvesterAccount"),
-  u8("dualCrop"),
-  blob(519, "padding"),
-]);
-
 export const LENDING_OPTIMIZER_VAULT_LAYOUT = struct([
   u64("discriminator"),
   VAULT_BASE_LAYOUT,

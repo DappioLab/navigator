@@ -4,13 +4,11 @@ import BN from "bn.js";
 import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
 import { configV2, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import {
-  ATRIX_VAULT_LAYOUT,
   DEPOSITOR_LAYOUT,
   LENDING_OPTIMIZER_VAULT_LAYOUT,
   MULTI_DEPOSIT_OPTIMIZER_VAULT_LAYOUT,
   ORCA_DD_VAULT_LAYOUT,
   ORCA_VAULT_LAYOUT,
-  QUARRY_VAULT_LAYOUT,
   RAYDIUM_VAULT_LAYOUT,
   RESERVE_LAYOUT,
 } from "./layout";
@@ -121,18 +119,6 @@ infos = class InstanceTulip {
     const orcaDDFilters = [orcaDDSizeFilter];
     const orcaDDConfig: GetProgramAccountsConfig = { filters: orcaDDFilters };
 
-    const saberSizeFilter: DataSizeFilter = {
-      dataSize: QUARRY_VAULT_LAYOUT_SPAN,
-    };
-    const saberFilters = [saberSizeFilter];
-    const saberConfig: GetProgramAccountsConfig = { filters: saberFilters };
-
-    const atrixSizeFilter: DataSizeFilter = {
-      dataSize: ATRIX_VAULT_LAYOUT_SPAN,
-    };
-    const atrixFilters = [atrixSizeFilter];
-    const atrixConfig: GetProgramAccountsConfig = { filters: atrixFilters };
-
     const lendingOptimizerSizeFilter: DataSizeFilter = {
       dataSize: LENDING_OPTIMIZER_VAULT_LAYOUT_SPAN,
     };
@@ -148,8 +134,6 @@ infos = class InstanceTulip {
     const raydiumVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, raydiumConfig), page);
     const orcaVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, orcaConfig), page);
     const orcaDDVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, orcaDDConfig), page);
-    const saberVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, saberConfig), page);
-    const atrixVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, atrixConfig), page);
     const lendingOptimizerVaults = paginate(
       await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, lendingOptimizerConfig),
       page
@@ -162,8 +146,6 @@ infos = class InstanceTulip {
       ...raydiumVaults,
       ...orcaVaults,
       ...orcaDDVaults,
-      ...saberVaults,
-      ...atrixVaults,
       ...lendingOptimizerVaults,
       ...multiDepositOptimizerVaults,
     ];
@@ -199,12 +181,6 @@ infos = class InstanceTulip {
         break;
       case ORCA_DD_VAULT_LAYOUT_SPAN:
         parseVault = this._parseOrcaDDVault;
-        break;
-      case QUARRY_VAULT_LAYOUT_SPAN:
-        parseVault = this._parseSaberVault;
-        break;
-      case ATRIX_VAULT_LAYOUT_SPAN:
-        parseVault = this._parseAtrixVault;
         break;
       case LENDING_OPTIMIZER_VAULT_LAYOUT_SPAN:
         parseVault = this._parseLendingOptimizerVault;
@@ -412,61 +388,6 @@ infos = class InstanceTulip {
     };
   }
 
-  private static _parseSaberVault(data: any, vaultId: PublicKey): types.SaberVaultInfo {
-    const decodeData = QUARRY_VAULT_LAYOUT.decode(data);
-    const {
-      base,
-      miner,
-      minerTokenAccount,
-      mintWrapper,
-      minter,
-      quarry,
-      rewarder,
-      rewardTokenAccount,
-      swapMarkets,
-      variant,
-      configData,
-      configDataInitialized,
-      extraDataAccount,
-    } = decodeData;
-
-    const quarryVariant = Number(variant) < 3 ? Number(variant) : types.QuarryVariant.UNKNOWN;
-    const config = configV2.vaults.accounts.find((account) => account.orca?.account == vaultId.toString());
-    return {
-      vaultId,
-      shareMint: base.sharesMint,
-      base,
-      miner,
-      minerTokenAccount,
-      mintWrapper,
-      minter,
-      quarry,
-      rewarder,
-      rewardTokenAccount,
-      swapMarkets,
-      variant: quarryVariant,
-      configData,
-      configDataInitialized,
-      extraDataAccount,
-      feeDestination: new PublicKey(config?.quarry?.sunny_config.withdraw_fee_destination!),
-    };
-  }
-
-  private static _parseAtrixVault(data: any, vaultId: PublicKey): types.AtrixVaultInfo {
-    const decodeData = ATRIX_VAULT_LAYOUT.decode(data);
-    const { base, atrixFarmAccount, vaultStakerAccount, vaultHarvesterAccount, dualCrop } = decodeData;
-
-    return {
-      vaultId,
-      shareMint: base.sharesMint,
-      base,
-      atrixFarmAccount,
-      vaultStakerAccount,
-      vaultHarvesterAccount,
-      dualCrop,
-    };
-  }
-
   private static _parseLendingOptimizerVault(data: any, vaultId: PublicKey): types.LendingOptimizerVaultInfo {
     const decodeData = LENDING_OPTIMIZER_VAULT_LAYOUT.decode(data);
     const { base, currentFarmProgram, currentPlatformInformation, currentPlatformCount, lastRebaseSlot } = decodeData;
@@ -518,8 +439,6 @@ const RESERVE_LAYOUT_SPAN = 622;
 const RAYDIUM_VAULT_LAYOUT_SPAN = 1712;
 const ORCA_VAULT_LAYOUT_SPAN = 1376;
 const ORCA_DD_VAULT_LAYOUT_SPAN = 2016;
-const QUARRY_VAULT_LAYOUT_SPAN = 1256;
-const ATRIX_VAULT_LAYOUT_SPAN = 1184;
 const LENDING_OPTIMIZER_VAULT_LAYOUT_SPAN = 1648;
 const MULTI_DEPOSIT_OPTIMIZER_VAULT_LAYOUT_SPAN = 2072;
 const DEPOSITOR_LAYOUT_SPAN = 440;
