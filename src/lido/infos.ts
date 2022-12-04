@@ -6,7 +6,6 @@ import { IInstanceVault, IVaultInfoWrapper } from "../types";
 import { getMultipleAccounts } from "../utils";
 import { LIDO_ADDRESS, LIDO_PROGRAM_ID, ST_SOL_MINT_ADDRESS } from "./ids";
 import {
-  LIDO_LAYOUT_V1,
   LIDO_LAYOUT_V2,
   LIDO_VERSION_CHECK_LAYOUT,
   MAINTAINER_LIST_ACCOUNT_LAYOUT,
@@ -35,7 +34,7 @@ infos = class InstanceLido {
 
     let vault: types.VaultInfo = this.parseVault(vaultAccountInfo.data, vaultId);
 
-    // Fetch validators and maintainers if using Solido v2
+    // Fetch validators and maintainers
     // Both validatorList and maintainerList will always be present in Solido v2
     if (vault.validatorList && vault.maintainerList) {
       const [validator, maintainer] = await getMultipleAccounts(connection, [
@@ -55,74 +54,44 @@ infos = class InstanceLido {
 
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
     let vault: types.VaultInfo;
-    if (this._checkLidoV2(data)) {
-      const decodeData = LIDO_LAYOUT_V2.decode(data);
-      const {
-        lidoVersion,
-        manager,
-        stSolMint,
-        exchangeRate,
-        solReserveAuthorityBumpSeed,
-        stakeAuthorityBumpSeed,
-        mintAuthorityBumpSeed,
-        rewardDistribution,
-        feeRecipients,
-        metrics,
-        validatorList,
-        maintainerList,
-        maxCommissionPercentage,
-      } = decodeData;
-
-      vault = {
-        vaultId,
-        lidoVersion,
-        manager,
-        shareMint: stSolMint,
-        exchangeRate,
-        solReserveAuthorityBumpSeed,
-        stakeAuthorityBumpSeed,
-        mintAuthorityBumpSeed,
-        rewardDistribution,
-        feeRecipients,
-        metrics,
-        validatorList,
-        maintainerList,
-        maxCommissionPercentage,
-      };
-    } else {
-      const decodeData = LIDO_LAYOUT_V1.decode(data);
-      const {
-        lidoVersion,
-        manager,
-        stSolMint,
-        exchangeRate,
-        solReserveAuthorityBumpSeed,
-        stakeAuthorityBumpSeed,
-        mintAuthorityBumpSeed,
-        rewardsWithdrawAuthorityBumpSeed,
-        rewardDistribution,
-        feeRecipients,
-        metrics,
-        validators,
-        maintainers,
-      } = decodeData;
-      vault = {
-        vaultId,
-        lidoVersion,
-        manager,
-        shareMint: stSolMint,
-        exchangeRate,
-        solReserveAuthorityBumpSeed,
-        stakeAuthorityBumpSeed,
-        mintAuthorityBumpSeed,
-        rewardsWithdrawAuthorityBumpSeed,
-        rewardDistribution,
-        feeRecipients,
-        metrics,
-        validators,
-        maintainers,
-      };
+    // Guard clause to only accept v2 vault
+    if (!this._checkLidoV2(data)) {
+      throw Error("Error: Lido v1 is no longer supported");
     }
+
+    const decodeData = LIDO_LAYOUT_V2.decode(data);
+    const {
+      lidoVersion,
+      manager,
+      stSolMint,
+      exchangeRate,
+      solReserveAuthorityBumpSeed,
+      stakeAuthorityBumpSeed,
+      mintAuthorityBumpSeed,
+      rewardDistribution,
+      feeRecipients,
+      metrics,
+      validatorList,
+      maintainerList,
+      maxCommissionPercentage,
+    } = decodeData;
+
+    vault = {
+      vaultId,
+      lidoVersion,
+      manager,
+      shareMint: stSolMint,
+      exchangeRate,
+      solReserveAuthorityBumpSeed,
+      stakeAuthorityBumpSeed,
+      mintAuthorityBumpSeed,
+      rewardDistribution,
+      feeRecipients,
+      metrics,
+      validatorList,
+      maintainerList,
+      maxCommissionPercentage,
+    };
 
     // Ensure the mint matches
     if (!this._isAllowed(vault.shareMint)) {

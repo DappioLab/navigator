@@ -16,22 +16,6 @@ const METRICS_LAYOUT = struct(
 );
 
 /**
- * Layout of a single validator in Solido V1
- */
-const VALIDATOR_LAYOUT_V1 = struct(
-  [
-    u64("feeCredit"),
-    publicKey("feeAddress"),
-    struct([u64("begin"), u64("end")], "stakeSeeds"),
-    struct([u64("begin"), u64("end")], "unstakeSeeds"),
-    u64("stakeAccountsBalance"),
-    u64("unstakeAccountsBalance"),
-    u8("active"),
-  ],
-  "entry"
-);
-
-/**
  * Layout of a single validator in Solido V2
  */
 const VALIDATOR_LAYOUT_V2 = struct(
@@ -47,28 +31,7 @@ const VALIDATOR_LAYOUT_V2 = struct(
   "entry"
 );
 
-const VALIDATORS_ITEM_LAYOUT_V1 = struct([publicKey("pubkey"), VALIDATOR_LAYOUT_V1]);
-
 const MAINTAINERS_ITEM_LAYOUT = struct([publicKey("pubkey")]);
-
-export const LIDO_LAYOUT_V1 = struct([
-  u8("lidoVersion"),
-  publicKey("manager"),
-  publicKey("stSolMint"),
-  struct([u64("computedInEpoch"), u64("stSolSupply"), u64("solBalance")], "exchangeRate"),
-  u8("solReserveAuthorityBumpSeed"),
-  u8("stakeAuthorityBumpSeed"),
-  u8("mintAuthorityBumpSeed"),
-  u8("rewardsWithdrawAuthorityBumpSeed"),
-  struct(
-    [u32("treasuryFee"), u32("validationFee"), u32("developerFee"), u32("stSolAppreciation")],
-    "rewardDistribution"
-  ),
-  struct([publicKey("treasuryAccount"), publicKey("developerAccount")], "feeRecipients"),
-  METRICS_LAYOUT,
-  struct([vec(VALIDATORS_ITEM_LAYOUT_V1, "entries"), u32("maximumEntries")], "validators"),
-  struct([vec(MAINTAINERS_ITEM_LAYOUT, "entries"), u32("maximumEntries")], "maintainers"),
-]);
 
 export const LIDO_LAYOUT_V2 = struct([
   u8("accountType"),
