@@ -517,6 +517,8 @@ infos = class InstanceTulip {
             (amm) => amm.lp_token_mint === orcaVault.farmData.swapPoolMint.address.toBase58()
           )?.pool_fee_account!
         );
+        const config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaVault.vaultId.toBase58())?.orca!;
+        orcaVault.farmData.convertAuthority = new PublicKey(config.farm_data.convert_authority);
         fetchedVaults.push(orcaVault);
       } else if (vault.type == types.VaultType.OrcaDD) {
         // orca dd vault
@@ -534,6 +536,8 @@ infos = class InstanceTulip {
             (amm) => amm.lp_token_mint === orcaDDVault.farmData.swapPoolMint.address.toBase58()
           )?.pool_fee_account!
         );
+        const config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaDDVault.vaultId.toBase58())?.orca!;
+        orcaDDVault.farmData.convertAuthority = new PublicKey(config.farm_data.convert_authority);
 
         orcaDDVault.ddFarmData.poolSwapTokenA = tokenMap.get(orcaDDVault.ddFarmData.poolSwapTokenA.address.toBase58())!;
         orcaDDVault.ddFarmData.poolSwapTokenB = tokenMap.get(orcaDDVault.ddFarmData.poolSwapTokenB.address.toBase58())!;
@@ -548,6 +552,7 @@ infos = class InstanceTulip {
             (amm) => amm.lp_token_mint === orcaDDVault.ddFarmData.swapPoolMint.address.toBase58()
           )?.pool_fee_account!
         );
+        orcaDDVault.ddFarmData.convertAuthority = new PublicKey(config.dd_farm_data?.config_data?.convert_authority!);
         fetchedVaults.push(orcaDDVault);
       } else {
         fetchedVaults.push(vault);
