@@ -1,6 +1,7 @@
 export * from "./ids";
 export * from "./infos";
 
+import { Account, Mint } from "@solana/spl-token-v2";
 import { PublicKey } from "@solana/web3.js";
 import BN from "bn.js";
 import { IDepositorInfo, IReserveInfo, IVaultInfo } from "../types";
@@ -53,6 +54,7 @@ export interface Base {
 
 export interface VaultInfo extends IVaultInfo {
   base: Base;
+  type: VaultType;
 }
 
 export interface RaydiumVaultInfo extends VaultInfo {
@@ -63,15 +65,15 @@ export interface RaydiumVaultInfo extends VaultInfo {
   ammQuantitiesOrTargetOrders: PublicKey;
   stakeProgram: PublicKey;
   liquidityProgram: PublicKey;
-  coinTokenAccount: PublicKey;
-  pcTokenAccount: PublicKey;
+  coinTokenAccount: Account;
+  pcTokenAccount: Account;
   poolTempTokenAccount: PublicKey;
   poolLpTokenAccount: PublicKey;
   poolWithdrawQueue: PublicKey;
   poolId: PublicKey;
   poolAuthority: PublicKey;
-  poolRewardATokenAccount: PublicKey;
-  poolRewardBTokenAccount: PublicKey;
+  poolRewardATokenAccount: Account;
+  poolRewardBTokenAccount: Account;
   feeCollectorRewardATokenAccount: PublicKey;
   feeCollectorRewardBTokenAccount: PublicKey;
   dualRewards: BN;
@@ -90,8 +92,8 @@ export interface OrcaVaultInfo extends VaultInfo {
     userFarmNonce: BN;
     vaultSwapTokenA: PublicKey;
     vaultSwapTokenB: PublicKey;
-    poolSwapTokenA: PublicKey;
-    poolSwapTokenB: PublicKey;
+    poolSwapTokenA: Account;
+    poolSwapTokenB: Account;
     poolSwapAccount: PublicKey;
     vaultRewardTokenAccount: PublicKey;
     vaultFarmTokenAccount: PublicKey;
@@ -101,12 +103,13 @@ export interface OrcaVaultInfo extends VaultInfo {
     globalFarm: PublicKey;
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
-    swapPoolMint: PublicKey;
+    feeCollectorTokenAccount: PublicKey;
+    poolSwapAuthority: PublicKey;
+    swapPoolMint: Mint;
     tokenAMint: PublicKey;
     tokenBMint: PublicKey;
     swapMarkets: PublicKey[];
   };
-  feeCollectorTokenAccount: PublicKey;
 }
 export interface OrcaDDVaultInfo extends VaultInfo {
   farmData: {
@@ -114,8 +117,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     userFarmNonce: BN;
     vaultSwapTokenA: PublicKey;
     vaultSwapTokenB: PublicKey;
-    poolSwapTokenA: PublicKey;
-    poolSwapTokenB: PublicKey;
+    poolSwapTokenA: Account;
+    poolSwapTokenB: Account;
     poolSwapAccount: PublicKey;
     vaultRewardTokenAccount: PublicKey;
     vaultFarmTokenAccount: PublicKey;
@@ -125,7 +128,9 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     globalFarm: PublicKey;
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
-    swapPoolMint: PublicKey;
+    feeCollectorTokenAccount: PublicKey;
+    poolSwapAuthority: PublicKey;
+    swapPoolMint: Mint;
     tokenAMint: PublicKey;
     tokenBMint: PublicKey;
     swapMarkets: PublicKey[];
@@ -135,8 +140,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     userFarmNonce: BN;
     vaultSwapTokenA: PublicKey;
     vaultSwapTokenB: PublicKey;
-    poolSwapTokenA: PublicKey;
-    poolSwapTokenB: PublicKey;
+    poolSwapTokenA: Account;
+    poolSwapTokenB: Account;
     poolSwapAccount: PublicKey;
     vaultRewardTokenAccount: PublicKey;
     vaultFarmTokenAccount: PublicKey;
@@ -146,7 +151,9 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     globalFarm: PublicKey;
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
-    swapPoolMint: PublicKey;
+    feeCollectorTokenAccount: PublicKey;
+    poolSwapAuthority: PublicKey;
+    swapPoolMint: Mint;
     tokenAMint: PublicKey;
     tokenBMint: PublicKey;
     swapMarkets: PublicKey[];
@@ -156,31 +163,29 @@ export interface OrcaDDVaultInfo extends VaultInfo {
   ddConfigured: BN;
   ddWithdrawQueue: PublicKey;
   ddWithdrawQueueNonce: BN;
-  farmFeeCollectorTokenAccount: PublicKey;
-  ddFeeCollectorTokenAccount: PublicKey;
 }
 
-export interface LendingOptimizerVaultInfo extends VaultInfo {
-  currentFarmProgram: PublicKey;
-  currentPlatformInformation: PublicKey;
-  currentPlatformCount: PublicKey;
-  lastRebaseSlot: BN;
-}
+// export interface LendingOptimizerVaultInfo extends VaultInfo {
+//   currentFarmProgram: PublicKey;
+//   currentPlatformInformation: PublicKey;
+//   currentPlatformCount: PublicKey;
+//   lastRebaseSlot: BN;
+// }
 
-export interface MultiDepositOptimizerVaultInfo extends VaultInfo {
-  lastRebaseSlot: BN;
-  standaloneVaults: {
-    vaultAddress: PublicKey;
-    depositedBalance: BN;
-    programType: BN;
-    programAddress: PublicKey;
-    sharesMint: PublicKey;
-    sharesAccount: PublicKey;
-  }[];
-  targetVault: PublicKey;
-  stateTransitionAccount: PublicKey;
-  minimumRebalanceAmount: BN;
-}
+// export interface MultiDepositOptimizerVaultInfo extends VaultInfo {
+//   lastRebaseSlot: BN;
+//   standaloneVaults: {
+//     vaultAddress: PublicKey;
+//     depositedBalance: BN;
+//     programType: BN;
+//     programAddress: PublicKey;
+//     sharesMint: PublicKey;
+//     sharesAccount: PublicKey;
+//   }[];
+//   targetVault: PublicKey;
+//   stateTransitionAccount: PublicKey;
+//   minimumRebalanceAmount: BN;
+// }
 
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
@@ -241,9 +246,10 @@ export interface DepositorInfo extends IDepositorInfo {
   extraDataAccount: PublicKey;
 }
 
-export enum QuarryVariant {
-  Vanilla,
-  Saber,
-  Sunny,
-  UNKNOWN,
+export enum VaultType {
+  Raydium,
+  Orca,
+  OrcaDD,
+  LendingOptimizer,
+  MultiDepositOptimizer,
 }
