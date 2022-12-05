@@ -1,9 +1,23 @@
-import { Connection, GetProgramAccountsConfig, DataSizeFilter, PublicKey, MemcmpFilter } from "@solana/web3.js";
+import {
+  Connection,
+  GetProgramAccountsConfig,
+  DataSizeFilter,
+  PublicKey,
+  MemcmpFilter,
+  SystemProgram,
+} from "@solana/web3.js";
 import BN from "bn.js";
 import { utils } from "..";
 import { IInstanceVault, IVaultInfoWrapper, PageConfig } from "../types";
-import { VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
-import { EXTRA_VOLT_DATA_LAYOUT, ROUND_LAYOUT, USER_PENDING_LAYOUT, VOLT_VAULT_LAYOUT } from "./layouts";
+import { IS_STABLE, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
+import {
+  ENTROPY_METADATA_LAYOUT,
+  EPOCH_INFO_LAYOUT,
+  EXTRA_VOLT_DATA_LAYOUT,
+  ROUND_LAYOUT,
+  USER_PENDING_LAYOUT,
+  VOLT_VAULT_LAYOUT,
+} from "./layouts";
 
 import * as types from ".";
 import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
@@ -16,6 +30,8 @@ infos = class InstanceFriktion {
   static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
     let rounds = await this.getAllRoundSet(connection);
     let extraInfos = await this.getAllExtraDataSet(connection);
+    let entropyMetaDataSet = await this.getAllEntropyMetadataSet(connection);
+    let epochInfoSet = await this.getAllEpochInfoSet(connection);
     const sizeFilter: DataSizeFilter = {
       dataSize: VOLT_VAULT_LAYOUT.span,
     };
@@ -25,14 +41,21 @@ infos = class InstanceFriktion {
     return allVaultAccount.map((account) => {
       const vault = this.parseVault(account.account!.data, account.pubkey);
       const vaultWrapper = new VaultInfoWrapper(vault);
+      vault.epochInfos = [];
       for (let round = 1; round < Number(vault.roundNumber) + 1; round++) {
         let roundId = vaultWrapper.getRoundInfoAddress(new BN(round));
         let roundInfo = rounds.get(roundId.toString());
         if (roundInfo) {
           vault.roundInfos.push(roundInfo);
         }
+        let epochId = vaultWrapper.getEpochInfoAddress(new BN(round));
+        let epochInfo = epochInfoSet.get(epochId.toString());
+        if (epochInfo) {
+          vault.epochInfos.push(epochInfo);
+        }
       }
       vault.extraData = extraInfos.get(vaultWrapper.getExtraVoltDataAddress().toString()) as types.ExtraVaultInfo;
+      vault.extraData.entropyMetadataInfo = entropyMetaDataSet.get(vault.extraData.entropyMetadata.toString());
       return vault;
     });
   }
@@ -45,6 +68,7 @@ infos = class InstanceFriktion {
     const vaultAccount = await connection.getAccountInfo(vaultId);
     let rounds = await this.getAllRoundSet(connection);
     let extraInfos = await this.getAllExtraDataSet(connection);
+    let entropyMetaDataSet = await this.getAllEntropyMetadataSet(connection);
     if (!vaultAccount) {
       throw new Error("Vault account not found");
     }
@@ -58,6 +82,7 @@ infos = class InstanceFriktion {
       }
     }
     vault.extraData = extraInfos.get(vaultWrapper.getExtraVoltDataAddress().toString()) as types.ExtraVaultInfo;
+    vault.extraData.entropyMetadataInfo = entropyMetaDataSet.get(vault.extraData.entropyMetadata.toString());
     return vault;
   }
   static parseVault(data: Buffer, vaultId: PublicKey): types.VaultInfo {
@@ -176,6 +201,28 @@ infos = class InstanceFriktion {
       ])
     );
   }
+  static async getAllEntropyMetadataSet(connection: Connection) {
+    let memcmpFilter: MemcmpFilter = { memcmp: { offset: 0, bytes: "S4L1u3M2boH" } };
+    let config: GetProgramAccountsConfig = { filters: [memcmpFilter] };
+    let allExtraDataKeys = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
+    return new Map(
+      allExtraDataKeys.map((key) => [
+        key.pubkey.toString(),
+        { ...ENTROPY_METADATA_LAYOUT.decode(key.account.data) } as types.EntropyMetadata,
+      ])
+    );
+  }
+  static async getAllEpochInfoSet(connection: Connection) {
+    let memcmpFilter: MemcmpFilter = { memcmp: { offset: 0, bytes: "b5Wr6XPu32" } };
+    let config: GetProgramAccountsConfig = { filters: [memcmpFilter] };
+    let allExtraDataKeys = await connection.getProgramAccounts(VOLT_PROGRAM_ID, config);
+    return new Map(
+      allExtraDataKeys.map((key) => [
+        key.pubkey.toString(),
+        { ...EPOCH_INFO_LAYOUT.decode(key.account.data) } as types.EpochInfo,
+      ])
+    );
+  }
 };
 export class VaultInfoWrapper {
   constructor(public readonly vaultInfo: types.VaultInfo) {}
@@ -191,11 +238,17 @@ export class VaultInfoWrapper {
       voltProgramId
     )[0];
   }
+  getEntropyMetadataAddress(voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [this.vaultInfo.vaultId.toBuffer(), new Uint8Array(Buffer.from("entropyMetadata", "utf-8"))],
+      voltProgramId
+    )[0];
+  }
   getRoundInfoAddress(roundNumber: BN, voltProgramId: PublicKey = VOLT_PROGRAM_ID): PublicKey {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
-        roundNumber.toBuffer("le", 8),
+        roundNumber.toArrayLike(Buffer, "le", 8),
         new Uint8Array(Buffer.from("roundInfo", "utf-8")),
       ],
       voltProgramId
@@ -205,7 +258,7 @@ export class VaultInfoWrapper {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
-        roundNumber.toBuffer("le", 8),
+        roundNumber.toArrayLike(Buffer, "le", 8),
         new Uint8Array(Buffer.from("roundVoltTokens", "utf-8")),
       ],
       voltProgramId
@@ -215,7 +268,7 @@ export class VaultInfoWrapper {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
-        roundNumber.toBuffer("le", 8),
+        roundNumber.toArrayLike(Buffer, "le", 8),
         new Uint8Array(Buffer.from("roundUnderlyingTokens", "utf-8")),
       ],
       voltProgramId
@@ -225,7 +278,7 @@ export class VaultInfoWrapper {
     return PublicKey.findProgramAddressSync(
       [
         this.vaultInfo.vaultId.toBuffer(),
-        roundNumber.toBuffer("le", 8),
+        roundNumber.toArrayLike(Buffer, "le", 8),
         new Uint8Array(Buffer.from("epochInfo", "utf-8")),
       ],
       voltProgramId
@@ -233,5 +286,43 @@ export class VaultInfoWrapper {
   }
   async getFeeAccount(): Promise<PublicKey> {
     return getAssociatedTokenAddress(this.vaultInfo.vaultMint, VOLT_FEE_OWNER);
+  }
+  getTypes(): types.VaultType {
+    if (
+      this.vaultInfo.premiumPool.toString() !== SystemProgram.programId.toString() &&
+      this.vaultInfo.vaultType.toNumber() === 2
+    ) {
+      return types.VaultType.PrincipalProtection;
+    } else if (this.vaultInfo.premiumPool.toString() !== SystemProgram.programId.toString()) {
+      return IS_STABLE.has(this.vaultInfo.underlyingAssetMint.toString())
+        ? types.VaultType.ShortPuts
+        : types.VaultType.ShortCalls;
+    } else if (this.vaultInfo.premiumPool.toString() === SystemProgram.programId.toString()) {
+      if (this.vaultInfo.extraData.entropyMetadataInfo?.hedgeWithSpot) {
+        return types.VaultType.LongBasis;
+      }
+      return types.VaultType.ShortCrab;
+    } else {
+      throw new Error("Unknown vault type");
+    }
+  }
+  getAPR(): number {
+    let apr = 0;
+    let yieldSum = 0
+
+    if (this.vaultInfo.roundInfos.length == 0){
+      return apr;
+    }
+    this.vaultInfo.roundInfos.forEach((round,index)=>{
+      if (round.premiumFarmed.eqn(0)){
+        return false;
+      }
+      let yieldPercent = round.premiumFarmed.divn(10**3).toNumber() / round.underlyingFromPendingDeposits.add(round.underlyingPreEnter).divn(10**3).toNumber();
+      yieldSum += yieldPercent;
+    })
+    let epochLength = this.vaultInfo.expirationUnixTimestamp.toNumber() 
+    console.log(epochLength)
+    apr = yieldSum * 52/ this.vaultInfo.roundInfos.length;
+    return apr;
   }
 }

@@ -11,7 +11,8 @@ describe("Friktion", () => {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
   // });
-  const connection = new Connection("https://solana-api.projectserum.com", {
+  const connection = new Connection("https://rpc.ankr.com/solana", {
+    wsEndpoint: "wss://solana-mainnet.g.alchemy.com/v2/LhVpGFciWuulV_aAmsr6HbBlddZVM2TX",
     commitment: "confirmed",
     confirmTransactionInitialTimeout: 180 * 1000,
   });
@@ -36,13 +37,20 @@ describe("Friktion", () => {
   // anchor.setProvider(provider);
 
   it("test", async () => {
+    //console.log(friktion.ENTROPY_METADATA_LAYOUT.decode(Buffer.alloc(1000)));
     let wallet = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
-    let vaults = await friktion.infos.getAllVaults(connection);
+    let vaults = (await friktion.infos.getAllVaults(connection)) as friktion.VaultInfo[];
+    vaults.forEach((v) => {
+      let wrapp = new friktion.VaultInfoWrapper(v);
+      if (v.roundInfos.length > 1) {
+        console.log("https://explorer.solana.com/address/" + wrapp.getEpochInfoAddress(new BN(1)));
+        console.log(v.epochInfos.length, v.roundInfos.length,v.roundNumber.toString());
+        console.log(wrapp.getAPR());
+      }
+    });
     let userDeposits = await friktion.infos.getAllDepositors(connection, wallet);
-    console.table(vaults, ["roundNumber", "roundInfos"]);
-    console.table(userDeposits, ["depositorId"]);
-    let withdrawer = await friktion.infos.getAllWithdrawers!(connection, wallet);
 
-    console.table(withdrawer, ["depositorId"]);
+    let withdrawer = await friktion.infos.getAllWithdrawers!(connection, wallet);
+    let addre = new friktion.VaultInfoWrapper(vaults[3]).getRoundInfoAddress(new BN(4));
   });
 });

@@ -4,6 +4,14 @@ export * from "./layouts";
 import { PublicKey } from "@solana/web3.js";
 import { IDepositorInfo, IVaultInfo, IWithdrawerInfo } from "../types";
 import BN from "bn.js";
+
+export enum VaultType {
+  LongBasis = "LongBasis",
+  ShortCrab = "ShortCrab",
+  PrincipalProtection = "PrincipalProtection",
+  ShortCalls = "ShortCalls",
+  ShortPuts = "ShortPuts",
+}
 export interface VaultInfo extends IVaultInfo {
   // vaultId
   admin: PublicKey;
@@ -60,6 +68,7 @@ export interface VaultInfo extends IVaultInfo {
   permissionedMarketPremiumPool: PublicKey;
   capacity: BN;
   roundInfos: RoundInfo[];
+  epochInfos: EpochInfo[];
   extraData: ExtraVaultInfo;
 }
 
@@ -124,6 +133,7 @@ export interface ExtraVaultInfo {
   doneRebalancingPowerPerp: boolean;
   isHedgingOn: boolean;
   haveTakenPerformanceFees: boolean;
+  entropyMetadataInfo?: EntropyMetadata;
 }
 
 export interface RoundInfo {
@@ -134,4 +144,39 @@ export interface RoundInfo {
   underlyingPreEnter: BN;
   underlyingPostSettle: BN;
   premiumFarmed: BN;
+}
+export interface EntropyMetadata {
+  targetHedgeRatio: number;
+  rebalancingLenience: number;
+  requiredBasisFromOracle: number;
+  spotOpenOrders: PublicKey;
+  targetCurrBasePosition: number;
+  targetCurrQuotePosition: number;
+  hedgeLenience: number;
+  hedgeWithSpot: boolean;
+}
+export interface EpochInfo {
+  vaultTokenPrice:number;
+  pctPnl:number;
+  epochNumber:BN;
+  underlyingPreEnter:BN;
+  underlyingPostSettle:BN;
+  voltTokenSupply:BN;
+  pnl:BN;
+  performanceFees:BN;
+  withdrawalFees:BN;
+  pendingDeposits:BN;
+  pendingWithdrawalsVoltTokens:BN;
+  pendingWithdrawals:BN;
+  canceledWithdrawals:BN;
+  canceledDeposits:BN;
+  totalWithdrawals:BN;
+  totalDeposits:BN;
+  instantDeposits:BN;
+  instantWithdrawals:BN;
+  mintedOptions:BN;
+  enterNumTimesCalled:BN;
+  startRoundTime:BN;
+  beginAuctionTime:BN;
+  endAuctionTime:BN;
 }
