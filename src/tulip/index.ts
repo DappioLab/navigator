@@ -104,6 +104,7 @@ export interface OrcaVaultInfo extends VaultInfo {
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
     feeCollectorTokenAccount: PublicKey;
+    swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
     tokenAMint: PublicKey;
@@ -129,6 +130,7 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
     feeCollectorTokenAccount: PublicKey;
+    swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
     tokenAMint: PublicKey;
@@ -152,6 +154,7 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
     feeCollectorTokenAccount: PublicKey;
+    swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
     tokenAMint: PublicKey;

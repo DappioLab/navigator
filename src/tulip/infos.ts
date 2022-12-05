@@ -359,6 +359,7 @@ infos = class InstanceTulip {
         poolSwapTokenB: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenB),
         swapPoolMint: InstanceTulip._defaultMint(farmData.swapPoolMint),
         feeCollectorTokenAccount: PublicKey.default,
+        swapPoolFeeTokenAccount: PublicKey.default,
       },
     };
   }
@@ -387,6 +388,7 @@ infos = class InstanceTulip {
         poolSwapTokenB: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenB),
         swapPoolMint: InstanceTulip._defaultMint(farmData.swapPoolMint),
         feeCollectorTokenAccount: PublicKey.default,
+        swapPoolFeeTokenAccount: PublicKey.default,
       },
       ddFarmData: {
         ...ddFarmData,
@@ -394,6 +396,7 @@ infos = class InstanceTulip {
         poolSwapTokenB: InstanceTulip._defaultTokenAccount(ddFarmData.poolSwapTokenB),
         swapPoolMint: InstanceTulip._defaultMint(ddFarmData.swapPoolMint),
         feeCollectorTokenAccount: PublicKey.default,
+        swapPoolFeeTokenAccount: PublicKey.default,
       },
       ddCompoundQueue,
       ddCompoundQueueNonce,
@@ -509,6 +512,11 @@ infos = class InstanceTulip {
           orcaVault.farmData.rewardTokenMint,
           orcaVault.base.fees.feeWallet
         );
+        orcaVault.farmData.swapPoolFeeTokenAccount = new PublicKey(
+          configV2.markets.orca.amms.find(
+            (amm) => amm.lp_token_mint === orcaVault.farmData.swapPoolMint.address.toBase58()
+          )?.pool_fee_account!
+        );
         fetchedVaults.push(orcaVault);
       } else if (vault.type == types.VaultType.OrcaDD) {
         // orca dd vault
@@ -521,6 +529,11 @@ infos = class InstanceTulip {
           orcaDDVault.farmData.rewardTokenMint,
           orcaDDVault.base.fees.feeWallet
         );
+        orcaDDVault.farmData.swapPoolFeeTokenAccount = new PublicKey(
+          configV2.markets.orca.amms.find(
+            (amm) => amm.lp_token_mint === orcaDDVault.farmData.swapPoolMint.address.toBase58()
+          )?.pool_fee_account!
+        );
 
         orcaDDVault.ddFarmData.poolSwapTokenA = tokenMap.get(orcaDDVault.ddFarmData.poolSwapTokenA.address.toBase58())!;
         orcaDDVault.ddFarmData.poolSwapTokenB = tokenMap.get(orcaDDVault.ddFarmData.poolSwapTokenB.address.toBase58())!;
@@ -529,6 +542,11 @@ infos = class InstanceTulip {
         orcaDDVault.ddFarmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
           orcaDDVault.ddFarmData.rewardTokenMint,
           orcaDDVault.base.fees.feeWallet
+        );
+        orcaDDVault.ddFarmData.swapPoolFeeTokenAccount = new PublicKey(
+          configV2.markets.orca.amms.find(
+            (amm) => amm.lp_token_mint === orcaDDVault.ddFarmData.swapPoolMint.address.toBase58()
+          )?.pool_fee_account!
         );
         fetchedVaults.push(orcaDDVault);
       } else {
