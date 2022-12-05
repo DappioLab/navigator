@@ -100,6 +100,7 @@ describe("Tulip", () => {
           logTokenAccount(orcaVault.farmData.poolSwapTokenB);
           console.log(" . fee collector:", orcaVault.farmData.feeCollectorTokenAccount.toBase58());
           console.log(" . swap pool fee:", orcaVault.farmData.swapPoolFeeTokenAccount.toBase58());
+          console.log(" . convert authority:", orcaVault.farmData.convertAuthority.toBase58());
           break;
         case tulip.VaultType.OrcaDD:
           const orcaDDVault = v.vaultInfo as tulip.OrcaDDVaultInfo;
@@ -111,6 +112,7 @@ describe("Tulip", () => {
           console.log(" . fee collector:", orcaDDVault.farmData.feeCollectorTokenAccount.toBase58());
           console.log(" . swap pool mint:", orcaDDVault.farmData.swapPoolMint.address.toBase58());
           console.log(" . swap pool fee:", orcaDDVault.farmData.swapPoolFeeTokenAccount.toBase58());
+          console.log(" . convert authority:", orcaDDVault.farmData.convertAuthority.toBase58());
           console.log(" . pool token A(dd):");
           logTokenAccount(orcaDDVault.ddFarmData.poolSwapTokenA);
           console.log(" . pool token B(dd):");
@@ -118,7 +120,7 @@ describe("Tulip", () => {
           console.log(" . fee collector(dd):", orcaDDVault.ddFarmData.feeCollectorTokenAccount.toBase58());
           console.log(" . swap pool mint:", orcaDDVault.farmData.swapPoolMint.address.toBase58());
           console.log(" . swap pool fee(dd):", orcaDDVault.ddFarmData.swapPoolFeeTokenAccount.toBase58());
-
+          console.log(" . convert authority(dd):", orcaDDVault.ddFarmData.convertAuthority.toBase58());
           break;
       }
     });

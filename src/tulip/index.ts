@@ -101,6 +101,7 @@ export interface OrcaVaultInfo extends VaultInfo {
     globalBaseTokenVault: PublicKey;
     globalRewardTokenVault: PublicKey;
     globalFarm: PublicKey;
+    convertAuthority: PublicKey;
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
     feeCollectorTokenAccount: PublicKey;
@@ -127,6 +128,7 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     globalBaseTokenVault: PublicKey;
     globalRewardTokenVault: PublicKey;
     globalFarm: PublicKey;
+    convertAuthority: PublicKey;
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
     feeCollectorTokenAccount: PublicKey;
@@ -151,6 +153,7 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     globalBaseTokenVault: PublicKey;
     globalRewardTokenVault: PublicKey;
     globalFarm: PublicKey;
+    convertAuthority: PublicKey;
     farmTokenMint: PublicKey;
     rewardTokenMint: PublicKey;
     feeCollectorTokenAccount: PublicKey;
