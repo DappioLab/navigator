@@ -23,7 +23,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">ReserveInfo</span></li></ul></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:132</li></ul></aside>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L175">tulip/index.ts:175</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -46,43 +46,114 @@
 <h3 class="tsd-anchor-link"><span>borrow<wbr/>Authorizer</span><a href="#borrowAuthorizer" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none" id="icon-anchor-a"></path><path d="M10 14a3.5 3.5 0 0 0 5 0l4 -4a3.5 3.5 0 0 0 -5 -5l-.5 .5" id="icon-anchor-b"></path><path d="M14 10a3.5 3.5 0 0 0 -5 0l-4 4a3.5 3.5 0 0 0 5 5l.5 -.5" id="icon-anchor-c"></path></svg></a></h3>
 <div class="tsd-signature">borrow<wbr/>Authorizer<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">PublicKey</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:136</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L182">tulip/index.ts:182</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="collateral" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>collateral</span><a href="#collateral" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
-<div class="tsd-signature">collateral<span class="tsd-signature-symbol">:</span> <a href="../modules/tulip.html" class="tsd-signature-type" data-tsd-kind="Namespace">tulip</a><span class="tsd-signature-symbol">.</span><a href="tulip.ReserveCollateral.html" class="tsd-signature-type" data-tsd-kind="Interface">ReserveCollateral</a></div><aside class="tsd-sources">
+<div class="tsd-signature">collateral<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span>mintTotalSupply<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>reserveTokenMint<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>supplyPubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-type-declaration">
+<h4>Type declaration</h4>
+<ul class="tsd-parameters">
+<li class="tsd-parameter">
+<h5>mint<wbr/>Total<wbr/>Supply<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>reserve<wbr/>Token<wbr/>Mint<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span></h5></li>
+<li class="tsd-parameter">
+<h5>supply<wbr/>Pubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span></h5></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:138</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L196">tulip/index.ts:196</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="config" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>config</span><a href="#config" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
-<div class="tsd-signature">config<span class="tsd-signature-symbol">:</span> <a href="../modules/tulip.html" class="tsd-signature-type" data-tsd-kind="Namespace">tulip</a><span class="tsd-signature-symbol">.</span><a href="tulip.ReserveConfig.html" class="tsd-signature-type" data-tsd-kind="Interface">ReserveConfig</a></div><aside class="tsd-sources">
+<div class="tsd-signature">config<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span>degenBorrowRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>degenUtilizationRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>fees<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>        </span>borrowFeeWad<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>        </span>flashLoanFeeWad<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>        </span>hostFeePercentage<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span><span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>liquidationBonus<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>liquidationThreshold<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>loanToValueRatio<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>maxBorrowRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>minBorrowRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>optimalBorrowRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>optimalUtilizationRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-type-declaration">
+<h4>Type declaration</h4>
+<ul class="tsd-parameters">
+<li class="tsd-parameter">
+<h5>degen<wbr/>Borrow<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>degen<wbr/>Utilization<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>fees<span class="tsd-signature-symbol">: </span><span class="tsd-signature-symbol">{ </span><br/><span>    </span>borrowFeeWad<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>flashLoanFeeWad<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>hostFeePercentage<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></h5>
+<ul class="tsd-parameters">
+<li class="tsd-parameter">
+<h5>borrow<wbr/>Fee<wbr/>Wad<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>flash<wbr/>Loan<wbr/>Fee<wbr/>Wad<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>host<wbr/>Fee<wbr/>Percentage<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li></ul></li>
+<li class="tsd-parameter">
+<h5>liquidation<wbr/>Bonus<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>liquidation<wbr/>Threshold<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>loan<wbr/>To<wbr/>Value<wbr/>Ratio<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>max<wbr/>Borrow<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>min<wbr/>Borrow<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>optimal<wbr/>Borrow<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>optimal<wbr/>Utilization<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:139</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L201">tulip/index.ts:201</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="lastUpdate" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>last<wbr/>Update</span><a href="#lastUpdate" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
-<div class="tsd-signature">last<wbr/>Update<span class="tsd-signature-symbol">:</span> <a href="../modules/tulip.html" class="tsd-signature-type" data-tsd-kind="Namespace">tulip</a><span class="tsd-signature-symbol">.</span><a href="tulip.LastUpdate.html" class="tsd-signature-type" data-tsd-kind="Interface">LastUpdate</a></div><aside class="tsd-sources">
+<div class="tsd-signature">last<wbr/>Update<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span>lastUpdatedSlot<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>stale<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-type-declaration">
+<h4>Type declaration</h4>
+<ul class="tsd-parameters">
+<li class="tsd-parameter">
+<h5>last<wbr/>Updated<wbr/>Slot<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>stale<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></h5></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:134</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L177">tulip/index.ts:177</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="lendingMarket" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>lending<wbr/>Market</span><a href="#lendingMarket" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">lending<wbr/>Market<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">PublicKey</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:135</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L181">tulip/index.ts:181</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="liquidity" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>liquidity</span><a href="#liquidity" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
-<div class="tsd-signature">liquidity<span class="tsd-signature-symbol">:</span> <a href="../modules/tulip.html" class="tsd-signature-type" data-tsd-kind="Namespace">tulip</a><span class="tsd-signature-symbol">.</span><a href="tulip.ReserveLiquidity.html" class="tsd-signature-type" data-tsd-kind="Interface">ReserveLiquidity</a></div><aside class="tsd-sources">
+<div class="tsd-signature">liquidity<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-symbol">{ </span><br/><span>    </span>availableAmount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>borrowedAmount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>cumulativeBorrowRate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>feeReceiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>marketPrice<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>mintDecimals<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>mintPubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>oraclePubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>platformAmountWads<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>platformFee<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span><span class="tsd-signature-symbol">; </span><br/><span>    </span>supplyPubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span><span class="tsd-signature-symbol">; </span><br/><span class="tsd-signature-symbol">}</span></div>
+<div class="tsd-type-declaration">
+<h4>Type declaration</h4>
+<ul class="tsd-parameters">
+<li class="tsd-parameter">
+<h5>available<wbr/>Amount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>borrowed<wbr/>Amount<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>cumulative<wbr/>Borrow<wbr/>Rate<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>fee<wbr/>Receiver<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span></h5></li>
+<li class="tsd-parameter">
+<h5>market<wbr/>Price<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>mint<wbr/>Decimals<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>mint<wbr/>Pubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span></h5></li>
+<li class="tsd-parameter">
+<h5>oracle<wbr/>Pubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span></h5></li>
+<li class="tsd-parameter">
+<h5>platform<wbr/>Amount<wbr/>Wads<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>platform<wbr/>Fee<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">BN</span></h5></li>
+<li class="tsd-parameter">
+<h5>supply<wbr/>Pubkey<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">PublicKey</span></h5></li></ul></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:137</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L183">tulip/index.ts:183</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface tsd-is-inherited"><a id="reserveId" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>reserve<wbr/>Id</span><a href="#reserveId" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">reserve<wbr/>Id<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">PublicKey</span></div><aside class="tsd-sources">
 <p>Inherited from <a href="IReserveInfo.html">IReserveInfo</a>.<a href="IReserveInfo.html#reserveId">reserveId</a></p>
 <ul>
-<li>Defined in types.ts:66</li></ul></aside></section>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/types.ts#L66">types.ts:66</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-interface"><a id="version" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>version</span><a href="#version" aria-label="Permalink" class="tsd-anchor-icon"><svg class="icon icon-tabler icon-tabler-link" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><use href="#icon-anchor-a"></use><use href="#icon-anchor-b"></use><use href="#icon-anchor-c"></use></svg></a></h3>
 <div class="tsd-signature">version<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">BN</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in tulip/index.ts:133</li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/DappioWonderland/navigator/blob/b3f9f9e/src/tulip/index.ts#L176">tulip/index.ts:176</a></li></ul></aside></section></section></div>
 <div class="col-4 col-menu menu-sticky-wrap menu-highlight">
 <div class="tsd-navigation settings">
 <details class="tsd-index-accordion"><summary class="tsd-accordion-summary">
