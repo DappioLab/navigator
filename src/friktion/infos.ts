@@ -9,7 +9,7 @@ import {
 import BN from "bn.js";
 import { utils } from "..";
 import { IInstanceVault, IVaultInfoWrapper, PageConfig } from "../types";
-import { IS_STABLE, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
+import { STABLE_VAULT_IDS, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
 import {
   ENTROPY_METADATA_LAYOUT,
   EPOCH_INFO_LAYOUT,
@@ -32,7 +32,7 @@ infos = class InstanceFriktion {
     connection: Connection,
     page?: PageConfig
   ): Promise<types.VaultInfo[]> {
-    let rounds = await this._getSnapshotSet(connection);
+    let rounds = await this._getAllRoundSet(connection);
     let extraInfos = await this._getAllExtraDataSet(connection);
     let entropyMetaDataSet = await this._getAllEntropyMetadataSet(connection);
     let epochInfoSet = await this._getAllEpochInfoSet(connection);
@@ -92,9 +92,10 @@ infos = class InstanceFriktion {
     vaultId: PublicKey
   ): Promise<types.VaultInfo> {
     const vaultAccount = await connection.getAccountInfo(vaultId);
-    let rounds = await this._getSnapshotSet(connection);
+    let rounds = await this._getAllRoundSet(connection);
     let extraInfos = await this._getAllExtraDataSet(connection);
     let entropyMetaDataSet = await this._getAllEntropyMetadataSet(connection);
+    let snapshot = await this._getSnapshotSet();
     if (!vaultAccount) {
       throw new Error("Vault account not found");
     }
@@ -426,7 +427,9 @@ export class VaultInfoWrapper {
       this.vaultInfo.premiumPool.toString() !==
       SystemProgram.programId.toString()
     ) {
-      return IS_STABLE.includes([this.vaultInfo.underlyingAssetMint.toString()])
+      return STABLE_VAULT_IDS.includes([
+        this.vaultInfo.underlyingAssetMint.toString(),
+      ])
         ? types.VaultType.ShortPuts
         : types.VaultType.ShortCalls;
     } else if (
@@ -442,47 +445,9 @@ export class VaultInfoWrapper {
     }
   }
   getAPR(): number {
-    if (this.vaultInfo.snapshotInfo) {
-      return this.vaultInfo.snapshotInfo.apr;
-    }
-    return 0;
-    /* let apr = 0;
-    let yieldSum = 0;
-    let vaultTime = 0;
-    if (this.vaultInfo.roundInfos.length == 0) {
-      return apr;
-    }
-    this.vaultInfo.roundInfos.forEach((round, index) => {
-      if (round.premiumFarmed.eqn(0)) {
-        return false;
-      }
-      if (this.vaultInfo.epochInfos[index].epochNumber.toNumber()) {
-        let time =
-          this.vaultInfo.epochInfos[index].endAuctionTime
-            .sub(this.vaultInfo.epochInfos[index].startRoundTime)
-            .toNumber() / 86400;
-        console.log(time);
-        vaultTime += time;
-        let yieldPercent =
-          round.premiumFarmed
-            .divn(10 ** 3)
-            .muln(time)
-            .toNumber() /
-          round.underlyingFromPendingDeposits
-            .add(round.underlyingPreEnter)
-            .divn(10 ** 3)
-            .toNumber();
-        yieldSum += yieldPercent;
-      }
-    });
-
-    apr = yieldSum / vaultTime;
-    return apr;*/
+    return this.vaultInfo.snapshotInfo ? this.vaultInfo.snapshotInfo.apr : 0;
   }
   getAPY(): number {
-    if (this.vaultInfo.snapshotInfo) {
-      return this.vaultInfo.snapshotInfo.apy;
-    }
-    return 0;
+    return this.vaultInfo.snapshotInfo ? this.vaultInfo.snapshotInfo.apy : 0;
   }
 }
