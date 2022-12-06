@@ -70,6 +70,7 @@ export interface VaultInfo extends IVaultInfo {
   roundInfos: RoundInfo[];
   epochInfos: EpochInfo[];
   extraData: ExtraVaultInfo;
+  snapshotInfo?: SnapshotInfo;
 }
 
 export interface DepositorInfo extends IDepositorInfo {
@@ -156,27 +157,38 @@ export interface EntropyMetadata {
   hedgeWithSpot: boolean;
 }
 export interface EpochInfo {
-  vaultTokenPrice:number;
-  pctPnl:number;
-  epochNumber:BN;
-  underlyingPreEnter:BN;
-  underlyingPostSettle:BN;
-  voltTokenSupply:BN;
-  pnl:BN;
-  performanceFees:BN;
-  withdrawalFees:BN;
-  pendingDeposits:BN;
-  pendingWithdrawalsVoltTokens:BN;
-  pendingWithdrawals:BN;
-  canceledWithdrawals:BN;
-  canceledDeposits:BN;
-  totalWithdrawals:BN;
-  totalDeposits:BN;
-  instantDeposits:BN;
-  instantWithdrawals:BN;
-  mintedOptions:BN;
-  enterNumTimesCalled:BN;
-  startRoundTime:BN;
-  beginAuctionTime:BN;
-  endAuctionTime:BN;
+  epochId: PublicKey;
+  vaultTokenPrice: number;
+  pctPnl: number;
+  epochNumber: BN;
+  underlyingPreEnter: BN;
+  underlyingPostSettle: BN;
+  voltTokenSupply: BN;
+  pnl: BN;
+  performanceFees: BN;
+  withdrawalFees: BN;
+  pendingDeposits: BN;
+  pendingWithdrawalsVoltTokens: BN;
+  pendingWithdrawals: BN;
+  canceledWithdrawals: BN;
+  canceledDeposits: BN;
+  totalWithdrawals: BN;
+  totalDeposits: BN;
+  instantDeposits: BN;
+  instantWithdrawals: BN;
+  mintedOptions: BN;
+  enterNumTimesCalled: BN;
+  startRoundTime: BN;
+  beginAuctionTime: BN;
+  endAuctionTime: BN;
+}
+
+export interface SnapshotInfo {
+  globalId: string;
+  voltVaultId: string;
+  apy: number;
+  tvlDepositToken: number;
+  weeklyPy: number;
+  monthlyPy: number;
+  apr: number;
 }
