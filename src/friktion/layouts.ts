@@ -1,6 +1,7 @@
 import { publicKey, struct, u64, u128, u8, bool, u16, i64, f64 } from "@project-serum/borsh";
 // @ts-ignore
-import { blob } from "buffer-layout";
+import { blob, seq } from "buffer-layout";
+
 export const VOLT_VAULT_LAYOUT = struct([
   blob(8, "identifier"),
   publicKey("adminKey"),
@@ -79,7 +80,7 @@ export const EPOCH_INFO_LAYOUT = struct([
   blob(8, "identifier"),
   f64("vaultTokenPrice"),
   f64("pctPnl"),
-  u64("number"),
+  u64("epochNumber"),//changed from "number"
   u64("underlyingPreEnter"),
   u64("underlyingPostSettle"),
   u64("voltTokenSupply"),
@@ -172,4 +173,18 @@ export const EXTRA_VOLT_DATA_LAYOUT = struct([
   bool("doneRebalancingPowerPerp"),
   bool("isHedgingOn"),
   bool("haveTakenPerformanceFees"),
+]);
+export const ENTROPY_METADATA_LAYOUT = struct([
+  blob(8, "identifier"),
+  f64("targetHedgeRatio"),
+  f64("rebalancingLenience"),
+  f64("requiredBasisFromOracle"),
+  publicKey("spotOpenOrders"),
+  seq(struct([publicKey("extraKey")]), 9, "extras"),
+  seq(struct([u64("unusedUint")]), 8, "unusedUints"),
+  f64("targetCurrBasePosition"),
+  f64("targetCurrQuotePosition"),
+  f64("hedgeLenience"),
+  seq(struct([f64("unusedF64")]),9, "unusedF64s"),
+  bool("hedgeWithSpot"),
 ]);
