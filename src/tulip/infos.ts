@@ -1,11 +1,18 @@
-import { getMint } from "@solana/spl-token-v2";
+import { getAssociatedTokenAddress, getMint, AccountLayout, MintLayout, Account, Mint } from "@solana/spl-token-v2";
 import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSizeFilter } from "@solana/web3.js";
 import BN from "bn.js";
+import axios from "axios";
 import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
-import { vaultV2Config, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
-import { DEPOSITOR_LAYOUT, RAYDIUM_VAULT_LAYOUT, RESERVE_LAYOUT } from "./layout";
+import { configV2, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
+import {
+  DEPOSITOR_LAYOUT,
+  ORCA_DD_VAULT_LAYOUT,
+  ORCA_VAULT_LAYOUT,
+  RAYDIUM_VAULT_LAYOUT,
+  RESERVE_LAYOUT,
+} from "./layout";
 import * as types from ".";
-import { paginate } from "../utils";
+import { getMultipleAccounts, paginate } from "../utils";
 
 let infos: IInstanceMoneyMarket & IInstanceVault;
 
@@ -93,16 +100,35 @@ infos = class InstanceTulip {
   }
 
   static async getAllVaults(connection: Connection, page?: PageConfig): Promise<types.VaultInfo[]> {
-    const sizeFilter: DataSizeFilter = {
+    const raydiumSizeFilter: DataSizeFilter = {
       dataSize: RAYDIUM_VAULT_LAYOUT_SPAN,
     };
-    const filters = [sizeFilter];
-    const config: GetProgramAccountsConfig = { filters: filters };
+    const raydiumFilters = [raydiumSizeFilter];
+    const raydiumConfig: GetProgramAccountsConfig = { filters: raydiumFilters };
 
-    const accountInfos = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, config), page);
-    const vaults: types.VaultInfo[] = accountInfos
+    const orcaSizeFilter: DataSizeFilter = {
+      dataSize: ORCA_VAULT_LAYOUT_SPAN,
+    };
+    const orcaFilters = [orcaSizeFilter];
+    const orcaConfig: GetProgramAccountsConfig = { filters: orcaFilters };
+
+    const orcaDDSizeFilter: DataSizeFilter = {
+      dataSize: ORCA_DD_VAULT_LAYOUT_SPAN,
+    };
+    const orcaDDFilters = [orcaDDSizeFilter];
+    const orcaDDConfig: GetProgramAccountsConfig = { filters: orcaDDFilters };
+
+    const raydiumVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, raydiumConfig), page);
+    const orcaVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, orcaConfig), page);
+    const orcaDDVaults = paginate(await connection.getProgramAccounts(TULIP_VAULT_V2_PROGRAM_ID, orcaDDConfig), page);
+    const vaultAccountInfos = [...raydiumVaults, ...orcaVaults, ...orcaDDVaults];
+
+    let vaults: types.VaultInfo[] = vaultAccountInfos
       .filter((info) => this._isAllowedId(info.pubkey))
       .map((info) => this.parseVault(info.account!.data, info.pubkey));
+
+    vaults = await this._fetchTokenAccountAndMint(connection, vaults);
+
     return vaults;
   }
 
@@ -114,7 +140,8 @@ infos = class InstanceTulip {
     const vaultAccountInfo = await connection.getAccountInfo(vaultId);
     if (!vaultAccountInfo) throw Error("Error: Cannot get reserve account (tulip.getVault)");
 
-    const vault: types.VaultInfo = this.parseVault(vaultAccountInfo?.data, vaultId);
+    let vault: types.VaultInfo = this.parseVault(vaultAccountInfo?.data, vaultId);
+    vault = (await this._fetchTokenAccountAndMint(connection, [vault]))[0];
 
     return vault;
   }
@@ -124,6 +151,12 @@ infos = class InstanceTulip {
     switch (data.length) {
       case RAYDIUM_VAULT_LAYOUT_SPAN:
         parseVault = this._parseRaydiumVault;
+        break;
+      case ORCA_VAULT_LAYOUT_SPAN:
+        parseVault = this._parseOrcaVault;
+        break;
+      case ORCA_DD_VAULT_LAYOUT_SPAN:
+        parseVault = this._parseOrcaDDVault;
         break;
       default:
         throw Error("Error: data structure does not exist or not supported yet (tulip.parseVault");
@@ -193,7 +226,7 @@ infos = class InstanceTulip {
       totalWithdrawnUnderlying,
       lastPendingReward,
       rewardPerSharePaid,
-      extra_data_account,
+      extraDataAccount,
     } = decodeData;
 
     return {
@@ -210,7 +243,7 @@ infos = class InstanceTulip {
       totalWithdrawnUnderlying,
       lastPendingReward,
       rewardPerSharePaid,
-      extra_data_account,
+      extraDataAccount,
     };
   }
 
@@ -244,14 +277,12 @@ infos = class InstanceTulip {
       serumMarket,
     } = decodeData;
 
-    const vaultAccount = vaultV2Config.vaults.accounts.find(
-      (account) => account.raydium?.account == vaultId.toString()
-    );
-
     return {
       vaultId,
       shareMint: base.sharesMint,
       base,
+      type: types.VaultType.Raydium,
+      apy: 0,
       lpMint: raydiumLpMintAddress,
       ammId: raydiumAmmId,
       ammAuthority: raydiumAmmAuthority,
@@ -259,17 +290,17 @@ infos = class InstanceTulip {
       ammQuantitiesOrTargetOrders: raydiumAmmQuantitiesOrTargetOrders,
       stakeProgram: raydiumStakeProgram,
       liquidityProgram: raydiumLiquidityProgram,
-      coinTokenAccount: raydiumCoinTokenAccount,
-      pcTokenAccount: raydiumPcTokenAccount,
+      coinTokenAccount: InstanceTulip._defaultTokenAccount(raydiumCoinTokenAccount),
+      pcTokenAccount: InstanceTulip._defaultTokenAccount(raydiumPcTokenAccount),
       poolTempTokenAccount: raydiumPoolTempTokenAccount,
       poolLpTokenAccount: raydiumPoolLpTokenAccount,
       poolWithdrawQueue: raydiumPoolWithdrawQueue,
       poolId: raydiumPoolId,
       poolAuthority: raydiumPoolAuthority,
-      poolRewardATokenAccount: raydiumPoolRewardATokenAccount,
-      poolRewardBTokenAccount: raydiumPoolRewardBTokenAccount,
-      feeCollectorRewardATokenAccount: new PublicKey(vaultAccount?.raydium?.fee_collector_reward_a_token_account!),
-      feeCollectorRewardBTokenAccount: new PublicKey(vaultAccount?.raydium?.fee_collector_reward_b_token_account!),
+      poolRewardATokenAccount: InstanceTulip._defaultTokenAccount(raydiumPoolRewardATokenAccount),
+      poolRewardBTokenAccount: InstanceTulip._defaultTokenAccount(raydiumPoolRewardBTokenAccount),
+      feeCollectorRewardATokenAccount: PublicKey.default,
+      feeCollectorRewardBTokenAccount: PublicKey.default,
       dualRewards,
       vaultRewardATokenAccount,
       vaultRewardBTokenAccount,
@@ -280,8 +311,223 @@ infos = class InstanceTulip {
       serumMarket,
     };
   }
+
+  private static _parseOrcaVault(data: any, vaultId: PublicKey): types.OrcaVaultInfo {
+    const decodeData = ORCA_VAULT_LAYOUT.decode(data);
+    const { base, farmData } = decodeData;
+
+    return {
+      vaultId,
+      shareMint: base.sharesMint,
+      base,
+      type: types.VaultType.Orca,
+      apy: 0,
+      farmData: {
+        ...farmData,
+        poolSwapTokenA: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenA),
+        poolSwapTokenB: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenB),
+        swapPoolMint: InstanceTulip._defaultMint(farmData.swapPoolMint),
+        feeCollectorTokenAccount: PublicKey.default,
+        swapPoolFeeTokenAccount: PublicKey.default,
+      },
+    };
+  }
+
+  private static _parseOrcaDDVault(data: any, vaultId: PublicKey): types.OrcaDDVaultInfo {
+    const decodeData = ORCA_DD_VAULT_LAYOUT.decode(data);
+    const {
+      base,
+      farmData,
+      ddFarmData,
+      ddCompoundQueue,
+      ddCompoundQueueNonce,
+      ddConfigured,
+      ddWithdrawQueue,
+      ddWithdrawQueueNonce,
+    } = decodeData;
+
+    return {
+      vaultId,
+      shareMint: base.sharesMint,
+      base,
+      type: types.VaultType.OrcaDD,
+      apy: 0,
+      farmData: {
+        ...farmData,
+        poolSwapTokenA: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenA),
+        poolSwapTokenB: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenB),
+        swapPoolMint: InstanceTulip._defaultMint(farmData.swapPoolMint),
+        feeCollectorTokenAccount: PublicKey.default,
+        swapPoolFeeTokenAccount: PublicKey.default,
+      },
+      ddFarmData: {
+        ...ddFarmData,
+        poolSwapTokenA: InstanceTulip._defaultTokenAccount(ddFarmData.poolSwapTokenA),
+        poolSwapTokenB: InstanceTulip._defaultTokenAccount(ddFarmData.poolSwapTokenB),
+        swapPoolMint: InstanceTulip._defaultMint(ddFarmData.swapPoolMint),
+        feeCollectorTokenAccount: PublicKey.default,
+        swapPoolFeeTokenAccount: PublicKey.default,
+      },
+      ddCompoundQueue,
+      ddCompoundQueueNonce,
+      ddConfigured,
+      ddWithdrawQueue,
+      ddWithdrawQueueNonce,
+    };
+  }
+
+  private static async _fetchTokenAccountAndMint(
+    connection: Connection,
+    vaults: types.VaultInfo[]
+  ): Promise<types.VaultInfo[]> {
+    // Raydium:
+    //   tokenAccount: (pool coin, pool pc -> calc TVL), (reward A, reward B -> get Mint, then calc fee ATA)
+    // Orca:
+    //   tokenAccount: (pool coin, pool pc -> calc TVL)
+    //   mint: underlyingMint -> get authority (pool swap authority)
+    const tokenAccountKeys: PublicKey[] = [];
+    const mintKeys: PublicKey[] = [];
+    vaults.forEach((vault) => {
+      switch (vault.type) {
+        case types.VaultType.Raydium:
+          const raydiumVault = vault as types.RaydiumVaultInfo;
+          tokenAccountKeys.push(raydiumVault.coinTokenAccount.address);
+          tokenAccountKeys.push(raydiumVault.pcTokenAccount.address);
+          tokenAccountKeys.push(raydiumVault.poolRewardATokenAccount.address);
+          tokenAccountKeys.push(raydiumVault.poolRewardBTokenAccount.address);
+          break;
+        case types.VaultType.Orca:
+          const orcaVault = vault as types.OrcaVaultInfo;
+          tokenAccountKeys.push(orcaVault.farmData.poolSwapTokenA.address);
+          tokenAccountKeys.push(orcaVault.farmData.poolSwapTokenB.address);
+          mintKeys.push(orcaVault.farmData.swapPoolMint.address);
+          break;
+        case types.VaultType.OrcaDD:
+          const orcaDDVault = vault as types.OrcaDDVaultInfo;
+          tokenAccountKeys.push(orcaDDVault.farmData.poolSwapTokenA.address);
+          tokenAccountKeys.push(orcaDDVault.farmData.poolSwapTokenB.address);
+          mintKeys.push(orcaDDVault.farmData.swapPoolMint.address);
+
+          tokenAccountKeys.push(orcaDDVault.ddFarmData.poolSwapTokenA.address);
+          tokenAccountKeys.push(orcaDDVault.ddFarmData.poolSwapTokenB.address);
+          mintKeys.push(orcaDDVault.ddFarmData.swapPoolMint.address);
+          break;
+        default:
+          console.error("Error: Unsupported Vault");
+          break;
+      }
+    });
+    const tokenMap = new Map<string, Account>();
+    (await getMultipleAccounts(connection, tokenAccountKeys)).forEach((t) =>
+      tokenMap.set(t.pubkey.toBase58(), this._parseTokenAccount(t.pubkey, t.account?.data!))
+    );
+    const mintMap = new Map<string, Mint>();
+    (await getMultipleAccounts(connection, mintKeys)).forEach((m) =>
+      mintMap.set(m.pubkey.toBase58(), this._parseMint(m.pubkey, m.account?.data!))
+    );
+
+    // fetch APR/APY from api endpoint
+    const apyMap = new Map<string, number>();
+    const apiData = await (await axios.get(types.API_ENDPOINT + types.TOKEN_PAIRS.reduce((a, b) => a + "," + b))).data;
+    types.TOKEN_PAIRS.forEach((key) => {
+      const data = apiData[key];
+      if (data) apyMap.set(data.lpMint, Number(data.apy));
+    });
+
+    const fetchedVaults: types.VaultInfo[] = [];
+    for (let vault of vaults) {
+      vault.apy = apyMap.get(vault.base.underlyingMint.toBase58()) || 0;
+      switch (vault.type) {
+        case types.VaultType.Raydium:
+          // raydium vault
+          const raydiumVault = vault as types.RaydiumVaultInfo;
+          raydiumVault.coinTokenAccount = tokenMap.get(raydiumVault.coinTokenAccount.address.toBase58())!;
+          raydiumVault.pcTokenAccount = tokenMap.get(raydiumVault.pcTokenAccount.address.toBase58())!;
+          raydiumVault.poolRewardATokenAccount = tokenMap.get(raydiumVault.poolRewardATokenAccount.address.toBase58())!;
+          raydiumVault.poolRewardBTokenAccount = tokenMap.get(raydiumVault.poolRewardBTokenAccount.address.toBase58())!;
+          raydiumVault.feeCollectorRewardATokenAccount = await getAssociatedTokenAddress(
+            raydiumVault.poolRewardATokenAccount.mint,
+            raydiumVault.base.fees.feeWallet
+          );
+          raydiumVault.feeCollectorRewardBTokenAccount = await getAssociatedTokenAddress(
+            raydiumVault.poolRewardBTokenAccount.mint,
+            raydiumVault.base.fees.feeWallet
+          );
+          fetchedVaults.push(raydiumVault);
+          break;
+        case types.VaultType.Orca:
+          // orca vault
+          const orcaVault = vault as types.OrcaVaultInfo;
+          orcaVault.farmData.poolSwapTokenA = tokenMap.get(orcaVault.farmData.poolSwapTokenA.address.toBase58())!;
+          orcaVault.farmData.poolSwapTokenB = tokenMap.get(orcaVault.farmData.poolSwapTokenB.address.toBase58())!;
+          orcaVault.farmData.swapPoolMint = mintMap.get(orcaVault.farmData.swapPoolMint.address.toBase58())!;
+          orcaVault.farmData.poolSwapAuthority = orcaVault.farmData.swapPoolMint.mintAuthority!;
+          orcaVault.farmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
+            orcaVault.farmData.rewardTokenMint,
+            orcaVault.base.fees.feeWallet
+          );
+          orcaVault.farmData.swapPoolFeeTokenAccount = new PublicKey(
+            configV2.markets.orca.amms.find(
+              (amm) => amm.lp_token_mint === orcaVault.farmData.swapPoolMint.address.toBase58()
+            )?.pool_fee_account!
+          );
+          const config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaVault.vaultId.toBase58())?.orca!;
+          orcaVault.farmData.convertAuthority = new PublicKey(config.farm_data.convert_authority);
+          fetchedVaults.push(orcaVault);
+          break;
+        case types.VaultType.OrcaDD:
+          // orca dd vault
+          const orcaDDVault = vault as types.OrcaDDVaultInfo;
+          orcaDDVault.farmData.poolSwapTokenA = tokenMap.get(orcaDDVault.farmData.poolSwapTokenA.address.toBase58())!;
+          orcaDDVault.farmData.poolSwapTokenB = tokenMap.get(orcaDDVault.farmData.poolSwapTokenB.address.toBase58())!;
+          orcaDDVault.farmData.swapPoolMint = mintMap.get(orcaDDVault.farmData.swapPoolMint.address.toBase58())!;
+          orcaDDVault.farmData.poolSwapAuthority = orcaDDVault.farmData.swapPoolMint.mintAuthority!;
+          orcaDDVault.farmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
+            orcaDDVault.farmData.rewardTokenMint,
+            orcaDDVault.base.fees.feeWallet
+          );
+          orcaDDVault.farmData.swapPoolFeeTokenAccount = new PublicKey(
+            configV2.markets.orca.amms.find(
+              (amm) => amm.lp_token_mint === orcaDDVault.farmData.swapPoolMint.address.toBase58()
+            )?.pool_fee_account!
+          );
+          const _config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaDDVault.vaultId.toBase58())
+            ?.orca!;
+          orcaDDVault.farmData.convertAuthority = new PublicKey(_config.farm_data.convert_authority);
+
+          orcaDDVault.ddFarmData.poolSwapTokenA = tokenMap.get(
+            orcaDDVault.ddFarmData.poolSwapTokenA.address.toBase58()
+          )!;
+          orcaDDVault.ddFarmData.poolSwapTokenB = tokenMap.get(
+            orcaDDVault.ddFarmData.poolSwapTokenB.address.toBase58()
+          )!;
+          orcaDDVault.ddFarmData.swapPoolMint = mintMap.get(orcaDDVault.ddFarmData.swapPoolMint.address.toBase58())!;
+          orcaDDVault.ddFarmData.poolSwapAuthority = orcaDDVault.ddFarmData.swapPoolMint.mintAuthority!;
+          orcaDDVault.ddFarmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
+            orcaDDVault.ddFarmData.rewardTokenMint,
+            orcaDDVault.base.fees.feeWallet
+          );
+          orcaDDVault.ddFarmData.swapPoolFeeTokenAccount = new PublicKey(
+            configV2.markets.orca.amms.find(
+              (amm) => amm.lp_token_mint === orcaDDVault.ddFarmData.swapPoolMint.address.toBase58()
+            )?.pool_fee_account!
+          );
+          orcaDDVault.ddFarmData.convertAuthority = new PublicKey(
+            _config.dd_farm_data?.config_data?.convert_authority!
+          );
+          fetchedVaults.push(orcaDDVault);
+          break;
+        default:
+          fetchedVaults.push(vault);
+          break;
+      }
+    }
+
+    return fetchedVaults;
+  }
+
   private static _isAllowedId(id: PublicKey) {
-    return !!vaultV2Config.vaults.accounts.find(
+    return !!configV2.vaults.accounts.find(
       (account) =>
         account.multi_deposit_optimizer?.account == id.toString() ||
         account.lending_optimizer?.account == id.toString() ||
@@ -291,12 +537,70 @@ infos = class InstanceTulip {
         account.atrix?.account == id.toString()
     );
   }
+
+  private static _parseTokenAccount(address: PublicKey, data: Buffer): Account {
+    const rawAccount = AccountLayout.decode(data);
+    return {
+      address,
+      mint: rawAccount.mint,
+      owner: rawAccount.owner,
+      amount: rawAccount.amount,
+      delegate: rawAccount.delegateOption ? rawAccount.delegate : null,
+      delegatedAmount: rawAccount.delegatedAmount,
+      isInitialized: rawAccount.state !== 0,
+      isFrozen: rawAccount.state === 2,
+      isNative: !!rawAccount.isNativeOption,
+      rentExemptReserve: rawAccount.isNativeOption ? rawAccount.isNative : null,
+      closeAuthority: rawAccount.closeAuthorityOption ? rawAccount.closeAuthority : null,
+    };
+  }
+
+  private static _defaultTokenAccount(address: PublicKey): Account {
+    return {
+      address,
+      mint: PublicKey.default,
+      owner: PublicKey.default,
+      amount: BigInt(0),
+      delegate: null,
+      delegatedAmount: BigInt(0),
+      isInitialized: true,
+      isFrozen: false,
+      isNative: false,
+      rentExemptReserve: null,
+      closeAuthority: null,
+    };
+  }
+
+  private static _parseMint(address: PublicKey, data: Buffer): Mint {
+    const rawMint = MintLayout.decode(data);
+    return {
+      address,
+      mintAuthority: rawMint.mintAuthorityOption ? rawMint.mintAuthority : null,
+      supply: rawMint.supply,
+      decimals: rawMint.decimals,
+      isInitialized: rawMint.isInitialized,
+      freezeAuthority: rawMint.freezeAuthorityOption ? rawMint.freezeAuthority : null,
+    };
+  }
+
+  private static _defaultMint(address: PublicKey): Mint {
+    return {
+      address,
+      mintAuthority: null,
+      supply: BigInt(0),
+      decimals: 0,
+      isInitialized: true,
+      freezeAuthority: null,
+    };
+  }
 };
 
 export { infos };
 
 const RESERVE_LAYOUT_SPAN = 622;
 const RAYDIUM_VAULT_LAYOUT_SPAN = 1712;
+const ORCA_VAULT_LAYOUT_SPAN = 1376;
+const ORCA_DD_VAULT_LAYOUT_SPAN = 2016;
 const DEPOSITOR_LAYOUT_SPAN = 440;
 const WAD = new BN(10).pow(new BN(18));
 
@@ -401,8 +705,33 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
   getApr() {
-    // TODO
-    return 0;
+    const numberOfPeriods = 8760; // yearly compound times = 24 * 365
+    const apr = (Math.pow(this.vaultInfo.apy / 100 + 1, 1 / numberOfPeriods) - 1) * 100 * 24 * 365;
+
+    return Number(apr.toFixed(2));
+  }
+
+  getPoolTokenAccounts(): { coinTokenAccount: Account; pcTokenAccount: Account } {
+    if (this.vaultInfo.type == types.VaultType.Raydium) {
+      const raydiumVault = this.vaultInfo as types.RaydiumVaultInfo;
+      return { coinTokenAccount: raydiumVault.coinTokenAccount, pcTokenAccount: raydiumVault.pcTokenAccount };
+    } else if (this.vaultInfo.type == types.VaultType.Orca) {
+      const orcaVault = this.vaultInfo as types.OrcaVaultInfo;
+      return { coinTokenAccount: orcaVault.farmData.poolSwapTokenA, pcTokenAccount: orcaVault.farmData.poolSwapTokenB };
+    } else if (this.vaultInfo.type == types.VaultType.OrcaDD) {
+      const orcaDDVault = this.vaultInfo as types.OrcaDDVaultInfo;
+      return {
+        coinTokenAccount: orcaDDVault.farmData.poolSwapTokenA,
+        pcTokenAccount: orcaDDVault.farmData.poolSwapTokenB,
+      };
+    } else throw "Error: Pool token accounts don't exist.";
+  }
+
+  getDepositedLpAmountAndCapacityLimit(): { lpAmount: BN; capacityLimit: BN } {
+    return {
+      lpAmount: this.vaultInfo.base.totalDepositedBalance,
+      capacityLimit: this.vaultInfo.base.totalDepositedBalanceCap,
+    };
   }
 
   deriveTrackingAddress(owner: PublicKey): [PublicKey, number] {

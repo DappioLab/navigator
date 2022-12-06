@@ -1,3 +1,4 @@
+import { Account } from "@solana/spl-token-v2";
 import { PublicKey, Connection } from "@solana/web3.js";
 import { IServicesTokenInfo } from "../src";
 import * as tulip from "../src/tulip";
@@ -69,21 +70,78 @@ describe("Tulip", () => {
       })}`
     );
   });
-  it(" Can get all vaults", async () => {
-    const vaults = (await tulip.infos.getAllVaults(connection)) as tulip.VaultInfo[];
+  it(" Can get all vault wrappers", async () => {
+    const vaults = (await tulip.infos.getAllVaultWrappers(connection)) as tulip.VaultInfoWrapper[];
     console.log(`Fetched ${vaults.length} vaults`);
     vaults.forEach((v, i) => {
       console.log(`\n* Vault#${i + 1}`);
-      console.log(`** VaultId: ${v.vaultId}`);
+      console.log(`** VaultId: ${v.vaultInfo.vaultId}`);
+      console.log("feeWallet:", v.vaultInfo.base.fees.feeWallet.toBase58());
+      console.log("apr:", v.getApr());
+      const vaultDeposited = v.getDepositedLpAmountAndCapacityLimit();
+      console.log("total deposit balance:", Number(vaultDeposited.lpAmount));
+      console.log("total deposit balance Cap:", Number(vaultDeposited.capacityLimit));
+      switch (v.vaultInfo.type) {
+        case tulip.VaultType.Raydium:
+          const raydiumVault = v.vaultInfo as tulip.RaydiumVaultInfo;
+          console.log("Rayidum vault:");
+          console.log(" . pool token A:");
+          logTokenAccount(raydiumVault.coinTokenAccount);
+          console.log(" . pool token B:");
+          logTokenAccount(raydiumVault.pcTokenAccount);
+          console.log(" . fee collector A:", raydiumVault.feeCollectorRewardATokenAccount.toBase58());
+          console.log(" . fee collector B:", raydiumVault.feeCollectorRewardBTokenAccount.toBase58());
+          break;
+        case tulip.VaultType.Orca:
+          const orcaVault = v.vaultInfo as tulip.OrcaVaultInfo;
+          console.log("orca vault:");
+          console.log(" . pool token A:");
+          logTokenAccount(orcaVault.farmData.poolSwapTokenA);
+          console.log(" . pool token B:");
+          logTokenAccount(orcaVault.farmData.poolSwapTokenB);
+          console.log(" . fee collector:", orcaVault.farmData.feeCollectorTokenAccount.toBase58());
+          console.log(" . swap pool fee:", orcaVault.farmData.swapPoolFeeTokenAccount.toBase58());
+          console.log(" . convert authority:", orcaVault.farmData.convertAuthority.toBase58());
+          break;
+        case tulip.VaultType.OrcaDD:
+          const orcaDDVault = v.vaultInfo as tulip.OrcaDDVaultInfo;
+          console.log("orca dd vault:");
+          console.log(" . pool token A:");
+          logTokenAccount(orcaDDVault.farmData.poolSwapTokenA);
+          console.log(" . pool token B:");
+          logTokenAccount(orcaDDVault.farmData.poolSwapTokenB);
+          console.log(" . fee collector:", orcaDDVault.farmData.feeCollectorTokenAccount.toBase58());
+          console.log(" . swap pool mint:", orcaDDVault.farmData.swapPoolMint.address.toBase58());
+          console.log(" . swap pool fee:", orcaDDVault.farmData.swapPoolFeeTokenAccount.toBase58());
+          console.log(" . convert authority:", orcaDDVault.farmData.convertAuthority.toBase58());
+          console.log(" . pool token A(dd):");
+          logTokenAccount(orcaDDVault.ddFarmData.poolSwapTokenA);
+          console.log(" . pool token B(dd):");
+          logTokenAccount(orcaDDVault.ddFarmData.poolSwapTokenB);
+          console.log(" . fee collector(dd):", orcaDDVault.ddFarmData.feeCollectorTokenAccount.toBase58());
+          console.log(" . swap pool mint:", orcaDDVault.farmData.swapPoolMint.address.toBase58());
+          console.log(" . swap pool fee(dd):", orcaDDVault.ddFarmData.swapPoolFeeTokenAccount.toBase58());
+          console.log(" . convert authority(dd):", orcaDDVault.ddFarmData.convertAuthority.toBase58());
+          break;
+      }
     });
   });
   it(" Can get vault", async () => {
     const vault = (await tulip.infos.getVault!(
       connection,
-      new PublicKey("4gKvh8AmET6U84KXAJdnq1eU53mtniPXGyfDTW2R3rQN")
+      new PublicKey("51dmDpwuZNJF9ypw8Mt4Cyah4U1xdNRX8Dh7CEJVKU7n")
     )) as tulip.VaultInfo;
     console.log(`- Vault shareMint: ${vault.shareMint.toBase58()}`);
     console.log(`- Vault base PDA: ${vault.base.pda.toBase58()}`);
+    console.log(`- Total Balance: ${Number(vault.base.totalDepositedBalance)}`);
+    console.log(`- UnderlyingMint: ${vault.base.underlyingMint.toBase58()}`);
+    console.log(`- Total Share: ${Number(vault.base.totalShares)}`);
+    console.log(`- Total Balance Cap: ${Number(vault.base.totalDepositedBalanceCap)}`);
+    console.log(
+      `- Fees:\n  feeMultiplier: ${Number(vault.base.fees.feeMultiplier)}\n  controllerFee: ${Number(
+        vault.base.fees.controllerFee
+      )}\n  platformFee: ${Number(vault.base.fees.platformFee)}`
+    );
   });
   it(" Can get all depositors", async () => {
     const depositors = (await tulip.infos.getAllDepositors(connection, userKey)) as tulip.DepositorInfo[];
@@ -96,11 +154,16 @@ describe("Tulip", () => {
     });
   });
   it(" Can get depositor", async () => {
-    const depositor = (await tulip.infos.getDepositor(
-      connection,
-      new PublicKey("4gKvh8AmET6U84KXAJdnq1eU53mtniPXGyfDTW2R3rQN")
-    )) as tulip.DepositorInfo;
+    const vaultId = new PublicKey("51dmDpwuZNJF9ypw8Mt4Cyah4U1xdNRX8Dh7CEJVKU7n");
+    const depositorId = await tulip.infos.getDepositorId(vaultId, userKey);
+    const depositor = (await tulip.infos.getDepositor(connection, depositorId)) as tulip.DepositorInfo;
     console.log(`- Deposited Balance: ${Number(depositor.depositedBalance)}`);
     console.log(`- Corresponding vault: ${depositor.vaultId.toBase58()}`);
   });
 });
+
+function logTokenAccount(account: Account) {
+  console.log(" .     address:", account.address.toBase58());
+  console.log(" .     mint:", account.mint.toBase58());
+  console.log(" .     amount:", account.amount);
+}

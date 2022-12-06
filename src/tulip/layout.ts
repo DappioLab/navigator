@@ -42,7 +42,7 @@ export const RESERVE_LAYOUT = struct([
 ]);
 
 // Vault Layout
-const VAULT_BASE_LAYOUT = struct(
+export const VAULT_BASE_LAYOUT = struct(
   [
     u8("nonce"),
     array(u8(), 32, "tag"),
@@ -87,7 +87,7 @@ const VAULT_BASE_LAYOUT = struct(
     array(u8(), 7, "configuredAlignment"),
     u64("pendingFees"),
     u64("totalDepositedBalanceCap"),
-    struct([u128("gainPerSecond"), u128("apr"), blob(32, "buffer")], "realizedYield"),
+    struct([u128("a"), u128("b"), blob(32, "buffer")], "testData"),
     array(u64(), 4, "buffer"),
   ],
   "base"
@@ -123,6 +123,80 @@ export const RAYDIUM_VAULT_LAYOUT = struct([
   blob(407, "padding"),
 ]);
 
+export const ORCA_FARM_DATA = [
+  publicKey("userFarmAddr"),
+  u8("userFarmNonce"),
+  publicKey("vaultSwapTokenA"),
+  publicKey("vaultSwapTokenB"),
+  publicKey("poolSwapTokenA"),
+  publicKey("poolSwapTokenB"),
+  publicKey("poolSwapAccount"),
+  publicKey("vaultRewardTokenAccount"),
+  publicKey("vaultFarmTokenAccount"),
+  publicKey("vaultSwapTokenAccount"),
+  publicKey("globalBaseTokenVault"),
+  publicKey("globalRewardTokenVault"),
+  publicKey("globalFarm"),
+  publicKey("farmTokenMint"),
+  publicKey("rewardTokenMint"),
+  publicKey("swapPoolMint"),
+  publicKey("tokenAMint"),
+  publicKey("tokenBMint"),
+  array(publicKey(), 3, "swapMarkets"),
+  blob(32, "padding"),
+];
+
+export const ORCA_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  struct(ORCA_FARM_DATA, "farmData"),
+  blob(135, "padding"),
+]);
+
+export const ORCA_DD_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  struct(ORCA_FARM_DATA, "farmData"),
+  struct(ORCA_FARM_DATA, "ddFarmData"),
+  publicKey("ddCompoundQueue"),
+  u8("ddCompoundQueueNonce"),
+  u8("ddConfigured"),
+  publicKey("ddWithdrawQueue"),
+  u8("ddWithdrawQueueNonce"),
+  blob(35, "padding"),
+]);
+
+export const LENDING_OPTIMIZER_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  publicKey("currentFarmProgram"),
+  publicKey("currentPlatformInformation"),
+  publicKey("currentPlatformCount"),
+  u64("lastRebaseSlot"),
+  blob(1000, "padding"),
+]);
+
+const STANDALONE_VAULT_CACHE = struct([
+  publicKey("vaultAddress"),
+  u64("depositedBalance"),
+  u8("programType"),
+  publicKey("programAddress"),
+  publicKey("sharesMint"),
+  publicKey("sharesAccount"),
+  blob(55, "padding"),
+]);
+
+export const MULTI_DEPOSIT_OPTIMIZER_VAULT_LAYOUT = struct([
+  u64("discriminator"),
+  VAULT_BASE_LAYOUT,
+  u64("lastRebaseSlot"),
+  array(STANDALONE_VAULT_CACHE, 6, "standaloneVaults"),
+  publicKey("targetVault"),
+  publicKey("stateTransitionAccount"),
+  u64("minimumRebalanceAmount"),
+  blob(272, "padding"),
+]);
+
 export const DEPOSITOR_LAYOUT = struct([
   u64("discriminator"),
   publicKey("owner"),
@@ -138,6 +212,6 @@ export const DEPOSITOR_LAYOUT = struct([
   u64("totalWithdrawnUnderlying"),
   u64("lastPendingReward"),
   u128("rewardPerSharePaid"),
-  publicKey("extra_data_account"),
+  publicKey("extraDataAccount"),
   blob(407, "padding"),
 ]);
