@@ -55,6 +55,7 @@ export interface Base {
 export interface VaultInfo extends IVaultInfo {
   base: Base;
   type: VaultType;
+  apy: number;
 }
 
 export interface RaydiumVaultInfo extends VaultInfo {
@@ -171,28 +172,6 @@ export interface OrcaDDVaultInfo extends VaultInfo {
   ddWithdrawQueueNonce: BN;
 }
 
-// export interface LendingOptimizerVaultInfo extends VaultInfo {
-//   currentFarmProgram: PublicKey;
-//   currentPlatformInformation: PublicKey;
-//   currentPlatformCount: PublicKey;
-//   lastRebaseSlot: BN;
-// }
-
-// export interface MultiDepositOptimizerVaultInfo extends VaultInfo {
-//   lastRebaseSlot: BN;
-//   standaloneVaults: {
-//     vaultAddress: PublicKey;
-//     depositedBalance: BN;
-//     programType: BN;
-//     programAddress: PublicKey;
-//     sharesMint: PublicKey;
-//     sharesAccount: PublicKey;
-//   }[];
-//   targetVault: PublicKey;
-//   stateTransitionAccount: PublicKey;
-//   minimumRebalanceAmount: BN;
-// }
-
 export interface ReserveInfo extends IReserveInfo {
   version: BN;
   lastUpdate: {
@@ -256,6 +235,23 @@ export enum VaultType {
   Raydium,
   Orca,
   OrcaDD,
-  LendingOptimizer,
-  MultiDepositOptimizer,
 }
+
+export const API_ENDPOINT = "https://data.tulip.garden/pairs?pair=";
+export const TOKEN_PAIRS: string[] = [
+  "SAMO-USDC",
+  "ATLAS-USDC",
+  "SHDW-USDC",
+  "ORCA-USDC",
+  "BASIS-USDC",
+  "SHDW-SOL",
+  "CMFI-USDC",
+  "stSOL-wUST",
+  "RAY-SOL",
+  "RAY-USDC",
+  "RAY-SRM",
+  "RAY-USDT",
+  "ATLAS-RAY",
+  "RAY-ETH",
+  "RAY-whETH",
+];
