@@ -705,7 +705,7 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
   getApr() {
-    const numberOfPeriods = 8760;
+    const numberOfPeriods = 8760; // yearly compound times = 24 * 365
     const apr = (Math.pow(this.vaultInfo.apy / 100 + 1, 1 / numberOfPeriods) - 1) * 100 * 24 * 365;
 
     return Number(apr.toFixed(2));
