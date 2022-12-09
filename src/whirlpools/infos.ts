@@ -68,6 +68,7 @@ infos = class InstanceWhirlpools {
     let allUserTokenMintSet = new Map<string, BN>();
     (await connection.getTokenAccountsByOwner(userKey, { programId: TOKEN_PROGRAM_ID })).value.forEach((info) => {
       let rawAccount = AccountLayout.decode(info.account.data);
+      if (rawAccount.amount.toString() == "0") return false;
       allUserTokenMintSet.set(rawAccount.mint.toString(), new BN(rawAccount.amount.toString()));
     });
     const sizeFilter: DataSizeFilter = {
