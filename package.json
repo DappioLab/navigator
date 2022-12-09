@@ -21,7 +21,8 @@
     "testFriktion": "mocha --require ts-node/register --timeout 10000000 ./test/friktion.ts",
     "testNftFinance": "mocha --require ts-node/register --timeout 10000000 ./test/nftFinance.ts",
     "testLido": "mocha --require ts-node/register --timeout 10000000 ./test/lido.ts",
-    "testMarinade": "mocha --require ts-node/register --timeout 10000000 ./test/marinade.ts"
+    "testMarinade": "mocha --require ts-node/register --timeout 10000000 ./test/marinade.ts",
+    "testWhirlpools": "mocha --require ts-node/register --timeout 10000000 ./test/whirlpools.ts"
   },
   "keywords": [],
   "author": "",
