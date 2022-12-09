@@ -77,6 +77,18 @@ export interface PageConfig {
   pageIndex: number;
 }
 
+export interface ICLPoolInfo {
+  poolId: PublicKey;
+  tokenAMint: PublicKey;
+  tokenBMint: PublicKey;
+}
+
+export interface ICLPositionInfo {
+  positionId: PublicKey;
+  mint: PublicKey;
+  userKey: PublicKey;
+}
+
 export enum PoolDirection {
   Obverse,
   Reverse,
@@ -220,4 +232,18 @@ export interface IInstanceVault {
   getWithdrawer?(connection: Connection, withdrawerId: PublicKey, userKey?: PublicKey): Promise<IWithdrawerInfo>;
   parseWithdrawer?(data: Buffer, withdrawerId: PublicKey): IWithdrawerInfo;
   getAllWithdrawers?(connection: Connection, userKey: PublicKey): Promise<IWithdrawerInfo[]>;
+}
+
+export interface IInstanceCLPool {
+  getAllPools(connection: Connection, page?: PageConfig): Promise<ICLPoolInfo[]>;
+  getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<ICLPoolWrapper[]>;
+  getPool(connection: Connection, poolId: PublicKey): Promise<ICLPoolInfo>;
+  getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<ICLPoolWrapper>;
+  parsePool(data: Buffer, poolId: PublicKey): ICLPoolInfo;
+  getPosition(connection: Connection, positionId: PublicKey): Promise<ICLPositionInfo>;
+  getAllPositions(connection: Connection, userKey: PublicKey): Promise<ICLPositionInfo[]>;
+  parsePosition(data: Buffer, positionId: PublicKey): ICLPositionInfo;
+}
+export interface ICLPoolWrapper {
+  poolInfo: ICLPoolInfo;
 }
