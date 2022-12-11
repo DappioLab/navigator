@@ -3,7 +3,7 @@ import { Connection, PublicKey, GetProgramAccountsConfig, MemcmpFilter, DataSize
 import BN from "bn.js";
 import axios from "axios";
 import { IInstanceMoneyMarket, IInstanceVault, IReserveInfoWrapper, IVaultInfoWrapper, PageConfig } from "../types";
-import { configV2, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
+import { configV2, patch, TULIP_PROGRAM_ID, TULIP_VAULT_V2_PROGRAM_ID } from "./ids";
 import {
   DEPOSITOR_LAYOUT,
   ORCA_DD_VAULT_LAYOUT,
@@ -277,6 +277,14 @@ infos = class InstanceTulip {
       serumMarket,
     } = decodeData;
 
+    let poolId = raydiumPoolId;
+
+    Object.entries(patch).find((k) => {
+      const deprecatedPoolId = k[0];
+      const newPoolId = k[1];
+      if (deprecatedPoolId === raydiumPoolId.toBase58()) poolId = new PublicKey(newPoolId);
+    });
+
     return {
       vaultId,
       shareMint: base.sharesMint,
@@ -295,7 +303,7 @@ infos = class InstanceTulip {
       poolTempTokenAccount: raydiumPoolTempTokenAccount,
       poolLpTokenAccount: raydiumPoolLpTokenAccount,
       poolWithdrawQueue: raydiumPoolWithdrawQueue,
-      poolId: raydiumPoolId,
+      poolId,
       poolAuthority: raydiumPoolAuthority,
       poolRewardATokenAccount: InstanceTulip._defaultTokenAccount(raydiumPoolRewardATokenAccount),
       poolRewardBTokenAccount: InstanceTulip._defaultTokenAccount(raydiumPoolRewardBTokenAccount),

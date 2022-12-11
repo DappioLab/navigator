@@ -17,15 +17,15 @@ describe("Tulip", () => {
   //   commitment: "confirmed",
   //   confirmTransactionInitialTimeout: 180 * 1000,
   // });
-  // const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
-  //   commitment: "confirmed",
-  //   confirmTransactionInitialTimeout: 180 * 1000,
-  //   wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
-  // });
-  const connection = new Connection("https://cache-rpc.dappio.xyz/", {
+  const connection = new Connection("https://rpc-mainnet-fork.epochs.studio", {
     commitment: "confirmed",
     confirmTransactionInitialTimeout: 180 * 1000,
+    wsEndpoint: "wss://rpc-mainnet-fork.epochs.studio/ws",
   });
+  // const connection = new Connection("https://solana-mainnet.g.alchemy.com/v2/7Us4nzuUS82Z33j3AKzhUOKRA7d_TkNh", {
+  //   commitment: "confirmed",
+  //   confirmTransactionInitialTimeout: 180 * 1000,
+  // });
 
   const solReserveId = new PublicKey("8PbodeaosQP19SjYFx855UMqWxH2HynZLdBXmsrbac36");
   const userKey = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
@@ -86,6 +86,7 @@ describe("Tulip", () => {
         case tulip.VaultType.Raydium:
           const raydiumVault = v.vaultInfo as tulip.RaydiumVaultInfo;
           console.log("Rayidum vault:");
+          console.log(" . pool Id:", raydiumVault.poolId.toBase58());
           console.log(" . pool token A:");
           logTokenAccount(raydiumVault.coinTokenAccount);
           console.log(" . pool token B:");
