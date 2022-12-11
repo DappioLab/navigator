@@ -242,4 +242,14 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
 
     return sortedValidatorEntries[0];
   }
+
+  getHeaviestValidatorIndex(): number {
+    const heaviestValidator = this.getHeaviestValidator();
+
+    const heaviestValidatorIndex = this.vaultInfo.validators!.entries.findIndex((value) =>
+      value.pubkey.equals(heaviestValidator.pubkey)
+    );
+
+    return heaviestValidatorIndex;
+  }
 }
