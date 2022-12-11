@@ -71,6 +71,7 @@ describe("Tulip", () => {
     );
   });
   it(" Can get all vault wrappers", async () => {
+    let vaultInfoKeys: PublicKey[] = [];
     const vaults = (await tulip.infos.getAllVaultWrappers(connection)) as tulip.VaultInfoWrapper[];
     console.log(`Fetched ${vaults.length} vaults`);
     vaults.forEach((v, i) => {
@@ -102,6 +103,7 @@ describe("Tulip", () => {
           console.log(" . fee collector:", orcaVault.farmData.feeCollectorTokenAccount.toBase58());
           console.log(" . swap pool fee:", orcaVault.farmData.swapPoolFeeTokenAccount.toBase58());
           console.log(" . convert authority:", orcaVault.farmData.convertAuthority.toBase58());
+          vaultInfoKeys = getOrcaVaultAddress(orcaVault, vaultInfoKeys);
           break;
         case tulip.VaultType.OrcaDD:
           const orcaDDVault = v.vaultInfo as tulip.OrcaDDVaultInfo;
@@ -122,9 +124,16 @@ describe("Tulip", () => {
           console.log(" . swap pool mint:", orcaDDVault.farmData.swapPoolMint.address.toBase58());
           console.log(" . swap pool fee(dd):", orcaDDVault.ddFarmData.swapPoolFeeTokenAccount.toBase58());
           console.log(" . convert authority(dd):", orcaDDVault.ddFarmData.convertAuthority.toBase58());
+          vaultInfoKeys = getOrcaVaultAddress(orcaDDVault, vaultInfoKeys);
           break;
       }
     });
+    const vaultInfoSet = new Set<string>();
+    console.log("\n\n===================");
+    vaultInfoKeys.forEach((k) => vaultInfoSet.add(k.toBase58()));
+    vaultInfoSet.forEach((k) => console.log(`"${k}",`));
+    console.log("\n===================");
+    console.log("# of vault info keys:", vaultInfoSet.size);
   });
   it(" Can get vault", async () => {
     const vault = (await tulip.infos.getVault!(
@@ -154,11 +163,14 @@ describe("Tulip", () => {
     });
   });
   it(" Can get depositor", async () => {
-    const vaultId = new PublicKey("51dmDpwuZNJF9ypw8Mt4Cyah4U1xdNRX8Dh7CEJVKU7n");
+    const vaultId = new PublicKey("7nbcWTUnvELLmLjJtMRrbg9qH9zabZ9VowJSfwB2j8y7");
     const depositorId = await tulip.infos.getDepositorId(vaultId, userKey);
     const depositor = (await tulip.infos.getDepositor(connection, depositorId)) as tulip.DepositorInfo;
-    console.log(`- Deposited Balance: ${Number(depositor.depositedBalance)}`);
-    console.log(`- Corresponding vault: ${depositor.vaultId.toBase58()}`);
+
+    console.log(`Depositor Id: ${depositor.depositorId.toBase58()}`);
+    console.log(` . Corresponding vault: ${depositor.vaultId.toBase58()}`);
+    console.log(` . Deposited Balance: ${Number(depositor.depositedBalance)}`);
+    console.log(` . last deposit time: ${Number(depositor.lastDepositTime)}`);
   });
 });
 
@@ -167,3 +179,86 @@ function logTokenAccount(account: Account) {
   console.log(" .     mint:", account.mint.toBase58());
   console.log(" .     amount:", account.amount);
 }
+
+function getOrcaVaultAddress(vault: tulip.VaultInfo, accountKeys: PublicKey[]): PublicKey[] {
+  if (orcaV2VaultIds.find((k) => k === vault.vaultId.toBase58()))
+    switch (vault.type) {
+      case tulip.VaultType.Orca:
+        const orcaVault = vault as tulip.OrcaVaultInfo;
+        accountKeys.push(orcaVault.vaultId);
+        accountKeys.push(orcaVault.base.pda);
+        accountKeys.push(orcaVault.base.underlyingWithdrawQueue);
+        accountKeys.push(orcaVault.farmData.vaultFarmTokenAccount);
+        accountKeys.push(orcaVault.farmData.vaultRewardTokenAccount);
+        accountKeys.push(orcaVault.farmData.vaultSwapTokenAccount);
+        accountKeys.push(orcaVault.farmData.globalRewardTokenVault);
+        accountKeys.push(orcaVault.farmData.globalBaseTokenVault);
+        accountKeys.push(orcaVault.farmData.poolSwapTokenA.address);
+        accountKeys.push(orcaVault.farmData.poolSwapTokenB.address);
+        accountKeys.push(orcaVault.farmData.globalFarm);
+        accountKeys.push(orcaVault.farmData.userFarmAddr);
+        accountKeys.push(orcaVault.farmData.convertAuthority);
+        accountKeys.push(orcaVault.farmData.poolSwapAccount);
+        accountKeys.push(orcaVault.farmData.poolSwapAuthority);
+        accountKeys.push(orcaVault.farmData.swapPoolMint.address);
+        accountKeys.push(orcaVault.farmData.farmTokenMint);
+        accountKeys.push(orcaVault.shareMint);
+        accountKeys.push(orcaVault.farmData.swapPoolFeeTokenAccount);
+        accountKeys.push(orcaVault.farmData.feeCollectorTokenAccount);
+        break;
+      case tulip.VaultType.OrcaDD:
+        const orcaDDVault = vault as tulip.OrcaDDVaultInfo;
+
+        accountKeys.push(orcaDDVault.vaultId);
+        accountKeys.push(orcaDDVault.base.pda);
+        accountKeys.push(orcaDDVault.base.underlyingWithdrawQueue);
+        accountKeys.push(orcaDDVault.ddFarmData.vaultFarmTokenAccount);
+        accountKeys.push(orcaDDVault.ddFarmData.vaultRewardTokenAccount);
+        accountKeys.push(orcaDDVault.ddFarmData.vaultSwapTokenAccount);
+        accountKeys.push(orcaDDVault.ddFarmData.globalRewardTokenVault);
+        accountKeys.push(orcaDDVault.ddFarmData.globalBaseTokenVault);
+        accountKeys.push(orcaDDVault.ddFarmData.poolSwapTokenA.address);
+        accountKeys.push(orcaDDVault.ddFarmData.poolSwapTokenB.address);
+        accountKeys.push(orcaDDVault.ddFarmData.globalFarm);
+        accountKeys.push(orcaDDVault.ddFarmData.userFarmAddr);
+        accountKeys.push(orcaDDVault.ddFarmData.convertAuthority);
+        accountKeys.push(orcaDDVault.ddFarmData.poolSwapAccount);
+        accountKeys.push(orcaDDVault.ddFarmData.poolSwapAuthority);
+        accountKeys.push(orcaDDVault.ddFarmData.swapPoolMint.address);
+        accountKeys.push(orcaDDVault.ddFarmData.farmTokenMint);
+        accountKeys.push(orcaDDVault.shareMint);
+        accountKeys.push(orcaDDVault.ddFarmData.swapPoolFeeTokenAccount);
+        accountKeys.push(orcaDDVault.ddFarmData.feeCollectorTokenAccount);
+        accountKeys.push(orcaDDVault.farmData.vaultFarmTokenAccount);
+        accountKeys.push(orcaDDVault.farmData.vaultRewardTokenAccount);
+        accountKeys.push(orcaDDVault.farmData.vaultSwapTokenAccount);
+        accountKeys.push(orcaDDVault.farmData.globalRewardTokenVault);
+        accountKeys.push(orcaDDVault.farmData.globalBaseTokenVault);
+        accountKeys.push(orcaDDVault.farmData.poolSwapTokenA.address);
+        accountKeys.push(orcaDDVault.farmData.poolSwapTokenB.address);
+        accountKeys.push(orcaDDVault.farmData.globalFarm);
+        accountKeys.push(orcaDDVault.farmData.userFarmAddr);
+        accountKeys.push(orcaDDVault.farmData.convertAuthority);
+        accountKeys.push(orcaDDVault.farmData.poolSwapAccount);
+        accountKeys.push(orcaDDVault.farmData.poolSwapAuthority);
+        accountKeys.push(orcaDDVault.farmData.swapPoolMint.address);
+        accountKeys.push(orcaDDVault.farmData.farmTokenMint);
+        accountKeys.push(orcaDDVault.farmData.swapPoolFeeTokenAccount);
+        accountKeys.push(orcaDDVault.farmData.feeCollectorTokenAccount);
+        break;
+      default:
+        break;
+    }
+  return accountKeys;
+}
+
+const orcaV2VaultIds = [
+  "DUnC2MTUtcMhzr7JgUMF7dRyUoEiUTqv4aBy1gEi3gpt", // SAMO-USDC
+  "CjwvvwuacJAJm8w54VcNDgpbnyde6k65mvdRpEFK2Dqm", // ATLAS-USDC
+  "3q4BaXmKMJma9QWrodtp8V82iEPWTreVw57UcxsrTvgA", // SHDW-USDC
+  "7nbcWTUnvELLmLjJtMRrbg9qH9zabZ9VowJSfwB2j8y7", // ORCA-USDC
+  "82GUeHBorpNxwMiAdzjbrvV8CpcDyoV57fLLMmC8m4W5", // BASIS-USDC
+  "J4cPE6XncW4pTCRferxiNpBEaHPy26HEoDnxBnxve3pw", // SHDW-SOL
+  "EpcHToCXfMoW25Ng6yGzWwCFyW7hhPuetocFWGcBt13J", // CMFI-USDC
+  "C4QPNt5wZrQS1hywhTbw86rtsoxCM4QvSaYuhn8RN1ea", // stSOL-wUST
+];
