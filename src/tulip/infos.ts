@@ -751,4 +751,11 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
       TULIP_VAULT_V2_PROGRAM_ID
     );
   }
+
+  deriveEphemeralTrackingAddress(owner: PublicKey): [PublicKey, number] {
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("ephemeraltracking"), this.vaultInfo.vaultId.toBuffer(), owner.toBuffer()],
+      TULIP_VAULT_V2_PROGRAM_ID
+    );
+  }
 }
