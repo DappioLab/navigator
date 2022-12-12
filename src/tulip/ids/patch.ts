@@ -1,3 +1,5 @@
+// Tulip Raydium vault stored deprecated pool Id, this is a work-around mapping
+// to the new one in Raydium.
 export const patch = {
   // RAY-SOL
   HUDr9BDaAGqi37xbQHzxCyXvfMCKPTPNF8g9c9bPu1Fu: "AVs9TA4nWDzfPJE9gGVNJMVhcQy3V9PGazuz33BfG2RA",
