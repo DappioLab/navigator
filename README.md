@@ -33,17 +33,7 @@ const farm = await raydium.infos.getFarm(connection, farmId);
 
 ## Supported Protocols
 
-| Protocol | Type               |
-| -------- | ------------------ |
-| Raydium  | Pool / Farm        |
-| Orca     | Pool / Farm        |
-| Saber    | Pool / Farm        |
-| Lifinity | Pool               |
-| Solend   | MoneyMarket        |
-| Larix    | MoneyMarket / Farm |
-| Francium | MoneyMarket        |
-| Tulip    | MoneyMarket        |
-| Katana   | Vault              |
+Check [here](https://universal-rabbit-hole.dappio.xyz/protocols) to see all the supported protocols
 
 ## Test
 
