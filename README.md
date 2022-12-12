@@ -10,25 +10,37 @@ Navigator is a Typescript client for instantiating various of kinds of DeFi prot
 
 ```typescript
 import { PublicKey, Connection } from "@solana/web3.js";
-import { raydium } from "@dappio/navigator";
+import { raydium, orca, tulip, friktion } from "@dappio/navigator";
 
 const connection = new Connection("https://api.mainnet-beta.solana.com", {
   commitment: "confirmed",
 });
 
-// Fetch all pools
-const pools = await raydium.infos.getAllPools(connection);
+// Fetch all Raydium pools
+const raydiumPools = await raydium.infos.getAllPools(connection);
 
-// Fetch pool (RAY-USDC)
+// Fetch all Orca pools
+const orcaPools = await orca.infos.getAllPools(connection);
+
+// Fetch Raydium pool (RAY-USDC)
 const poolId = new PublicKey("6UmmUiYoBjSrhakAobJw8BvkmJtDVxaeBtbt7rxWo1mg");
-const pool = await raydium.infos.getPool(connection, poolId);
+const raydiumPool = await raydium.infos.getPool(connection, poolId);
 
-// Fetch all farms
-const farms = await raydium.infos.getAllFarms(connection);
+// Fetch all Raydium farms
+const raydiumFarms = await raydium.infos.getAllFarms(connection);
 
-// Fetch farm (RAY-USDC)
+// Fetch all Orca farms
+const orcaFarms = await orca.infos.getAllFarms(connection);
+
+// Fetch Raydium farm (RAY-USDC)
 const farmId = new PublicKey("CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS");
-const farm = await raydium.infos.getFarm(connection, farmId);
+const raydiumFarm = await raydium.infos.getFarm(connection, farmId);
+
+// Fetch all Tulip vaults
+const tulipVaults = await tulip.infos.getAllVaults(connection);
+
+// Fetch all Friktion vaults
+const friktionVaults = await friktion.infos.getAllVaults(connection);
 ```
 
 ## Supported Protocols
