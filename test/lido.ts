@@ -66,6 +66,15 @@ describe("Lido", () => {
     console.log(`- Heaviest Validator: ${heaviestValidator.pubkey.toBase58()}`);
     console.log(`- Heaviest Validator Balance: ${heaviestValidator.entry.stakeAccountsBalance.toString()}`);
   });
+  it(" Can get heaviest validator index", async () => {
+    const vault = new lido.VaultInfoWrapper(
+      (await lido.infos.getVault(connection, lido.LIDO_ADDRESS)) as lido.VaultInfo
+    );
+    const heaviestValidatorIndex = vault.getHeaviestValidatorIndex();
+    console.log(`- Heaviest Validator Index: #${heaviestValidatorIndex}`);
+    console.log(`- Heaviest Validator Pubkey: ${vault.vaultInfo.validators!.entries[heaviestValidatorIndex].pubkey.toBase58()}`);
+    console.log(`- Heaviest Validator Balance: ${vault.vaultInfo.validators!.entries[heaviestValidatorIndex].entry.stakeAccountsBalance.toString()}`);
+  });
   it(" Can get APY", async () => {
     console.log(`- APY: ${await lido.VaultInfoWrapper.getApy()}%`);
   });
