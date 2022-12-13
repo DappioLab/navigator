@@ -72,6 +72,7 @@ export interface RaydiumVaultInfo extends VaultInfo {
   poolLpTokenAccount: PublicKey;
   poolWithdrawQueue: PublicKey;
   poolId: PublicKey;
+  deprecatedPoolId: PublicKey;
   poolAuthority: PublicKey;
   poolRewardATokenAccount: Account;
   poolRewardBTokenAccount: Account;
