@@ -219,6 +219,7 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
   }
 
   static async getApy(): Promise<string> {
+    // TODO: Move the fetch process to getAllVaults
     const apy: number = await axios.get(`${VaultInfoWrapper.SOL_API_HOST}/v1/apy?since_launch`).then((res) => {
       return res.data.data.apy;
     });
@@ -227,6 +228,11 @@ export class VaultInfoWrapper implements IVaultInfoWrapper {
       return apy.toFixed(2);
     }
     return VaultInfoWrapper.DEFAULT_APY;
+  }
+
+  getAPY(): number {
+    // TODO
+    return 0;
   }
 
   getHeaviestValidator(): types.ValidatorInfo {

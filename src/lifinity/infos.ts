@@ -303,7 +303,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  getApr(_x: number, _y: number): number {
+  getAPY(_x: number, _y: number): number {
     return this.poolInfo.tradingFee && this.poolInfo.marketMakingProfit
       ? this.poolInfo.tradingFee + this.poolInfo.marketMakingProfit
       : 0;

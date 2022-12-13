@@ -193,7 +193,7 @@ infos = class InstanceOrca {
       farm.rewardTokenMintAccountData = mintAccountSet.get(rewardMint.toString());
     });
 
-    // store additional attributes for calculate apr
+    // store additional attributes for calculate apy
     const tokenList = await getTokenList();
     const pools = await this.getAllPools(connection);
 
@@ -401,9 +401,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return 0;
   }
 
-  // getApr(tradingVolumeIn24Hours: number, lpPrice: number): number;
-
-  getApr() {
+  getAPY() {
     if (!this.allAPIPools) {
       return 0;
     }
@@ -438,8 +436,8 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return 0;
   }
 
-  getAprs(_x: number, _y: number, _z: number, doubleDip?: boolean): number[] {
-    let apr = 0;
+  getAPYs(_x: number, _y: number, _z: number, doubleDip?: boolean): number[] {
+    let apy = 0;
     let rewardTokenPrice = this.farmInfo.rewardTokenPrice;
     let emissionsPerSecondNumerator = this.farmInfo.emissionsPerSecondNumerator;
     let emissionsPerSecondDenominator = this.farmInfo.emissionsPerSecondDenominator;
@@ -456,7 +454,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
         baseTokenVaultAccountData = this.farmInfo.doubleDipBaseTokenVaultAccountData!;
         baseTokenMintAccountData = this.farmInfo.doubleDipBaseTokenMintAccountData!;
       } else {
-        return [apr];
+        return [apy];
       }
     }
 
@@ -470,7 +468,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
       Number(emissionsPerSecondDenominator) === 0 ||
       Number(this.farmInfo.lpSupply) === 0
     ) {
-      return [apr];
+      return [apy];
     }
 
     let dailyEmission =
@@ -490,10 +488,10 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
         10 ** Number(baseTokenMintAccountData!.decimals) /
         (Number(this.farmInfo.lpSupply) / 10 ** this.farmInfo.lpDecimals!);
 
-      apr = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
+      apy = (rewardValueUSD / poolValueUSD) * stakeRate * 100;
     }
 
-    return [apr];
+    return [apy];
   }
 
   getAuthority() {

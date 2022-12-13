@@ -101,7 +101,7 @@ export interface IPoolInfoWrapper {
   getTokenAmounts(lpAmount: number): { tokenAAmount: number; tokenBAmount: number };
   getLpAmount(tokenAmount: number, tokenMint: PublicKey): number;
   getLpPrice(tokenAPrice: number, tokenBPrice: number): number;
-  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number;
+  getAPY(tradingVolumeIn24Hours: number, lpPrice: number): number;
 
   // Optional
   getSwapOutAmount?(fromSide: PoolDirection, amountIn: BN): BN;
@@ -113,7 +113,7 @@ export interface IPoolInfoWrapper {
 export interface IFarmInfoWrapper {
   farmInfo: IFarmInfo;
   getStakedAmount(): number;
-  getAprs(lpPrice: number, rewardPrice: number, rewardPriceB?: number): number[];
+  getAPYs(lpPrice: number, rewardPrice: number, rewardPriceB?: number): number[];
 }
 
 // TODO: Util methods
@@ -124,6 +124,7 @@ export interface IReserveInfoWrapper {
 // TODO: Util methods
 export interface IVaultInfoWrapper {
   vaultInfo: IVaultInfo;
+  getAPY(): number;
 }
 
 export interface IInstancePool {

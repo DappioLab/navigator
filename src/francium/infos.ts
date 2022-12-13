@@ -399,7 +399,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return 0;
   }
 
-  getAprs(lpPrice: number, rewardTokenPrice: number): number[] {
+  getAPYs(lpPrice: number, rewardTokenPrice: number): number[] {
     // TODO
     return [0];
   }

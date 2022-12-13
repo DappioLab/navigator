@@ -145,4 +145,9 @@ export { infos };
 
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
+
+  getAPY(): number {
+    // TODO
+    return 0;
+  }
 }

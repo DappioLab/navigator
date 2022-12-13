@@ -735,7 +735,7 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
+  getAPY(tradingVolumeIn24Hours: number, lpPrice: number): number {
     const poolBalances = this._getPoolBalances();
     const feeNumerator = poolBalances.fees.numerator;
     const feeDenominator = poolBalances.fees.denominator;
@@ -748,9 +748,9 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     const lpDecimals = Number(this.poolInfo.lpDecimals);
 
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
-    const apr = lpValue > 0 ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100 : 0;
+    const apy = lpValue > 0 ? ((tradingVolumeIn24Hours * feeRate * 365) / lpValue) * 100 : 0;
 
-    return apr;
+    return apy;
   }
 
   getTokenAAmount(tokenBAmount: bigint): bigint {
@@ -811,7 +811,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return Number(this.farmInfo.poolLpTokenAccount?.amount) ?? 0;
   }
 
-  getAprs(lpPrice: number, rewardPrice: number, rewardPriceB?: number): number[] {
+  getAPYs(lpPrice: number, rewardPrice: number, rewardPriceB?: number): number[] {
     const lpAmount = Number(this.farmInfo.poolLpTokenAccount?.amount);
     const lpDecimals = Number(this.farmInfo.poolLpDecimals);
     const lpValue = lpAmount * lpPrice;
@@ -819,7 +819,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     const annualRewardAmount =
       (Number(this.farmInfo.perBlock) * (2 * 60 * 60 * 24 * 365)) / 10 ** (rewardDecimals - lpDecimals);
 
-    const apr = lpValue > 0 ? Math.round(((annualRewardAmount * rewardPrice) / lpValue) * 10000) / 100 : 0;
+    const apy = lpValue > 0 ? Math.round(((annualRewardAmount * rewardPrice) / lpValue) * 10000) / 100 : 0;
 
     if (rewardPriceB != undefined) {
       const rewardBDecimals = Number(this.farmInfo.poolRewardBDecimals);
@@ -827,11 +827,11 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
         ? (Number(this.farmInfo.perBlockB) * (2 * 60 * 60 * 24 * 365)) / 10 ** (rewardBDecimals - lpDecimals)
         : 0;
 
-      const aprB = lpValue > 0 ? Math.round(((annualRewardAmountB * rewardPriceB) / lpValue) * 10000) / 100 : 0;
-      return [apr, aprB];
+      const apyB = lpValue > 0 ? Math.round(((annualRewardAmountB * rewardPriceB) / lpValue) * 10000) / 100 : 0;
+      return [apy, apyB];
     }
 
-    return [apr];
+    return [apy];
   }
 
   authority() {
