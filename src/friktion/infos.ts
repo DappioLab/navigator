@@ -20,7 +20,7 @@ import {
 } from "./layouts";
 
 import * as types from ".";
-import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
+import { getAccount, getAssociatedTokenAddress, getMint } from "@solana/spl-token-v2";
 import { paginate } from "../utils";
 import axios from "axios";
 
@@ -312,6 +312,19 @@ export class VaultInfoWrapper {
       voltProgramId
     )[0];
   }
+  getRoundUnderlyingTokensPendingWithdrawalsAddress(
+    roundNumber: BN,
+    voltProgramId: PublicKey = VOLT_PROGRAM_ID
+  ): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [
+        this.vaultInfo.vaultId.toBuffer(),
+        roundNumber.toArrayLike(Buffer, "le", 8),
+        new Uint8Array(Buffer.from("roundUlPending", "utf-8")),
+      ],
+      voltProgramId
+    )[0];
+  }
   async getFeeAccount(): Promise<PublicKey> {
     return getAssociatedTokenAddress(this.vaultInfo.vaultMint, VOLT_FEE_OWNER);
   }
@@ -339,5 +352,52 @@ export class VaultInfoWrapper {
   }
   getAPY(): number {
     return this.vaultInfo.snapshotInfo ? this.vaultInfo.snapshotInfo.apy : 0;
+  }
+  async getSharePrice(
+    connection: Connection,
+    round?: number,
+    claimDeposit?: boolean,
+    claimWithdrawal?: boolean
+  ): Promise<number> {
+    if (this.vaultInfo.snapshotInfo && this.vaultInfo.roundNumber.toNumber() == round) {
+      return this.vaultInfo.snapshotInfo.shareTokenPrice;
+    } else if (this.vaultInfo.snapshotInfo) {
+      return this.vaultInfo.snapshotInfo.shareTokenPrice;
+    } else if (round) {
+      if (claimWithdrawal) {
+        let roundInfo = this.vaultInfo.roundInfos[round - 1];
+        let underlying = new BN(
+          (
+            await getAccount(connection, this.getRoundUnderlyingTokensPendingWithdrawalsAddress(new BN(round)))
+          ).amount.toString()
+        )
+          .div(new BN(10).pow(new BN(3)))
+          .toNumber();
+        let vaultTokenSupply = roundInfo.voltTokensFromPendingWithdrawals.div(new BN(10).pow(new BN(3))).toNumber();
+        return underlying / vaultTokenSupply;
+      } else if (claimDeposit) {
+        let roundInfo = this.vaultInfo.roundInfos[round - 1];
+        let vaultTokenSupply = new BN(
+          (await getAccount(connection, this.getRoundVoltTokensAddress(new BN(round)))).amount.toString()
+        )
+          .div(new BN(10).pow(new BN(3)))
+          .toNumber();
+        let underlying = roundInfo.underlyingFromPendingDeposits.div(new BN(10).pow(new BN(3))).toNumber();
+        return underlying / vaultTokenSupply;
+      } else {
+        return 1;
+      }
+    } else {
+      round = this.vaultInfo.roundNumber.toNumber() - 1;
+      if (round <= 0) return 1;
+      let roundInfo = this.vaultInfo.roundInfos[round];
+      let mint = this.vaultInfo.vaultMint;
+      let supply = new BN((await getMint(connection, mint)).supply.toString())
+        .add(roundInfo.voltTokensFromPendingWithdrawals)
+        .div(new BN(10).pow(new BN(6)))
+        .toNumber();
+      let totalDeposits = roundInfo.underlyingPreEnter.div(new BN(10).pow(new BN(6))).toNumber();
+      return supply == 0 ? 1 : totalDeposits / supply;
+    }
   }
 }
