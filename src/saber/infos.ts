@@ -490,14 +490,14 @@ export class PoolInfoWrapper implements IPoolInfoWrapper {
     return lpPrice;
   }
 
-  getApr(tradingVolumeIn24Hours: number, lpPrice: number): number {
+  getAPY(tradingVolumeIn24Hours: number, lpPrice: number): number {
     const lpSupply = Number(this.poolInfo.lpSupply!);
     const lpDecimals = this.poolInfo.lpDecimals!;
     const lpValue = (lpSupply / 10 ** lpDecimals) * lpPrice;
     const tradingFee = Number(this.poolInfo.tradingFee) / 10e9;
-    const apr = lpValue > 0 ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100 : 0;
+    const apy = lpValue > 0 ? ((tradingVolumeIn24Hours * tradingFee * 365) / lpValue) * 100 : 0;
 
-    return apr;
+    return apy;
   }
 }
 
@@ -509,14 +509,14 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return 0;
   }
 
-  getAprs(lpPrice: number, rewardTokenPrice: number): number[] {
+  getAPYs(lpPrice: number, rewardTokenPrice: number): number[] {
     const lpAmount = Number(this.farmInfo.totalTokensDeposited.div(new BN(10).pow(this.farmInfo.tokenMintDecimals)));
     const lpValue = lpAmount * lpPrice;
     const annualRewardAmount = Number(this.farmInfo.annualRewardsRate.divn(10e5));
     const annualRewardValue = annualRewardAmount * rewardTokenPrice;
 
-    const apr = lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
+    const apy = lpValue > 0 ? Math.round((annualRewardValue / lpValue) * 10000) / 100 : 0;
 
-    return [apr];
+    return [apy];
   }
 }

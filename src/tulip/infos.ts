@@ -712,7 +712,7 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
-  getApr() {
+  getAPY() {
     const numberOfPeriods = 8760; // yearly compound times = 24 * 365
     const apr = (Math.pow(this.vaultInfo.apy / 100 + 1, 1 / numberOfPeriods) - 1) * 100 * 24 * 365;
 

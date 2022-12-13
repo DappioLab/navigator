@@ -51,7 +51,7 @@ describe("Orca", () => {
     const amount = 72;
     const pools = (await orca.infos.getAllPoolWrappers(connection)) as PoolInfoWrapper[];
     const pool = await orca.infos.getPoolWrapper(connection, poolId);
-    pools.map((item) => console.log(item.getApr()));
+    pools.map((item) => console.log(item.getAPY()));
 
     const tokenAmount = pool.getTokenAmounts(amount);
     console.log(tokenAmount);
@@ -64,8 +64,8 @@ describe("Orca", () => {
     console.log("# of farms:", farms.length);
 
     farms.forEach((farm) => {
-      const apr = farm.getAprs(0, 0, 0);
-      const doubleDipApr = farm.getAprs(0, 0, 0, true);
+      const apr = farm.getAPYs(0, 0, 0);
+      const doubleDipApr = farm.getAPYs(0, 0, 0, true);
 
       if ((apr || doubleDipApr) && farm.farmInfo.poolId) {
         let pool = pools.find((item) => item.poolId.equals(farm.farmInfo.poolId!));

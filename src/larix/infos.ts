@@ -495,7 +495,7 @@ export class FarmInfoWrapper implements IFarmInfoWrapper {
     return 0;
   }
 
-  getAprs(lpPrice: number, rewardTokenPrice: number): number[] {
+  getAPYs(lpPrice: number, rewardTokenPrice: number): number[] {
     // TODO
     return [0];
   }
@@ -561,7 +561,7 @@ export class ObligationInfoWrapper {
         farm: farmMap.get(reserveInfoWrapper.reserveInfo.reserveId.toString())!,
       });
     }
-    
+
     let newReward = new BN(0);
     for (let depositedReserve of this.obligationInfo.obligationCollaterals) {
       let infoWrapper = reserveMap.get(depositedReserve.reserveId.toString());
@@ -582,7 +582,7 @@ export class ObligationInfoWrapper {
         let indexSub = infoWrapper.farm.farmInfo.lTokenMiningIndex.sub(depositedReserve.index);
 
         let reward = indexSub.mul(depositedReserve.depositedAmount);
-        
+
         newReward = newReward.add(reward);
       }
     }

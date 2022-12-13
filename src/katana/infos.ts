@@ -321,6 +321,11 @@ export class VaultInfoWrapper {
     let optionMarket = await getOptionMarketByOptionTokenMint(this.vaultInfo.optionTokenMint, connection);
     return optionMarket;
   }
+
+  getAPY(): number {
+    // TODO
+    return 0;
+  }
 }
 
 export async function checkDepositorCreated(

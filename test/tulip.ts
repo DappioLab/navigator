@@ -78,7 +78,7 @@ describe("Tulip", () => {
       console.log(`\n* Vault#${i + 1}`);
       console.log(`** VaultId: ${v.vaultInfo.vaultId}`);
       console.log("feeWallet:", v.vaultInfo.base.fees.feeWallet.toBase58());
-      console.log("apr:", v.getApr());
+      console.log("apr:", v.getAPY());
       const vaultDeposited = v.getDepositedLpAmountAndCapacityLimit();
       console.log("total deposit balance:", Number(vaultDeposited.lpAmount));
       console.log("total deposit balance Cap:", Number(vaultDeposited.capacityLimit));
