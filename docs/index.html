@@ -26,56 +26,13 @@
 <a href="#usage" id="usage" style="color: inherit; text-decoration: none;">
   <h2>Usage</h2>
 </a>
-<pre><code class="language-typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">PublicKey</span><span class="hl-1">, </span><span class="hl-2">Connection</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@solana/web3.js&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">raydium</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@dappio/navigator&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">connection</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">Connection</span><span class="hl-1">(</span><span class="hl-3">&quot;https://api.mainnet-beta.solana.com&quot;</span><span class="hl-1">, {</span><br/><span class="hl-1">  </span><span class="hl-2">commitment:</span><span class="hl-1"> </span><span class="hl-3">&quot;confirmed&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-7">// Fetch all pools</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">pools</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllPools</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch pool (RAY-USDC)</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">poolId</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">PublicKey</span><span class="hl-1">(</span><span class="hl-3">&quot;6UmmUiYoBjSrhakAobJw8BvkmJtDVxaeBtbt7rxWo1mg&quot;</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">pool</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getPool</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">, </span><span class="hl-2">poolId</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch all farms</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">farms</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllFarms</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch farm (RAY-USDC)</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">farmId</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">PublicKey</span><span class="hl-1">(</span><span class="hl-3">&quot;CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS&quot;</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">farm</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getFarm</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">, </span><span class="hl-2">farmId</span><span class="hl-1">);</span>
+<pre><code class="language-typescript"><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">PublicKey</span><span class="hl-1">, </span><span class="hl-2">Connection</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@solana/web3.js&quot;</span><span class="hl-1">;</span><br/><span class="hl-0">import</span><span class="hl-1"> { </span><span class="hl-2">raydium</span><span class="hl-1">, </span><span class="hl-2">orca</span><span class="hl-1">, </span><span class="hl-2">tulip</span><span class="hl-1">, </span><span class="hl-2">friktion</span><span class="hl-1"> } </span><span class="hl-0">from</span><span class="hl-1"> </span><span class="hl-3">&quot;@dappio/navigator&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">connection</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">Connection</span><span class="hl-1">(</span><span class="hl-3">&quot;https://api.mainnet-beta.solana.com&quot;</span><span class="hl-1">, {</span><br/><span class="hl-1">  </span><span class="hl-2">commitment:</span><span class="hl-1"> </span><span class="hl-3">&quot;confirmed&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-7">// Fetch all Raydium pools</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">raydiumPools</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllPools</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch all Orca pools</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">orcaPools</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">orca</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllPools</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch Raydium pool (RAY-USDC)</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">poolId</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">PublicKey</span><span class="hl-1">(</span><span class="hl-3">&quot;6UmmUiYoBjSrhakAobJw8BvkmJtDVxaeBtbt7rxWo1mg&quot;</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">raydiumPool</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getPool</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">, </span><span class="hl-2">poolId</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch all Raydium farms</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">raydiumFarms</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllFarms</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch all Orca farms</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">orcaFarms</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">orca</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllFarms</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch Raydium farm (RAY-USDC)</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">farmId</span><span class="hl-1"> = </span><span class="hl-4">new</span><span class="hl-1"> </span><span class="hl-6">PublicKey</span><span class="hl-1">(</span><span class="hl-3">&quot;CHYrUBX2RKX8iBg7gYTkccoGNBzP44LdaazMHCLcdEgS&quot;</span><span class="hl-1">);</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">raydiumFarm</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">raydium</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getFarm</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">, </span><span class="hl-2">farmId</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch all Tulip vaults</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">tulipVaults</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">tulip</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllVaults</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span><br/><br/><span class="hl-7">// Fetch all Friktion vaults</span><br/><span class="hl-4">const</span><span class="hl-1"> </span><span class="hl-5">friktionVaults</span><span class="hl-1"> = </span><span class="hl-0">await</span><span class="hl-1"> </span><span class="hl-2">friktion</span><span class="hl-1">.</span><span class="hl-2">infos</span><span class="hl-1">.</span><span class="hl-6">getAllVaults</span><span class="hl-1">(</span><span class="hl-2">connection</span><span class="hl-1">);</span>
 </code></pre>
 
 <a href="#supported-protocols" id="supported-protocols" style="color: inherit; text-decoration: none;">
   <h2>Supported Protocols</h2>
 </a>
-<table>
-<thead>
-<tr>
-<th>Protocol</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Raydium</td>
-<td>Pool / Farm</td>
-</tr>
-<tr>
-<td>Orca</td>
-<td>Pool / Farm</td>
-</tr>
-<tr>
-<td>Saber</td>
-<td>Pool / Farm</td>
-</tr>
-<tr>
-<td>Lifinity</td>
-<td>Pool</td>
-</tr>
-<tr>
-<td>Solend</td>
-<td>MoneyMarket</td>
-</tr>
-<tr>
-<td>Larix</td>
-<td>MoneyMarket / Farm</td>
-</tr>
-<tr>
-<td>Francium</td>
-<td>MoneyMarket</td>
-</tr>
-<tr>
-<td>Tulip</td>
-<td>MoneyMarket</td>
-</tr>
-<tr>
-<td>Katana</td>
-<td>Vault</td>
-</tr>
-</tbody></table>
+<p>Check <a href="https://universal-rabbit-hole.dappio.xyz/protocols">here</a> to see all the supported protocols</p>
 
 <a href="#test" id="test" style="color: inherit; text-decoration: none;">
   <h2>Test</h2>
