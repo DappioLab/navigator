@@ -277,6 +277,7 @@ infos = class InstanceTulip {
       serumMarket,
     } = decodeData;
 
+    const deprecatedPoolId = raydiumPoolId;
     let poolId = raydiumPoolId;
 
     Object.entries(patch).find((k) => {
@@ -304,6 +305,7 @@ infos = class InstanceTulip {
       poolLpTokenAccount: raydiumPoolLpTokenAccount,
       poolWithdrawQueue: raydiumPoolWithdrawQueue,
       poolId,
+      deprecatedPoolId,
       poolAuthority: raydiumPoolAuthority,
       poolRewardATokenAccount: InstanceTulip._defaultTokenAccount(raydiumPoolRewardATokenAccount),
       poolRewardBTokenAccount: InstanceTulip._defaultTokenAccount(raydiumPoolRewardBTokenAccount),
