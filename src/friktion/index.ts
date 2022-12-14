@@ -196,4 +196,5 @@ export interface SnapshotInfo {
   performanceFeeRate: number;
   withdrawalFeeRate: number;
   nextAutocompoundingTime: number;
+  lastTradedOption: string;
 }
