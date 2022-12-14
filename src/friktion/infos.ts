@@ -354,18 +354,21 @@ export class VaultInfoWrapper {
   getAPY(): number {
     return this.vaultInfo.snapshotInfo ? this.vaultInfo.snapshotInfo.apy : 0;
   }
-  async getSharePrice(
-    connection: Connection,
-    round?: number,
-    claimDeposit?: boolean,
-    claimWithdrawal?: boolean
-  ): Promise<number> {
-    if (this.vaultInfo.snapshotInfo && this.vaultInfo.roundNumber.toNumber() == round) {
-      return this.vaultInfo.snapshotInfo.shareTokenPrice;
-    } else if (this.vaultInfo.snapshotInfo) {
-      return this.vaultInfo.snapshotInfo.shareTokenPrice;
-    } else if (round) {
-      if (claimWithdrawal) {
+  async getSharePrice(connection: Connection, round?: number, isDeposit?: boolean): Promise<number> {
+    if (round) {
+      if (this.vaultInfo.snapshotInfo && this.vaultInfo.roundNumber.toNumber() == round) {
+        return this.vaultInfo.snapshotInfo.shareTokenPrice;
+      }
+      if (isDeposit) {
+        let roundInfo = this.vaultInfo.roundInfos[round - 1];
+        let vaultTokenSupply = new BN(
+          (await getAccount(connection, this.getRoundVoltTokensAddress(new BN(round)))).amount.toString()
+        )
+          .div(new BN(10).pow(new BN(3)))
+          .toNumber();
+        let underlying = roundInfo.underlyingFromPendingDeposits.div(new BN(10).pow(new BN(3))).toNumber();
+        return underlying / vaultTokenSupply;
+      } else {
         let roundInfo = this.vaultInfo.roundInfos[round - 1];
         let underlying = new BN(
           (
@@ -376,44 +379,33 @@ export class VaultInfoWrapper {
           .toNumber();
         let vaultTokenSupply = roundInfo.voltTokensFromPendingWithdrawals.div(new BN(10).pow(new BN(3))).toNumber();
         return underlying / vaultTokenSupply;
-      } else if (claimDeposit) {
-        let roundInfo = this.vaultInfo.roundInfos[round - 1];
-        let vaultTokenSupply = new BN(
-          (await getAccount(connection, this.getRoundVoltTokensAddress(new BN(round)))).amount.toString()
-        )
-          .div(new BN(10).pow(new BN(3)))
-          .toNumber();
-        let underlying = roundInfo.underlyingFromPendingDeposits.div(new BN(10).pow(new BN(3))).toNumber();
-        return underlying / vaultTokenSupply;
-      } else {
-        return 1;
       }
     } else {
-      round = this.vaultInfo.roundNumber.toNumber() - 1;
-      if (round <= 0) return 1;
-      let roundInfo = this.vaultInfo.roundInfos[round];
-      let mint = this.vaultInfo.vaultMint;
-      let supply = new BN((await getMint(connection, mint)).supply.toString())
-        .add(roundInfo.voltTokensFromPendingWithdrawals)
-        .div(new BN(10).pow(new BN(6)))
-        .toNumber();
-      let totalDeposits = roundInfo.underlyingPreEnter.div(new BN(10).pow(new BN(6))).toNumber();
-      return supply == 0 ? 1 : totalDeposits / supply;
+      if (this.vaultInfo.snapshotInfo) {
+        return this.vaultInfo.snapshotInfo.shareTokenPrice;
+      } else {
+        round = this.vaultInfo.roundNumber.toNumber() - 1;
+        if (round <= 0) return 1;
+        let roundInfo = this.vaultInfo.roundInfos[round];
+        let mint = this.vaultInfo.vaultMint;
+        let supply = new BN((await getMint(connection, mint)).supply.toString())
+          .add(roundInfo.voltTokensFromPendingWithdrawals)
+          .div(new BN(10).pow(new BN(6)))
+          .toNumber();
+        let totalDeposits = roundInfo.underlyingPreEnter.div(new BN(10).pow(new BN(6))).toNumber();
+        return supply == 0 ? 1 : totalDeposits / supply;
+      }
     }
   }
-  async getLastTradedOptipon(connection: Connection): Promise<string> {
+  async getLastTradedOptipon(connection: Connection): Promise<{ strikePrice: number | null; expiry: number | null }> {
     let optionAddress = this.vaultInfo.snapshotInfo?.lastTradedOption;
 
     if (optionAddress) {
       let account = new PublicKey(optionAddress);
       let optionInfo = await connection.getAccountInfo(account);
-      if (optionInfo && optionInfo.owner.toString() == INERTIA_PROGRAM_ID.toString()) {
+      if (optionInfo && optionInfo.owner.equals(INERTIA_PROGRAM_ID)) {
         let option = INERTIA_OPTION_CONTRACT_LAYOUT.decode(optionInfo.data);
         let ts = new BN(option.expiryTs).toNumber();
-        let date = new Date(ts * 1000);
-        let month = date.toLocaleString("en-US", { month: "short" });
-        let day = date.getDate();
-        let type = new BN(option.isCall).isZero() ? "PUT" : "CALL";
         let quoteDecimal = 10 ** (await (await getMint(connection, new PublicKey(option.quoteMint))).decimals);
 
         let underlyingDecimal =
@@ -423,10 +415,10 @@ export class VaultInfoWrapper {
             quoteDecimal
           : (new BN(option.quoteAmount).toNumber() / new BN(option.underlyingAmount).toNumber() / quoteDecimal) *
             underlyingDecimal;
-        price = Math.round(price * 10**5) / 10**5;
-        return `$${price} ${type} ${month} ${day}`;
+        price = Math.round(price * 10 ** 5) / 10 ** 5;
+        return { strikePrice: price, expiry: ts };
       }
     }
-    return "null";
+    return { strikePrice: null, expiry: null };
   }
 }
