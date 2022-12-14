@@ -9,11 +9,12 @@ import {
 import BN from "bn.js";
 import { utils } from "..";
 import { IInstanceVault, IVaultInfoWrapper, PageConfig } from "../types";
-import { STABLE_VAULT_IDS, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
+import { INERTIA_PROGRAM_ID, STABLE_VAULT_IDS, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
 import {
   ENTROPY_METADATA_LAYOUT,
   EPOCH_INFO_LAYOUT,
   EXTRA_VOLT_DATA_LAYOUT,
+  INERTIA_OPTION_CONTRACT_LAYOUT,
   ROUND_LAYOUT,
   USER_PENDING_LAYOUT,
   VOLT_VAULT_LAYOUT,
@@ -399,5 +400,33 @@ export class VaultInfoWrapper {
       let totalDeposits = roundInfo.underlyingPreEnter.div(new BN(10).pow(new BN(6))).toNumber();
       return supply == 0 ? 1 : totalDeposits / supply;
     }
+  }
+  async getLastTradedOptipon(connection: Connection): Promise<string> {
+    let optionAddress = this.vaultInfo.snapshotInfo?.lastTradedOption;
+
+    if (optionAddress) {
+      let account = new PublicKey(optionAddress);
+      let optionInfo = await connection.getAccountInfo(account);
+      if (optionInfo && optionInfo.owner.toString() == INERTIA_PROGRAM_ID.toString()) {
+        let option = INERTIA_OPTION_CONTRACT_LAYOUT.decode(optionInfo.data);
+        let ts = new BN(option.expiryTs).toNumber();
+        let date = new Date(ts * 1000);
+        let month = date.toLocaleString("en-US", { month: "short" });
+        let day = date.getDate();
+        let type = new BN(option.isCall).isZero() ? "PUT" : "CALL";
+        let quoteDecimal = 10 ** (await (await getMint(connection, new PublicKey(option.quoteMint))).decimals);
+
+        let underlyingDecimal =
+          10 ** (await (await getMint(connection, new PublicKey(option.underlyingMint))).decimals);
+        let price = new BN(option.isCall).isZero()
+          ? (new BN(option.underlyingAmount).toNumber() / new BN(option.quoteAmount).toNumber() / underlyingDecimal) *
+            quoteDecimal
+          : (new BN(option.quoteAmount).toNumber() / new BN(option.underlyingAmount).toNumber() / quoteDecimal) *
+            underlyingDecimal;
+        price = Math.round(price * 10**5) / 10**5;
+        return `$${price} ${type} ${month} ${day}`;
+      }
+    }
+    return "null";
   }
 }
