@@ -11,11 +11,12 @@ describe("Friktion", () => {
   //   commitment,
   //   wsEndpoint: "wss://rpc-mainnet-fork.dappio.xyz/ws",
   // });
-  const connection = new Connection("https://rpc.ankr.com/solana", {
+  const connection = new Connection("https://cache-rpc.dappio.xyz/", {
     wsEndpoint: "wss://api.mainnet-beta.solana.com",
 
     commitment: "confirmed",
     confirmTransactionInitialTimeout: 180 * 1000,
+    httpHeaders: { referer: "https://app.dappio.xyz" },
   });
   // const connection = new Connection("https://ssc-dao.genesysgo.net", {
   //   commitment: "confirmed",
@@ -38,19 +39,56 @@ describe("Friktion", () => {
   // anchor.setProvider(provider);
 
   it("test", async () => {
-    //console.log(friktion.ENTROPY_METADATA_LAYOUT.decode(Buffer.alloc(1000)));
     let wallet = new PublicKey("G9on1ddvCc8xqfk2zMceky2GeSfVfhU8JqGHxNEWB5u4");
+    let withdrawer = new Map(
+      ((await friktion.infos.getAllWithdrawers!(connection, wallet)) as friktion.withdrawerInfo[]).map((w) => [
+        w.withdrawerId.toString(),
+        w,
+      ])
+    );
+    let userDeposits = new Map(
+      ((await friktion.infos.getAllDepositors(connection, wallet)) as friktion.DepositorInfo[]).map((w) => [
+        w.depositorId.toString(),
+        w,
+      ])
+    );
+    console.log("vault");
     let vaults = (await friktion.infos.getAllVaults(connection)) as friktion.VaultInfo[];
-
-    vaults.forEach((v) => {
-      let wrapp = new friktion.VaultInfoWrapper(v);
-      if (v.roundInfos.length > 1) {
-        console.log("https://explorer.solana.com/address/" + wrapp.getEpochInfoAddress(new BN(1)));
-        console.log(wrapp.getTypes());
+    for (let v of vaults) {
+      let wrrp = new friktion.VaultInfoWrapper(v);
+      let withdrawerInfo = withdrawer.get(friktion.infos.getWithdrawerId!(v.vaultId, wallet).toString());
+      let DepositorInfo = userDeposits.get(friktion.infos.getDepositorId!(v.vaultId, wallet).toString());
+      let option = v.snapshotInfo?.lastTradedOption;
+      if (option != "N/A" && option) {
+        console.log(v.vaultId.toString());
+        console.log(await wrrp.getLastTradedOptipon(connection));
       }
-    });
-    let userDeposits = await friktion.infos.getAllDepositors(connection, wallet);
-
-    let withdrawer = await friktion.infos.getAllWithdrawers!(connection, wallet);
+      if (withdrawerInfo) {
+        let price = await wrrp.getSharePrice(connection, withdrawerInfo.roundNumber.toNumber(), false);
+        let amount = withdrawerInfo.amount.toNumber() * price;
+        console.log(
+          "withdraw",
+          withdrawerInfo.withdrawerId.toString(),
+          v.vaultId.toString(),
+          amount,
+          withdrawerInfo.amount.toNumber(),
+          price,
+          withdrawerInfo.roundNumber.toNumber(),
+          v.roundNumber.toNumber()
+        );
+      }
+      if (DepositorInfo) {
+        let price = await wrrp.getSharePrice(connection, DepositorInfo.roundNumber.toNumber(), true);
+        let amount = DepositorInfo.amount.toNumber() / price;
+        console.log(
+          "deposit",
+          DepositorInfo.depositorId.toString(),
+          v.vaultId.toString(),
+          amount,
+          DepositorInfo.amount.toNumber()
+        );
+      }
+    }
+    let vaultMap = new Map(vaults.map((v) => [v.vaultId.toString(), new friktion.VaultInfoWrapper(v)]));
   });
 });

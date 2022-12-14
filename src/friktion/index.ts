@@ -191,4 +191,10 @@ export interface SnapshotInfo {
   weeklyPy: number;
   monthlyPy: number;
   apr: number;
+  shareTokenPrice: number;
+  apyAfterFees: number;
+  performanceFeeRate: number;
+  withdrawalFeeRate: number;
+  nextAutocompoundingTime: number;
+  lastTradedOption: string;
 }

@@ -9,18 +9,19 @@ import {
 import BN from "bn.js";
 import { utils } from "..";
 import { IInstanceVault, IVaultInfoWrapper, PageConfig } from "../types";
-import { STABLE_VAULT_IDS, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
+import { INERTIA_PROGRAM_ID, STABLE_VAULT_IDS, VOLT_FEE_OWNER, VOLT_PROGRAM_ID } from "./ids";
 import {
   ENTROPY_METADATA_LAYOUT,
   EPOCH_INFO_LAYOUT,
   EXTRA_VOLT_DATA_LAYOUT,
+  INERTIA_OPTION_CONTRACT_LAYOUT,
   ROUND_LAYOUT,
   USER_PENDING_LAYOUT,
   VOLT_VAULT_LAYOUT,
 } from "./layouts";
 
 import * as types from ".";
-import { getAssociatedTokenAddress } from "@solana/spl-token-v2";
+import { getAccount, getAssociatedTokenAddress, getMint } from "@solana/spl-token-v2";
 import { paginate } from "../utils";
 import axios from "axios";
 
@@ -312,6 +313,19 @@ export class VaultInfoWrapper {
       voltProgramId
     )[0];
   }
+  getRoundUnderlyingTokensPendingWithdrawalsAddress(
+    roundNumber: BN,
+    voltProgramId: PublicKey = VOLT_PROGRAM_ID
+  ): PublicKey {
+    return PublicKey.findProgramAddressSync(
+      [
+        this.vaultInfo.vaultId.toBuffer(),
+        roundNumber.toArrayLike(Buffer, "le", 8),
+        new Uint8Array(Buffer.from("roundUlPending", "utf-8")),
+      ],
+      voltProgramId
+    )[0];
+  }
   async getFeeAccount(): Promise<PublicKey> {
     return getAssociatedTokenAddress(this.vaultInfo.vaultMint, VOLT_FEE_OWNER);
   }
@@ -339,5 +353,72 @@ export class VaultInfoWrapper {
   }
   getAPY(): number {
     return this.vaultInfo.snapshotInfo ? this.vaultInfo.snapshotInfo.apy : 0;
+  }
+  async getSharePrice(connection: Connection, round?: number, isDeposit?: boolean): Promise<number> {
+    if (round) {
+      if (this.vaultInfo.snapshotInfo && this.vaultInfo.roundNumber.toNumber() == round) {
+        return this.vaultInfo.snapshotInfo.shareTokenPrice;
+      }
+      if (isDeposit) {
+        let roundInfo = this.vaultInfo.roundInfos[round - 1];
+        let vaultTokenSupply = new BN(
+          (await getAccount(connection, this.getRoundVoltTokensAddress(new BN(round)))).amount.toString()
+        )
+          .div(new BN(10).pow(new BN(3)))
+          .toNumber();
+        let underlying = roundInfo.underlyingFromPendingDeposits.div(new BN(10).pow(new BN(3))).toNumber();
+        return underlying / vaultTokenSupply;
+      } else {
+        let roundInfo = this.vaultInfo.roundInfos[round - 1];
+        let underlying = new BN(
+          (
+            await getAccount(connection, this.getRoundUnderlyingTokensPendingWithdrawalsAddress(new BN(round)))
+          ).amount.toString()
+        )
+          .div(new BN(10).pow(new BN(3)))
+          .toNumber();
+        let vaultTokenSupply = roundInfo.voltTokensFromPendingWithdrawals.div(new BN(10).pow(new BN(3))).toNumber();
+        return underlying / vaultTokenSupply;
+      }
+    } else {
+      if (this.vaultInfo.snapshotInfo) {
+        return this.vaultInfo.snapshotInfo.shareTokenPrice;
+      } else {
+        round = this.vaultInfo.roundNumber.toNumber() - 1;
+        if (round <= 0) return 1;
+        let roundInfo = this.vaultInfo.roundInfos[round];
+        let mint = this.vaultInfo.vaultMint;
+        let supply = new BN((await getMint(connection, mint)).supply.toString())
+          .add(roundInfo.voltTokensFromPendingWithdrawals)
+          .div(new BN(10).pow(new BN(6)))
+          .toNumber();
+        let totalDeposits = roundInfo.underlyingPreEnter.div(new BN(10).pow(new BN(6))).toNumber();
+        return supply == 0 ? 1 : totalDeposits / supply;
+      }
+    }
+  }
+  async getLastTradedOptipon(connection: Connection): Promise<{ strikePrice: number | null; expiry: number | null }> {
+    let optionAddress = this.vaultInfo.snapshotInfo?.lastTradedOption;
+
+    if (optionAddress) {
+      let account = new PublicKey(optionAddress);
+      let optionInfo = await connection.getAccountInfo(account);
+      if (optionInfo && optionInfo.owner.equals(INERTIA_PROGRAM_ID)) {
+        let option = INERTIA_OPTION_CONTRACT_LAYOUT.decode(optionInfo.data);
+        let ts = new BN(option.expiryTs).toNumber();
+        let quoteDecimal = 10 ** (await (await getMint(connection, new PublicKey(option.quoteMint))).decimals);
+
+        let underlyingDecimal =
+          10 ** (await (await getMint(connection, new PublicKey(option.underlyingMint))).decimals);
+        let price = new BN(option.isCall).isZero()
+          ? (new BN(option.underlyingAmount).toNumber() / new BN(option.quoteAmount).toNumber() / underlyingDecimal) *
+            quoteDecimal
+          : (new BN(option.quoteAmount).toNumber() / new BN(option.underlyingAmount).toNumber() / quoteDecimal) *
+            underlyingDecimal;
+        price = Math.round(price * 10 ** 5) / 10 ** 5;
+        return { strikePrice: price, expiry: ts };
+      }
+    }
+    return { strikePrice: null, expiry: null };
   }
 }

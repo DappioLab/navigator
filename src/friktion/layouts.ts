@@ -68,7 +68,7 @@ export const USER_PENDING_LAYOUT = struct([
 
 export const ROUND_LAYOUT = struct([
   blob(8, "identifier"),
-  u64("number"),
+  u64("roundNumber"), //changed from "number"
   u64("underlyingFromPendingDeposits"),
   u64("voltTokensFromPendingWithdrawals"),
   u64("underlyingPreEnter"),
@@ -80,7 +80,7 @@ export const EPOCH_INFO_LAYOUT = struct([
   blob(8, "identifier"),
   f64("vaultTokenPrice"),
   f64("pctPnl"),
-  u64("epochNumber"),//changed from "number"
+  u64("epochNumber"), //changed from "number"
   u64("underlyingPreEnter"),
   u64("underlyingPostSettle"),
   u64("voltTokenSupply"),
@@ -185,6 +185,33 @@ export const ENTROPY_METADATA_LAYOUT = struct([
   f64("targetCurrBasePosition"),
   f64("targetCurrQuotePosition"),
   f64("hedgeLenience"),
-  seq(struct([f64("unusedF64")]),9, "unusedF64s"),
+  seq(struct([f64("unusedF64")]), 9, "unusedF64s"),
   bool("hedgeWithSpot"),
+]);
+
+export const INERTIA_OPTION_CONTRACT_LAYOUT = struct([
+  blob(8, "identifier"),
+  publicKey("adminKey"),
+  publicKey("oracleAi"),
+  publicKey("underlyingMint"),
+  publicKey("quoteMint"),
+  u64("expiryTs"),
+  u64("isCall"),
+  u8("contractBump"),
+  u8("writerBump"),
+  u8("underlyingPoolBump"),
+  u8("claimablePoolBump"),
+  u8("optionBump"),
+  u64("underlyingAmount"),
+  u64("quoteAmount"),
+  publicKey("writerMint"),
+  publicKey("optionMint"),
+  publicKey("underlyingPool"),
+  publicKey("claimablePool"),
+  publicKey("mintFeeAccount"),
+  publicKey("exerciseFeeAccount"),
+  bool("wasSettleCranked"),
+  publicKey("extraKey1"),
+  u64("exerciseAmount"),
+  u64("totalAmount"),
 ]);
