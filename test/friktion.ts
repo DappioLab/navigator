@@ -64,7 +64,7 @@ describe("Friktion", () => {
         console.log(await wrrp.getLastTradedOptipon(connection));
       }
       if (withdrawerInfo) {
-        let price = await wrrp.getSharePrice(connection, withdrawerInfo.roundNumber.toNumber(), false, true);
+        let price = await wrrp.getSharePrice(connection, withdrawerInfo.roundNumber.toNumber(), false);
         let amount = withdrawerInfo.amount.toNumber() * price;
         console.log(
           "withdraw",
@@ -78,7 +78,7 @@ describe("Friktion", () => {
         );
       }
       if (DepositorInfo) {
-        let price = await wrrp.getSharePrice(connection, DepositorInfo.roundNumber.toNumber(), true, false);
+        let price = await wrrp.getSharePrice(connection, DepositorInfo.roundNumber.toNumber(), true);
         let amount = DepositorInfo.amount.toNumber() / price;
         console.log(
           "deposit",
