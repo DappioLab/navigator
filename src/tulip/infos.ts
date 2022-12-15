@@ -538,13 +538,7 @@ infos = class InstanceTulip {
 
   private static _isAllowedId(id: PublicKey) {
     return !!configV2.vaults.accounts.find(
-      (account) =>
-        account.multi_deposit_optimizer?.account == id.toString() ||
-        account.lending_optimizer?.account == id.toString() ||
-        account.raydium?.account == id.toString() ||
-        account.orca?.account == id.toString() ||
-        account.quarry?.account == id.toString() ||
-        account.atrix?.account == id.toString()
+      (account) => account.raydium?.account == id.toString() || account.orca?.account == id.toString()
     );
   }
 
