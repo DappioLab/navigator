@@ -41,6 +41,12 @@ const tulipVaults = await tulip.infos.getAllVaults(connection);
 
 // Fetch all Friktion vaults
 const friktionVaults = await friktion.infos.getAllVaults(connection);
+
+// Fetch all Marinade vaults
+const marinadeVaults = await marinade.infos.getAllVaults(connection);
+
+// Fetch all Lido vaults
+const lidoVaults = await lido.infos.getAllVaults(connection);
 ```
 
 ## Supported Protocols
