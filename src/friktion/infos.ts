@@ -397,7 +397,7 @@ export class VaultInfoWrapper {
       }
     }
   }
-  async getLastTradedOptipon(connection: Connection): Promise<{ strikePrice: number | null; expiry: number | null }> {
+  async getLastTradedOption(connection: Connection): Promise<{ strikePrice: number | null; expiry: number | null }> {
     let optionAddress = this.vaultInfo.snapshotInfo?.lastTradedOption;
 
     if (optionAddress) {
@@ -406,10 +406,9 @@ export class VaultInfoWrapper {
       if (optionInfo && optionInfo.owner.equals(INERTIA_PROGRAM_ID)) {
         let option = INERTIA_OPTION_CONTRACT_LAYOUT.decode(optionInfo.data);
         let ts = new BN(option.expiryTs).toNumber();
-        let quoteDecimal = 10 ** (await (await getMint(connection, new PublicKey(option.quoteMint))).decimals);
+        let quoteDecimal = 10 ** (await getMint(connection, new PublicKey(option.quoteMint))).decimals;
 
-        let underlyingDecimal =
-          10 ** (await (await getMint(connection, new PublicKey(option.underlyingMint))).decimals);
+        let underlyingDecimal = 10 ** (await getMint(connection, new PublicKey(option.underlyingMint))).decimals;
         let price = new BN(option.isCall).isZero()
           ? (new BN(option.underlyingAmount).toNumber() / new BN(option.quoteAmount).toNumber() / underlyingDecimal) *
             quoteDecimal
