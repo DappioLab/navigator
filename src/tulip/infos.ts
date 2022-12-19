@@ -289,7 +289,7 @@ infos = class InstanceTulip {
     return {
       vaultId,
       shareMint: base.sharesMint,
-      base,
+      base: { ...base, sharesMint: InstanceTulip._defaultMint(base.sharesMint) },
       type: types.VaultType.Raydium,
       apy: 0,
       lpMint: raydiumLpMintAddress,
@@ -329,7 +329,7 @@ infos = class InstanceTulip {
     return {
       vaultId,
       shareMint: base.sharesMint,
-      base,
+      base: { ...base, sharesMint: InstanceTulip._defaultMint(base.sharesMint) },
       type: types.VaultType.Orca,
       apy: 0,
       farmData: {
@@ -359,7 +359,7 @@ infos = class InstanceTulip {
     return {
       vaultId,
       shareMint: base.sharesMint,
-      base,
+      base: { ...base, sharesMint: InstanceTulip._defaultMint(base.sharesMint) },
       type: types.VaultType.OrcaDD,
       apy: 0,
       farmData: {
@@ -398,6 +398,7 @@ infos = class InstanceTulip {
     const tokenAccountKeys: PublicKey[] = [];
     const mintKeys: PublicKey[] = [];
     vaults.forEach((vault) => {
+      mintKeys.push(vault.base.sharesMint.address);
       switch (vault.type) {
         case types.VaultType.Raydium:
           const raydiumVault = vault as types.RaydiumVaultInfo;
@@ -446,6 +447,7 @@ infos = class InstanceTulip {
 
     const fetchedVaults: types.VaultInfo[] = [];
     for (let vault of vaults) {
+      vault.base.sharesMint = mintMap.get(vault.base.sharesMint.address.toBase58())!;
       vault.apy = apyMap.get(vault.base.underlyingMint.toBase58()) || 0;
       switch (vault.type) {
         case types.VaultType.Raydium:

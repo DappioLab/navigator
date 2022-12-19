@@ -18,7 +18,7 @@ export interface Base {
   underlyingWithdrawQueue: PublicKey;
   underlyingDepositQueue: PublicKey;
   underlyingCompoundQueue: PublicKey;
-  sharesMint: PublicKey;
+  sharesMint: Mint;
   withdrawsPaused: BN;
   depositsPaused: BN;
   compoundPaused: BN;
