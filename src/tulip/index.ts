@@ -238,8 +238,18 @@ export enum VaultType {
   OrcaDD,
 }
 
-export const API_ENDPOINT = "https://data.tulip.garden/pairs?pair=";
-export const TOKEN_PAIRS: string[] = [
+export const RAYDIUM_API_ENDPOINT = "https://data.tulip.garden/pairs?pair=";
+export const ORCA_API_ENDPOINT = "https://data.tulip.garden/orca/pools?pool=";
+export const RAYDIUM_TOKEN_PAIRS: string[] = [
+  "RAY-SOL",
+  "RAY-USDC",
+  "RAY-SRM",
+  "RAY-USDT",
+  "ATLAS-RAY",
+  "RAY-soETH",
+  "RAY-ETH",
+];
+export const ORCA_TOKEN_PAIRS: string[] = [
   "SAMO-USDC",
   "ATLAS-USDC",
   "SHDW-USDC",
@@ -248,11 +258,4 @@ export const TOKEN_PAIRS: string[] = [
   "SHDW-SOL",
   "CMFI-USDC",
   "stSOL-wUST",
-  "RAY-SOL",
-  "RAY-USDC",
-  "RAY-SRM",
-  "RAY-USDT",
-  "ATLAS-RAY",
-  "RAY-ETH",
-  "RAY-whETH",
 ];

@@ -438,21 +438,31 @@ infos = class InstanceTulip {
     );
 
     // fetch APR/APY from api endpoint
-    const apyMap = new Map<string, number>();
-    const apiData = await (await axios.get(types.API_ENDPOINT + types.TOKEN_PAIRS.reduce((a, b) => a + "," + b))).data;
-    types.TOKEN_PAIRS.forEach((key) => {
-      const data = apiData[key];
-      if (data) apyMap.set(data.lpMint, Number(data.apy));
+    const raydiumApyMap = new Map<string, number>();
+    const raydiumAPIData = await (
+      await axios.get(types.RAYDIUM_API_ENDPOINT + types.RAYDIUM_TOKEN_PAIRS.reduce((a, b) => a + "," + b))
+    ).data;
+    types.RAYDIUM_TOKEN_PAIRS.forEach((key) => {
+      const data = raydiumAPIData[key.toUpperCase()];
+      if (data) raydiumApyMap.set(data.lpMint, Number(data.apy));
+    });
+    const orcaApyMap = new Map<string, number>();
+    const orcaAPIData = await (
+      await axios.get(types.ORCA_API_ENDPOINT + types.ORCA_TOKEN_PAIRS.reduce((a, b) => a + "," + b))
+    ).data;
+    types.ORCA_TOKEN_PAIRS.forEach((key) => {
+      const data = orcaAPIData[key.toUpperCase()];
+      if (data) orcaApyMap.set(key, Number(data.apy));
     });
 
     const fetchedVaults: types.VaultInfo[] = [];
     for (let vault of vaults) {
       vault.base.sharesMint = mintMap.get(vault.base.sharesMint.address.toBase58())!;
-      vault.apy = apyMap.get(vault.base.underlyingMint.toBase58()) || 0;
       switch (vault.type) {
         case types.VaultType.Raydium:
           // raydium vault
           const raydiumVault = vault as types.RaydiumVaultInfo;
+          raydiumVault.apy = raydiumApyMap.get(raydiumVault.base.underlyingMint.toBase58()) || 0;
           raydiumVault.coinTokenAccount = tokenMap.get(raydiumVault.coinTokenAccount.address.toBase58())!;
           raydiumVault.pcTokenAccount = tokenMap.get(raydiumVault.pcTokenAccount.address.toBase58())!;
           raydiumVault.poolRewardATokenAccount = tokenMap.get(raydiumVault.poolRewardATokenAccount.address.toBase58())!;
@@ -484,6 +494,7 @@ infos = class InstanceTulip {
             )?.pool_fee_account!
           );
           const config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaVault.vaultId.toBase58())?.orca!;
+          orcaVault.apy = orcaApyMap.get(config.symbol) || 0;
           orcaVault.farmData.convertAuthority = new PublicKey(config.farm_data.convert_authority);
           fetchedVaults.push(orcaVault);
           break;
@@ -505,6 +516,7 @@ infos = class InstanceTulip {
           );
           const _config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaDDVault.vaultId.toBase58())
             ?.orca!;
+          orcaDDVault.apy = orcaApyMap.get(_config.symbol) || 0;
           orcaDDVault.farmData.convertAuthority = new PublicKey(_config.farm_data.convert_authority);
 
           orcaDDVault.ddFarmData.poolSwapTokenA = tokenMap.get(
@@ -710,11 +722,15 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
-  getAPY() {
+  getAPR() {
     const numberOfPeriods = 8760; // yearly compound times = 24 * 365
     const apr = (Math.pow(this.vaultInfo.apy / 100 + 1, 1 / numberOfPeriods) - 1) * 100 * 24 * 365;
 
     return Number(apr.toFixed(2));
+  }
+
+  getAPY(): number {
+    return this.vaultInfo.apy;
   }
 
   getPoolTokenAccounts(): { coinTokenAccount: Account; pcTokenAccount: Account } {
