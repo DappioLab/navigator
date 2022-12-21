@@ -18,7 +18,7 @@ export interface Base {
   underlyingWithdrawQueue: PublicKey;
   underlyingDepositQueue: PublicKey;
   underlyingCompoundQueue: PublicKey;
-  sharesMint: PublicKey;
+  sharesMint: Mint;
   withdrawsPaused: BN;
   depositsPaused: BN;
   compoundPaused: BN;
@@ -110,8 +110,8 @@ export interface OrcaVaultInfo extends VaultInfo {
     swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
-    tokenAMint: PublicKey;
-    tokenBMint: PublicKey;
+    tokenAMint: Mint;
+    tokenBMint: Mint;
     swapMarkets: PublicKey[];
   };
 }
@@ -137,8 +137,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
-    tokenAMint: PublicKey;
-    tokenBMint: PublicKey;
+    tokenAMint: Mint;
+    tokenBMint: Mint;
     swapMarkets: PublicKey[];
   };
   ddFarmData: {
@@ -162,8 +162,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
-    tokenAMint: PublicKey;
-    tokenBMint: PublicKey;
+    tokenAMint: Mint;
+    tokenBMint: Mint;
     swapMarkets: PublicKey[];
   };
   ddCompoundQueue: PublicKey;
@@ -238,8 +238,18 @@ export enum VaultType {
   OrcaDD,
 }
 
-export const API_ENDPOINT = "https://data.tulip.garden/pairs?pair=";
-export const TOKEN_PAIRS: string[] = [
+export const RAYDIUM_API_ENDPOINT = "https://data.tulip.garden/pairs?pair=";
+export const ORCA_API_ENDPOINT = "https://data.tulip.garden/orca/pools?pool=";
+export const RAYDIUM_TOKEN_PAIRS: string[] = [
+  "RAY-SOL",
+  "RAY-USDC",
+  "RAY-SRM",
+  "RAY-USDT",
+  "ATLAS-RAY",
+  "RAY-soETH",
+  "RAY-ETH",
+];
+export const ORCA_TOKEN_PAIRS: string[] = [
   "SAMO-USDC",
   "ATLAS-USDC",
   "SHDW-USDC",
@@ -248,11 +258,4 @@ export const TOKEN_PAIRS: string[] = [
   "SHDW-SOL",
   "CMFI-USDC",
   "stSOL-wUST",
-  "RAY-SOL",
-  "RAY-USDC",
-  "RAY-SRM",
-  "RAY-USDT",
-  "ATLAS-RAY",
-  "RAY-ETH",
-  "RAY-whETH",
 ];

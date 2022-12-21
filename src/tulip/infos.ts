@@ -289,7 +289,7 @@ infos = class InstanceTulip {
     return {
       vaultId,
       shareMint: base.sharesMint,
-      base,
+      base: { ...base, sharesMint: InstanceTulip._defaultMint(base.sharesMint) },
       type: types.VaultType.Raydium,
       apy: 0,
       lpMint: raydiumLpMintAddress,
@@ -329,7 +329,7 @@ infos = class InstanceTulip {
     return {
       vaultId,
       shareMint: base.sharesMint,
-      base,
+      base: { ...base, sharesMint: InstanceTulip._defaultMint(base.sharesMint) },
       type: types.VaultType.Orca,
       apy: 0,
       farmData: {
@@ -337,6 +337,8 @@ infos = class InstanceTulip {
         poolSwapTokenA: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenA),
         poolSwapTokenB: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenB),
         swapPoolMint: InstanceTulip._defaultMint(farmData.swapPoolMint),
+        tokenAMint: InstanceTulip._defaultMint(farmData.tokenAMint),
+        tokenBMint: InstanceTulip._defaultMint(farmData.tokenBMint),
         feeCollectorTokenAccount: PublicKey.default,
         swapPoolFeeTokenAccount: PublicKey.default,
       },
@@ -359,7 +361,7 @@ infos = class InstanceTulip {
     return {
       vaultId,
       shareMint: base.sharesMint,
-      base,
+      base: { ...base, sharesMint: InstanceTulip._defaultMint(base.sharesMint) },
       type: types.VaultType.OrcaDD,
       apy: 0,
       farmData: {
@@ -367,6 +369,8 @@ infos = class InstanceTulip {
         poolSwapTokenA: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenA),
         poolSwapTokenB: InstanceTulip._defaultTokenAccount(farmData.poolSwapTokenB),
         swapPoolMint: InstanceTulip._defaultMint(farmData.swapPoolMint),
+        tokenAMint: InstanceTulip._defaultMint(farmData.tokenAMint),
+        tokenBMint: InstanceTulip._defaultMint(farmData.tokenBMint),
         feeCollectorTokenAccount: PublicKey.default,
         swapPoolFeeTokenAccount: PublicKey.default,
       },
@@ -375,6 +379,8 @@ infos = class InstanceTulip {
         poolSwapTokenA: InstanceTulip._defaultTokenAccount(ddFarmData.poolSwapTokenA),
         poolSwapTokenB: InstanceTulip._defaultTokenAccount(ddFarmData.poolSwapTokenB),
         swapPoolMint: InstanceTulip._defaultMint(ddFarmData.swapPoolMint),
+        tokenAMint: InstanceTulip._defaultMint(ddFarmData.tokenAMint),
+        tokenBMint: InstanceTulip._defaultMint(ddFarmData.tokenBMint),
         feeCollectorTokenAccount: PublicKey.default,
         swapPoolFeeTokenAccount: PublicKey.default,
       },
@@ -398,6 +404,7 @@ infos = class InstanceTulip {
     const tokenAccountKeys: PublicKey[] = [];
     const mintKeys: PublicKey[] = [];
     vaults.forEach((vault) => {
+      mintKeys.push(vault.base.sharesMint.address);
       switch (vault.type) {
         case types.VaultType.Raydium:
           const raydiumVault = vault as types.RaydiumVaultInfo;
@@ -411,16 +418,22 @@ infos = class InstanceTulip {
           tokenAccountKeys.push(orcaVault.farmData.poolSwapTokenA.address);
           tokenAccountKeys.push(orcaVault.farmData.poolSwapTokenB.address);
           mintKeys.push(orcaVault.farmData.swapPoolMint.address);
+          mintKeys.push(orcaVault.farmData.tokenAMint.address);
+          mintKeys.push(orcaVault.farmData.tokenBMint.address);
           break;
         case types.VaultType.OrcaDD:
           const orcaDDVault = vault as types.OrcaDDVaultInfo;
           tokenAccountKeys.push(orcaDDVault.farmData.poolSwapTokenA.address);
           tokenAccountKeys.push(orcaDDVault.farmData.poolSwapTokenB.address);
           mintKeys.push(orcaDDVault.farmData.swapPoolMint.address);
+          mintKeys.push(orcaDDVault.farmData.tokenAMint.address);
+          mintKeys.push(orcaDDVault.farmData.tokenBMint.address);
 
           tokenAccountKeys.push(orcaDDVault.ddFarmData.poolSwapTokenA.address);
           tokenAccountKeys.push(orcaDDVault.ddFarmData.poolSwapTokenB.address);
           mintKeys.push(orcaDDVault.ddFarmData.swapPoolMint.address);
+          mintKeys.push(orcaDDVault.ddFarmData.tokenAMint.address);
+          mintKeys.push(orcaDDVault.ddFarmData.tokenBMint.address);
           break;
         default:
           console.error("Error: Unsupported Vault");
@@ -437,20 +450,31 @@ infos = class InstanceTulip {
     );
 
     // fetch APR/APY from api endpoint
-    const apyMap = new Map<string, number>();
-    const apiData = await (await axios.get(types.API_ENDPOINT + types.TOKEN_PAIRS.reduce((a, b) => a + "," + b))).data;
-    types.TOKEN_PAIRS.forEach((key) => {
-      const data = apiData[key];
-      if (data) apyMap.set(data.lpMint, Number(data.apy));
+    const raydiumApyMap = new Map<string, number>();
+    const raydiumAPIData = await (
+      await axios.get(types.RAYDIUM_API_ENDPOINT + types.RAYDIUM_TOKEN_PAIRS.reduce((a, b) => a + "," + b))
+    ).data;
+    types.RAYDIUM_TOKEN_PAIRS.forEach((key) => {
+      const data = raydiumAPIData[key.toUpperCase()];
+      if (data) raydiumApyMap.set(data.lpMint, Number(data.apy));
+    });
+    const orcaApyMap = new Map<string, number>();
+    const orcaAPIData = await (
+      await axios.get(types.ORCA_API_ENDPOINT + types.ORCA_TOKEN_PAIRS.reduce((a, b) => a + "," + b))
+    ).data;
+    types.ORCA_TOKEN_PAIRS.forEach((key) => {
+      const data = orcaAPIData[key.toUpperCase()];
+      if (data) orcaApyMap.set(key, Number(data.apy));
     });
 
     const fetchedVaults: types.VaultInfo[] = [];
     for (let vault of vaults) {
-      vault.apy = apyMap.get(vault.base.underlyingMint.toBase58()) || 0;
+      vault.base.sharesMint = mintMap.get(vault.base.sharesMint.address.toBase58())!;
       switch (vault.type) {
         case types.VaultType.Raydium:
           // raydium vault
           const raydiumVault = vault as types.RaydiumVaultInfo;
+          raydiumVault.apy = raydiumApyMap.get(raydiumVault.base.underlyingMint.toBase58()) || 0;
           raydiumVault.coinTokenAccount = tokenMap.get(raydiumVault.coinTokenAccount.address.toBase58())!;
           raydiumVault.pcTokenAccount = tokenMap.get(raydiumVault.pcTokenAccount.address.toBase58())!;
           raydiumVault.poolRewardATokenAccount = tokenMap.get(raydiumVault.poolRewardATokenAccount.address.toBase58())!;
@@ -471,6 +495,8 @@ infos = class InstanceTulip {
           orcaVault.farmData.poolSwapTokenA = tokenMap.get(orcaVault.farmData.poolSwapTokenA.address.toBase58())!;
           orcaVault.farmData.poolSwapTokenB = tokenMap.get(orcaVault.farmData.poolSwapTokenB.address.toBase58())!;
           orcaVault.farmData.swapPoolMint = mintMap.get(orcaVault.farmData.swapPoolMint.address.toBase58())!;
+          orcaVault.farmData.tokenAMint = mintMap.get(orcaVault.farmData.tokenAMint.address.toBase58())!;
+          orcaVault.farmData.tokenBMint = mintMap.get(orcaVault.farmData.tokenBMint.address.toBase58())!;
           orcaVault.farmData.poolSwapAuthority = orcaVault.farmData.swapPoolMint.mintAuthority!;
           orcaVault.farmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
             orcaVault.farmData.rewardTokenMint,
@@ -482,6 +508,7 @@ infos = class InstanceTulip {
             )?.pool_fee_account!
           );
           const config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaVault.vaultId.toBase58())?.orca!;
+          orcaVault.apy = orcaApyMap.get(config.symbol) || 0;
           orcaVault.farmData.convertAuthority = new PublicKey(config.farm_data.convert_authority);
           fetchedVaults.push(orcaVault);
           break;
@@ -491,6 +518,8 @@ infos = class InstanceTulip {
           orcaDDVault.farmData.poolSwapTokenA = tokenMap.get(orcaDDVault.farmData.poolSwapTokenA.address.toBase58())!;
           orcaDDVault.farmData.poolSwapTokenB = tokenMap.get(orcaDDVault.farmData.poolSwapTokenB.address.toBase58())!;
           orcaDDVault.farmData.swapPoolMint = mintMap.get(orcaDDVault.farmData.swapPoolMint.address.toBase58())!;
+          orcaDDVault.farmData.tokenAMint = mintMap.get(orcaDDVault.farmData.tokenAMint.address.toBase58())!;
+          orcaDDVault.farmData.tokenBMint = mintMap.get(orcaDDVault.farmData.tokenBMint.address.toBase58())!;
           orcaDDVault.farmData.poolSwapAuthority = orcaDDVault.farmData.swapPoolMint.mintAuthority!;
           orcaDDVault.farmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
             orcaDDVault.farmData.rewardTokenMint,
@@ -503,6 +532,7 @@ infos = class InstanceTulip {
           );
           const _config = configV2.vaults.accounts.find((v) => v.orca?.account === orcaDDVault.vaultId.toBase58())
             ?.orca!;
+          orcaDDVault.apy = orcaApyMap.get(_config.symbol) || 0;
           orcaDDVault.farmData.convertAuthority = new PublicKey(_config.farm_data.convert_authority);
 
           orcaDDVault.ddFarmData.poolSwapTokenA = tokenMap.get(
@@ -512,6 +542,8 @@ infos = class InstanceTulip {
             orcaDDVault.ddFarmData.poolSwapTokenB.address.toBase58()
           )!;
           orcaDDVault.ddFarmData.swapPoolMint = mintMap.get(orcaDDVault.ddFarmData.swapPoolMint.address.toBase58())!;
+          orcaDDVault.farmData.tokenAMint = mintMap.get(orcaDDVault.ddFarmData.tokenAMint.address.toBase58())!;
+          orcaDDVault.farmData.tokenBMint = mintMap.get(orcaDDVault.ddFarmData.tokenBMint.address.toBase58())!;
           orcaDDVault.ddFarmData.poolSwapAuthority = orcaDDVault.ddFarmData.swapPoolMint.mintAuthority!;
           orcaDDVault.ddFarmData.feeCollectorTokenAccount = await getAssociatedTokenAddress(
             orcaDDVault.ddFarmData.rewardTokenMint,
@@ -708,11 +740,40 @@ export class ReserveInfoWrapper implements IReserveInfoWrapper {
 export class VaultInfoWrapper implements IVaultInfoWrapper {
   constructor(public vaultInfo: types.VaultInfo) {}
 
-  getAPY() {
+  getAPR() {
     const numberOfPeriods = 8760; // yearly compound times = 24 * 365
     const apr = (Math.pow(this.vaultInfo.apy / 100 + 1, 1 / numberOfPeriods) - 1) * 100 * 24 * 365;
 
     return Number(apr.toFixed(2));
+  }
+
+  getAPY(): number {
+    return this.vaultInfo.apy;
+  }
+
+  getTokenAAmount(tokenBAmount: BN): BN {
+    if (this.vaultInfo.type == types.VaultType.Raydium) return new BN(0);
+    const orcaVault = this.vaultInfo as types.OrcaVaultInfo;
+    const tokenADecimals = orcaVault.farmData.tokenAMint.decimals;
+    const tokenBDecimals = orcaVault.farmData.tokenBMint.decimals;
+    const poolTokenAAmount = Number(orcaVault.farmData.poolSwapTokenA.amount) / 10 ** tokenADecimals;
+    const poolTokenBAmount = Number(orcaVault.farmData.poolSwapTokenB.amount) / 10 ** tokenBDecimals;
+    const AToBRatio = poolTokenAAmount > 0 ? poolTokenBAmount / poolTokenAAmount : 0;
+    const BToARatio = poolTokenBAmount > 0 ? poolTokenAAmount / poolTokenBAmount : 0;
+
+    return new BN(Number(tokenBAmount) * BToARatio * 10 ** (tokenADecimals - tokenBDecimals));
+  }
+
+  getTokenBAmount(tokenAAmount: BN): BN {
+    if (this.vaultInfo.type == types.VaultType.Raydium) return new BN(0);
+    const orcaVault = this.vaultInfo as types.OrcaVaultInfo;
+    const tokenADecimals = orcaVault.farmData.tokenAMint.decimals;
+    const tokenBDecimals = orcaVault.farmData.tokenBMint.decimals;
+    const poolTokenAAmount = Number(orcaVault.farmData.poolSwapTokenA.amount) / 10 ** tokenADecimals;
+    const poolTokenBAmount = Number(orcaVault.farmData.poolSwapTokenB.amount) / 10 ** tokenBDecimals;
+    const AToBRatio = poolTokenAAmount > 0 ? poolTokenBAmount / poolTokenAAmount : 0;
+
+    return new BN(Number(tokenAAmount) * AToBRatio * 10 ** (tokenBDecimals - tokenADecimals));
   }
 
   getPoolTokenAccounts(): { coinTokenAccount: Account; pcTokenAccount: Account } {

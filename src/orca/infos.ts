@@ -65,7 +65,7 @@ infos = class InstanceOrca {
     return allPools
       .map((item, index) => {
         const { tokenAAmount, tokenBAmount, lpSupply, lpDecimals } = accounts[index];
-        let newItem = item;
+        let newItem: types.PoolInfo = item;
 
         newItem = {
           ...newItem,
@@ -81,7 +81,9 @@ infos = class InstanceOrca {
   }
 
   static async getAllPoolWrappers(connection: Connection, page?: PageConfig): Promise<PoolInfoWrapper[]> {
-    const allAPIPools: { [key: string]: types.IOrcaAPI } = await (await axios.get("https://api.orca.so/allPools")).data;
+    const allAPIPools: { [key: string]: types.IOrcaAPI } = await (
+      await axios.get("https://api.mainnet.orca.so/v1/standard-pool/list")
+    ).data;
     return (await this.getAllPools(connection, page)).map((poolInfo) => new PoolInfoWrapper(poolInfo, allAPIPools));
   }
 
@@ -106,7 +108,9 @@ infos = class InstanceOrca {
 
   static async getPoolWrapper(connection: Connection, poolId: PublicKey): Promise<PoolInfoWrapper> {
     const pool = await this.getPool(connection, poolId);
-    const allAPIPools: { [key: string]: types.IOrcaAPI } = await (await axios.get("https://api.orca.so/allPools")).data;
+    const allAPIPools: { [key: string]: types.IOrcaAPI } = await (
+      await axios.get("https://api.mainnet.orca.so/v1/standard-pool/list")
+    ).data;
     return new PoolInfoWrapper(pool, allAPIPools);
   }
 
