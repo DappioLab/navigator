@@ -1,6 +1,6 @@
 {
   "name": "@dappio-wonderland/navigator",
-  "version": "0.2.25-test-4e4b9a98",
+  "version": "0.2.26",
   "description": "Dappio Navigator: The Universal Typescript Client for Instantiating DeFi Protocols",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
