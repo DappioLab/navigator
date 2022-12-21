@@ -110,8 +110,8 @@ export interface OrcaVaultInfo extends VaultInfo {
     swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
-    tokenAMint: PublicKey;
-    tokenBMint: PublicKey;
+    tokenAMint: Mint;
+    tokenBMint: Mint;
     swapMarkets: PublicKey[];
   };
 }
@@ -137,8 +137,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
-    tokenAMint: PublicKey;
-    tokenBMint: PublicKey;
+    tokenAMint: Mint;
+    tokenBMint: Mint;
     swapMarkets: PublicKey[];
   };
   ddFarmData: {
@@ -162,8 +162,8 @@ export interface OrcaDDVaultInfo extends VaultInfo {
     swapPoolFeeTokenAccount: PublicKey;
     poolSwapAuthority: PublicKey;
     swapPoolMint: Mint;
-    tokenAMint: PublicKey;
-    tokenBMint: PublicKey;
+    tokenAMint: Mint;
+    tokenBMint: Mint;
     swapMarkets: PublicKey[];
   };
   ddCompoundQueue: PublicKey;
