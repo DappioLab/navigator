@@ -13,3 +13,4 @@ export * as nftFinance from "./nftFinance";
 export * as friktion from "./friktion";
 export * as lido from "./lido";
 export * as marinade from "./marinade";
+export * as whirlpools from "./whirlpools";
