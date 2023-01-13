@@ -3,7 +3,7 @@ export * from "./infos";
 export * from "./layouts";
 
 import BN from "bn.js";
-import { IDepositorInfo, IVaultInfo } from "../types";
+import { IDepositorInfo, IVaultInfo, IWithdrawerInfo } from "../types";
 import { PublicKey } from "@solana/web3.js";
 import { RawAccount } from "@solana/spl-token-v2";
 
@@ -89,4 +89,9 @@ export interface VaultInfo extends IVaultInfo {
 
 export interface DepositorInfo extends IDepositorInfo {
   tokenAccount: RawAccount;
+}
+
+export interface WithdrawerInfo extends IWithdrawerInfo {
+  lamports: BN;
+  epochCreated: BN;
 }

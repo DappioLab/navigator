@@ -68,6 +68,12 @@ export const MARINADE_FINANCE_ACCOUNT_STATE = struct(
 );
 
 export const MARINADE_FINANCE_ACCOUNT_TICKET_ACCOUNT_DATA = struct(
-  [publicKey("stateAddress"), publicKey("beneficiary"), u64("lamportsAmount"), u64("createdEpoch")],
+  [
+    blob(8, "identifier"),
+    publicKey("stateAddress"),
+    publicKey("beneficiary"),
+    u64("lamportsAmount"),
+    u64("createdEpoch"),
+  ],
   "TicketAccountData"
 );
