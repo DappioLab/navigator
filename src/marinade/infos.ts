@@ -1,9 +1,9 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import { Connection, PublicKey, GetProgramAccountsConfig, DataSizeFilter } from "@solana/web3.js";
 
 import { MARINADE_FINANCE_PROGRAM_ID, MARINADE_STATE_ADDRESS, MSOL_MINT_ADDRESS } from "./ids";
 
 import { IInstanceVault, IVaultInfoWrapper } from "../types";
-import { MARINADE_FINANCE_ACCOUNT_STATE } from "./layouts";
+import { MARINADE_FINANCE_ACCOUNT_STATE, MARINADE_FINANCE_ACCOUNT_TICKET_ACCOUNT_DATA } from "./layouts";
 
 import * as types from ".";
 import { AccountLayout, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token-v2";
@@ -135,7 +135,28 @@ infos = class InstanceMarinade {
       tokenAccount: rawAccount,
     };
   }
+  static parseWithdrawer(data: Buffer, withdrawalId: PublicKey): types.WithdrawerInfo {
+    let rawData = MARINADE_FINANCE_ACCOUNT_TICKET_ACCOUNT_DATA.decode(data);
+    return {
+      withdrawerId: withdrawalId,
+      lamports: rawData.lamportsAmount,
+      epochCreated: rawData.createdEpoch,
+      userKey: rawData.beneficiary,
+    };
+  }
+  static async getAllWithdrawers(connection: Connection, userKey: PublicKey): Promise<types.WithdrawerInfo[]> {
+    let filter: GetProgramAccountsConfig = {
+      filters: [
+        { dataSize: MARINADE_FINANCE_ACCOUNT_TICKET_ACCOUNT_DATA.span as number },
+        { memcmp: { offset: 40, bytes: userKey.toBase58() } },
+      ],
+    };
+    let withdrawerAccounts = await connection.getProgramAccounts(MARINADE_FINANCE_PROGRAM_ID, filter);
 
+    return withdrawerAccounts.map((account) => {
+      return this.parseWithdrawer(account.account.data, account.pubkey);
+    });
+  }
   private static _isAllowed(mint: PublicKey): boolean {
     return mint.equals(MSOL_MINT_ADDRESS);
   }
